@@ -1,4 +1,27 @@
 "use strict";
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+const child_process = require("child_process");
 const electron = require("electron");
 const path = require("path");
 const THEME_MODE_CURRENT_CHANNEL = "theme-mode:current";
@@ -46,13 +69,17 @@ function registerListeners(mainWindow) {
   addThemeEventListeners();
 }
 const inDevelopment = process.env.NODE_ENV === "development";
+const openBrowser = async (url) => {
+  const open = (await import("open")).default;
+  await open(url);
+};
 function createWindow() {
   const preload = path.join(__dirname, "preload.js");
   const mainWindow = new electron.BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1200,
+    height: 800,
     webPreferences: {
-      devTools: inDevelopment,
+      devTools: false,
       contextIsolation: true,
       nodeIntegration: true,
       nodeIntegrationInSubFrames: false,
@@ -61,8 +88,22 @@ function createWindow() {
     titleBarStyle: "hidden"
   });
   registerListeners(mainWindow);
+  const appUrl = "http://localhost:5173";
+  mainWindow.loadURL(appUrl);
   {
-    mainWindow.loadURL("http://localhost:5173");
+    mainWindow.webContents.openDevTools();
+    console.log("Opening DevTools");
+    openBrowser("http://localhost:5173");
+  }
+  if (inDevelopment) {
+    child_process.exec("npm run dev", (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error starting Vite dev server: ${error.message}`);
+        return;
+      }
+      console.log(`Vite dev server started: ${stdout}`);
+      openBrowser("http://localhost:3000");
+    });
   }
 }
 electron.app.whenReady().then(createWindow);
