@@ -3,21 +3,32 @@ import React, { type ReactNode } from 'react';
 
 interface DragWindowRegionProps {
   title?: ReactNode;
+  children?: ReactNode;
+  sidebarTrigger?: ReactNode;
 }
 
-export default function DragWindowRegion({ title }: DragWindowRegionProps) {
+export default function ({ title, children, sidebarTrigger }: DragWindowRegionProps) {
   return (
-    <div className="flex w-screen items-stretch justify-between">
-      <div className="draglayer w-full">
-        {title && (
-          <div className="flex flex-1 select-none whitespace-nowrap p-2 text-xs text-gray-400">
-            {title}
+    <div className="relative flex h-12 w-screen flex-col items-stretch justify-between bg-sidebar">
+      {/* Drag layer - positioned absolutely underneath */}
+      <div className="draglayer absolute inset-0" />
+
+      {/* Content layer - sits on top */}
+      <div className="z-12 relative">
+        <div className="flex h-12 w-full bg-sidebar">
+          {title && (
+            <div className="flex flex-1 select-none whitespace-nowrap p-2 text-xs text-gray-400">
+              {title}
+            </div>
+          )}
+          {/* Interactive elements with explicit no-drag */}
+          <div className="no-drag my-2.5 ml-20">{children}</div>
+          <div className="draglayer w-full bg-sidebar">
+            {/* it's just adding drag zone in between of the action area */}
           </div>
-        )}
+        </div>
+        <div className="no-drag">{sidebarTrigger}</div>
       </div>
-      {/* TODO: Allow this only when it's running in the Windows OS */}
-      {/* <WindowButtons /> */}
-      <div className="h-3"></div>
     </div>
   );
 }

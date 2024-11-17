@@ -115,6 +115,7 @@
 
     /* Cards and surfaces remain the same */
     --card: 220 6% 15%;
+    /* hex: #2d2d2d */
     --card-foreground: 0 0% 98%;
 
     --popover: 220 6% 17%;
@@ -159,6 +160,10 @@
   .draglayer {
     @apply bg-background;
     -webkit-app-region: drag;
+  }
+
+  .no-drag {
+    -webkit-app-region: no-drag;
   }
 }
 

@@ -85,7 +85,11 @@ function createWindow() {
       nodeIntegrationInSubFrames: false,
       preload
     },
-    titleBarStyle: "hidden"
+    titleBarStyle: "hidden",
+    trafficLightPosition: {
+      x: 16,
+      y: 16
+    }
   });
   registerListeners(mainWindow);
   const appUrl = "http://localhost:5173";
