@@ -1,6 +1,8 @@
 import AboutPage from '@/pages/AboutPage';
 import { createRoute } from '@tanstack/react-router';
-import HomePage from '../pages/HomePage';
+import { z } from 'zod';
+import FocusPage from '../pages/FocusPage';
+import Groups from '../pages/Groups';
 import { RootRoute } from './__root';
 
 // TODO: Steps to add a new route:
@@ -22,10 +24,26 @@ import { RootRoute } from './__root';
 // 4. Add to routeTree: RootRoute.addChildren([HomeRoute, NewRoute, ...])
 // 5. Add Link: <Link to="/new">New Page</Link>
 
-export const HomeRoute = createRoute({
+// Define the search params schema
+const weeklyCalendarSchema = z.object({
+  week: z.string().default(new Date().toISOString().split('T')[0]).optional(),
+  date: z.string().default(new Date().toISOString().split('T')[0]).optional(),
+});
+
+// Create type from schema
+export type WeeklyCalendarSearch = z.infer<typeof weeklyCalendarSchema>;
+
+export const FocusRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: '/',
-  component: HomePage,
+  component: FocusPage,
+  validateSearch: weeklyCalendarSchema,
+});
+
+export const GroupRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: '/groups/$name',
+  component: Groups,
 });
 
 export const AboutRoute = createRoute({
@@ -34,4 +52,4 @@ export const AboutRoute = createRoute({
   component: AboutPage,
 });
 
-export const rootTree = RootRoute.addChildren([HomeRoute, AboutRoute]);
+export const rootTree = RootRoute.addChildren([FocusRoute, GroupRoute, AboutRoute]);

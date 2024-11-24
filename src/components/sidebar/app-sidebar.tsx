@@ -23,27 +23,27 @@ const data = {
   navMain: [
     {
       title: 'Backglog',
-      url: '#',
+      url: 'groups/backlog',
       icon: PaintBucket,
       isActive: true,
       iconColor: 'gray',
     },
     {
       title: 'Work',
-      url: '#',
+      url: 'groups/work',
       icon: Hash,
       isActive: false,
       iconColor: 'yellow',
     },
     {
       title: 'Personal',
-      url: '#',
+      url: 'groups/personal',
       icon: Hash,
       iconColor: 'lightblue',
     },
     {
       title: 'Side hustle',
-      url: '#',
+      url: 'groups/side-hustle',
       icon: Hash,
       iconColor: 'lightgreen',
     },
@@ -52,8 +52,8 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar variant="inset" {...props} className="top-20">
-      <SidebarHeader className="mt-3">
+    <Sidebar variant="inset" {...props} className="top-10">
+      <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>

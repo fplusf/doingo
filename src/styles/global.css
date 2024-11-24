@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
+body {
+  overscroll-behavior-x: none;
+}
+
 @layer base {
   @font-face {
     font-family: 'Geist';
@@ -106,6 +111,14 @@
     --ring: 222.2 84% 4.9%;
 
     --radius: 0.5rem;
+
+    /* Chart THeme */
+    --ring: 142 86% 28%;
+    --chart-1: 139 65% 20%;
+    --chart-2: 140 74% 44%;
+    --chart-3: 142 88% 28%;
+    --chart-4: 137 55% 15%;
+    --chart-5: 141 40% 9%;
   }
 
   .dark {
@@ -147,6 +160,14 @@
     --ring: 217 45% 55%; /* Match new primary */
 
     --radius: 0.5rem;
+
+    /* Chart Theme */
+    --ring: 142 86% 28%;
+    --chart-1: 142 88% 28%;
+    --chart-2: 139 65% 20%;
+    --chart-3: 140 74% 24%;
+    --chart-4: 137 55% 15%;
+    --chart-5: 141 40% 9%;
   }
 }
 

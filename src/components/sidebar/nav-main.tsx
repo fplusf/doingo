@@ -10,6 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { Link } from '@tanstack/react-router';
 import React from 'react';
 
 export function NavMain({
@@ -34,10 +35,10 @@ export function NavMain({
         {items.map((item) => (
           <SidebarMenuItem key={item.title}>
             <SidebarMenuButton asChild tooltip={item.title}>
-              <a href={item.url}>
+              <Link to="/groups/$name" params={{ name: item.url }}>
                 <item.icon color={item.iconColor} />
                 <span>{item.title}</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
             {item.items?.length ? (
               <>
