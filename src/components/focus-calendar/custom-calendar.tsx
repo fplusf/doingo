@@ -1,8 +1,7 @@
 import { cn } from '@/lib/utils';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { useGesture } from '@use-gesture/react';
 import { addDays, addWeeks, format, isSameDay, parse, startOfWeek, subWeeks } from 'date-fns';
-import { ChevronRight } from 'lucide-react';
+import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures';
 import * as React from 'react';
 import { FocusRoute } from '../../routes/routes';
 import {
@@ -14,313 +13,196 @@ import {
   CarouselPrevious,
 } from '../ui/carousel';
 
-interface TaskCount {
-  completed: number;
-  goal: number;
-}
-
-interface CalendarProps {
-  className?: string;
-  selectedDate?: Date;
-  onDateSelect?: (date: Date) => void;
-  taskCounts?: { [date: string]: TaskCount };
-}
-
-interface NavigateWeekProps {
-  direction: 'prev' | 'next';
-  api?: CarouselApi;
-  isAnimating: boolean;
-  setIsAnimating: (value: boolean) => void;
-  currentWeekStart: Date;
-  setCurrentWeekStart: (date: Date) => void;
-  navigate: (params: {
-    search: (prev: Record<string, string | undefined>) => Record<string, string | undefined>;
-  }) => void;
-}
-
-const DAYS_COUNT = 7;
 const DATE_FORMAT = 'yyyy-MM-dd';
+const WINDOW_SIZE = 5; // Keep 5 weeks in memory: 2 before, current, 2 after
+const THRESHOLD_INDEX = 1; // When to shift the window
 
-function Calendar({
+interface WeekData {
+  id: string;
+  dates: Date[];
+  startDate: Date;
+}
+
+function createWeekData(startDate: Date): WeekData {
+  return {
+    id: format(startDate, DATE_FORMAT),
+    dates: Array.from({ length: 7 }).map((_, i) => addDays(startDate, i)),
+    startDate,
+  };
+}
+
+export function Calendar({
   className,
-  selectedDate = new Date(),
   onDateSelect,
-  taskCounts = {},
-}: CalendarProps) {
+}: {
+  className?: string;
+  onDateSelect: (date: Date) => void;
+}) {
   const search = useSearch({ from: '/' });
   const navigate = useNavigate({ from: FocusRoute.fullPath });
-
-  // Parse week from URL or use default
-  const initialWeek = React.useMemo(() => {
-    if (search.week) {
-      return parse(search.week, DATE_FORMAT, new Date());
-    }
-    return startOfWeek(selectedDate, { weekStartsOn: 1 }); // Set Monday as the first day of the week
-  }, [search.week, selectedDate]);
-
-  const [currentWeekStart, setCurrentWeekStart] = React.useState(initialWeek);
-  const [currendDay, setCurrentDay] = React.useState(selectedDate);
   const [api, setApi] = React.useState<CarouselApi>();
-  const [currentIndex, setCurrentIndex] = React.useState(1); // Start at middle week
-  const [isAnimating, setIsAnimating] = React.useState(false);
 
-  // Get previous, current and next week
-  const weeks = [subWeeks(currentWeekStart, 1), currentWeekStart, addWeeks(currentWeekStart, 1)];
+  // Parse selected date from URL or use current date
+  const selectedDate = React.useMemo(() => {
+    return search.date ? parse(search.date, DATE_FORMAT, new Date()) : new Date();
+  }, [search.date]);
 
-  console.log('weeks', weeks);
-  const navigateWeek = ({
-    direction,
-    api,
-    isAnimating,
-    setIsAnimating,
-    currentWeekStart,
-    setCurrentWeekStart,
-    navigate,
-  }: NavigateWeekProps) => {
-    try {
-      // Prevent multiple rapid transitions
-      if (isAnimating || !api) return;
+  // Keep track of the central date for our window
+  const [centerDate, setCenterDate] = React.useState(() =>
+    startOfWeek(selectedDate, { weekStartsOn: 1 }),
+  );
 
-      setIsAnimating(true);
+  // Generate and maintain our sliding window of weeks
+  const [weeks, setWeeks] = React.useState<WeekData[]>(() => {
+    const center = startOfWeek(centerDate, { weekStartsOn: 1 });
+    const start = subWeeks(center, Math.floor(WINDOW_SIZE / 2));
 
-      // Move carousel
-      if (direction === 'prev') {
-        api.scrollPrev();
+    return Array.from({ length: WINDOW_SIZE }).map((_, i) => createWeekData(addWeeks(start, i)));
+  });
+
+  // Handle window sliding
+  const slideWindow = React.useCallback((direction: 'forward' | 'backward') => {
+    setWeeks((currentWeeks) => {
+      const newWeeks = [...currentWeeks];
+
+      if (direction === 'forward') {
+        // Remove first week and add a new week at the end
+        newWeeks.shift();
+        const lastWeek = newWeeks[newWeeks.length - 1];
+        newWeeks.push(createWeekData(addWeeks(lastWeek.startDate, 1)));
       } else {
-        api.scrollNext();
+        // Remove last week and add a new week at the start
+        newWeeks.pop();
+        const firstWeek = newWeeks[0];
+        newWeeks.unshift(createWeekData(subWeeks(firstWeek.startDate, 1)));
       }
 
-      // Update date
-      const newDate = addDays(currentWeekStart, direction === 'prev' ? -DAYS_COUNT : DAYS_COUNT);
-      setCurrentWeekStart(newDate);
+      return newWeeks;
+    });
 
-      // Update URL params
-      navigate({
-        search: (prevSearch: Record<string, string | undefined>) => ({
-          ...prevSearch,
-          week: format(newDate, DATE_FORMAT),
-        }),
-      });
+    // Update center date
+    setCenterDate((current) =>
+      direction === 'forward' ? addWeeks(current, 1) : subWeeks(current, 1),
+    );
+  }, []);
 
-      // Reset animation flag after transition
-      setTimeout(() => setIsAnimating(false), 300);
-    } catch (error) {
-      console.error('Error navigating week:', error);
-      setIsAnimating(false);
-    }
-  };
-
-  const bind = useGesture(
-    {
-      onWheel: ({ direction: [dx], memo }) => {
-        if (memo) return memo; // Prevent multiple navigations
-        navigateWeek({
-          direction: dx < 0 ? 'prev' : 'next',
-          api,
-          isAnimating,
-          setIsAnimating,
-          currentWeekStart,
-          setCurrentWeekStart,
-          navigate,
-        });
-        return true; // Set memo to true to indicate navigation has occurred
-      },
-      onWheelEnd: () => {
-        return false; // Reset memo to allow new gesture
-      },
-    },
-    {
-      // Add any specific configuration if needed
-    },
-  );
-
-  const handleCarouselChange = React.useCallback(
-    async (emblaApi: CarouselApi) => {
-      if (!emblaApi) return;
-
-      const currentIdx = emblaApi.selectedScrollSnap();
-      console.log('Carousel index:', currentIdx);
-      if (isAnimating) return;
-      setIsAnimating(true);
-
-      // Handle edge cases
-      if (currentIdx === 0 || currentIdx === 2) {
-        // Update the current week
-        const newWeekStart =
-          currentIdx === 0 ? subWeeks(currentWeekStart, 1) : addWeeks(currentWeekStart, 1);
-
-        setCurrentWeekStart(newWeekStart);
-
-        // Update URL
-        navigate({
-          search: (prev) => ({
-            ...prev,
-            week: format(newWeekStart, DATE_FORMAT),
-          }),
-        });
-
-        // Reset carousel to middle position after transition
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        api?.scrollTo(1, false);
-        setCurrentIndex(1);
-      }
-
-      setIsAnimating(false);
-    },
-    [currentWeekStart, isAnimating, api?.containerNode()],
-  );
-
+  // Handle carousel events
   React.useEffect(() => {
-    if (api) {
-      api.on('select', handleCarouselChange);
-    }
-    return () => {
-      api?.off('select', handleCarouselChange);
-    };
-  }, [currentWeekStart, api?.containerNode()]);
+    if (!api) return;
 
-  React.useEffect(() => {
-    if (!search.week) {
+    const onSelect = () => {
+      const selectedIndex = api.selectedScrollSnap();
+      const selectedWeek = weeks[selectedIndex];
+
+      // Update URL with selected date
       navigate({
         search: (prev) => ({
           ...prev,
-          week: format(currentWeekStart, DATE_FORMAT),
+          date: format(selectedWeek.startDate, DATE_FORMAT),
         }),
+        replace: true,
       });
-    }
-  }, [currentWeekStart, search.week, navigate]);
+
+      // Check if we need to slide the window
+      if (selectedIndex <= THRESHOLD_INDEX) {
+        slideWindow('backward');
+        api.scrollTo(THRESHOLD_INDEX + 1, false);
+      } else if (selectedIndex >= weeks.length - THRESHOLD_INDEX - 1) {
+        slideWindow('forward');
+        api.scrollTo(weeks.length - THRESHOLD_INDEX - 2, false);
+      }
+    };
+
+    api.on('select', onSelect);
+    // return () => api.off('select', onSelect);
+  }, [api, weeks, navigate, slideWindow]);
 
   const renderDayCell = (date: Date) => {
     const dateKey = format(date, DATE_FORMAT);
-    const counts = taskCounts[dateKey] || { completed: 0, goal: 0 };
+    // const counts = taskCounts[dateKey] || { completed: 0, goal: 0 };
     const isToday = isSameDay(date, new Date());
-    const isSelected = isSameDay(date, currendDay);
-
-    const getCountColor = (completed: number, goal: number) => {
-      if (completed === 0) return 'text-gray-500';
-      if (completed > goal) return 'text-red-500';
-      return 'text-gray-300';
-    };
+    const isSelected = isSameDay(date, selectedDate);
 
     return (
       <div
         key={dateKey}
         className={cn(
           'flex flex-col items-center rounded-lg p-2',
-          // Base border style
-          'border',
-          // Selection states with precedence
+          'border transition-all duration-200',
           {
-            'border-white bg-gray-800': isSelected,
+            'scale-105 border-white bg-gray-800': isSelected,
             'border-green-500': isToday && !isSelected,
             'border-transparent': !isToday && !isSelected,
           },
-          // Hover state
-          'cursor-pointer transition-colors hover:bg-gray-800',
+          'cursor-pointer hover:bg-gray-800/50',
         )}
         onClick={() => {
-          setCurrentDay(date);
-          onDateSelect?.(date);
-
-          console.log('date', { date, currendDay });
+          navigate({
+            search: (prev) => ({
+              ...prev,
+              date: format(date, DATE_FORMAT),
+            }),
+          });
         }}
       >
         <span className="text-sm text-gray-400">{format(date, 'EEE')}</span>
         <span className="my-1 text-lg font-bold">{format(date, 'd')}</span>
-        <span className={cn('text-xs', getCountColor(counts.completed, counts.goal))}>
-          {counts.completed}/{counts.goal}
-        </span>
+        {/* <TaskCounter completed={counts.completed} goal={counts.goal} /> */}
       </div>
     );
   };
 
   return (
-    <div className={cn('rounded-xl bg-black p-4 text-white', className)} {...bind()}>
-      {/* <div className="mb-4 flex items-center justify-between">
-        <button
-          onClick={() =>
-            navigateWeek({
-              direction: 'prev',
-              api,
-              isAnimating,
-              setIsAnimating,
-              currentWeekStart,
-              setCurrentWeekStart,
-              navigate,
-            })
-          }
-          disabled={isAnimating}
-          className="p-1"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <h2 className="text-xl font-bold">
-          <span className="text-green-500">{format(currentWeekStart, 'MMMM')}</span>{' '}
-          <span>{format(currentWeekStart, 'yyyy')}</span>
-        </h2>
-        
-      </div> */}
-
+    <div className={cn('rounded-xl bg-black p-4 text-white', className)}>
       <Carousel
         setApi={setApi}
         className="relative mx-auto w-full"
         opts={{
-          containScroll: false,
           align: 'center',
-          dragFree: true,
+          containScroll: false,
+          loop: false,
+          dragFree: false,
+          slidesToScroll: 1,
+          skipSnaps: false,
+          // duration: 20,
+          startIndex: Math.floor(WINDOW_SIZE / 2), // Start in the middle
         }}
+        plugins={[
+          WheelGesturesPlugin({
+            forceWheelAxis: 'x',
+          }),
+        ]}
       >
         <CarouselContent>
-          {weeks.map((weekStart, idx) => (
-            <CarouselItem key={weekStart.toISOString()} className="flex w-full justify-between">
+          {weeks.map((week) => (
+            <CarouselItem key={week.id} className="flex w-full justify-between">
               <div className="grid w-full grid-cols-7 gap-2">
-                {[...Array(7)].map((_, i) => renderDayCell(addDays(weekStart, i)))}
+                {week.dates.map((date) => renderDayCell(date))}
               </div>
             </CarouselItem>
           ))}
         </CarouselContent>
 
-        <CarouselPrevious
-          onClick={() =>
-            navigateWeek({
-              direction: 'next',
-              api,
-              isAnimating,
-              setIsAnimating,
-              currentWeekStart,
-              setCurrentWeekStart,
-              navigate,
-            })
-          }
-          disabled={isAnimating}
-          className="p-1"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </CarouselPrevious>
-
-        <CarouselNext
-          onClick={() =>
-            navigateWeek({
-              direction: 'next',
-              api,
-              isAnimating,
-              setIsAnimating,
-              currentWeekStart,
-              setCurrentWeekStart,
-              navigate,
-            })
-          }
-          disabled={isAnimating}
-          className="p-1"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </CarouselNext>
+        <CarouselPrevious />
+        <CarouselNext />
       </Carousel>
     </div>
   );
 }
 
-Calendar.displayName = 'Calendar';
+// function TaskCounter({ completed, goal }: TaskCount) {
+//   const getCountColor = (completed: number, goal: number) => {
+//     if (completed === 0) return 'text-gray-500';
+//     if (completed > goal) return 'text-red-500';
+//     return 'text-gray-300';
+//   };
 
-export { Calendar };
-export type { CalendarProps, TaskCount };
+//   return (
+//     <span className={cn('text-xs', getCountColor(completed, goal))}>
+//       {completed}/{goal}
+//     </span>
+//   );
+// }
+
+// export { Calendar };
+// export type { CalendarProps, TaskCount };
