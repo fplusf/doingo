@@ -130,10 +130,15 @@ export function WeekNavigator({
     <div className={cn('mx-auto w-full max-w-4xl rounded-xl bg-black p-4 text-white', className)}>
       <Swiper
         direction={'horizontal'}
+        slidesPerView={1}
+        slidesPerGroup={1}
+        speed={300}
         spaceBetween={30}
-        mousewheel={true}
         cssMode={true}
-        keyboard={true}
+        keyboard={{
+          enabled: true,
+          onlyInViewport: true,
+        }}
         modules={[Mousewheel, Pagination]}
       >
         {weeks.map((week) => (
