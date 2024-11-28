@@ -1,11 +1,12 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "./",
+    "rootDir": "../../..",
     "baseUrl": "./src",
     "outDir": "./dist",
     "paths": {
-      "test/*": ["../test/*"]
+      "test/*": ["../test/*"],
+      "@": ["../../components/*"]
     },
     "importHelpers": true,
     "types": ["jest", "node"]

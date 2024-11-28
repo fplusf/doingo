@@ -1,8 +1,11 @@
+import { addMonths, subMonths } from 'date-fns';
+import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures';
+import { useCallback, useState } from 'react';
+import { Carousel, CarouselContent, CarouselItem } from '../../../../../components/ui/carousel';
 import { Footer } from '../../components/Footer';
 import { Head } from '../../components/Head';
 import { Row } from '../../components/Row';
 import { useDayPicker } from '../../contexts/DayPicker';
-
 import { getMonthWeeks } from './utils/getMonthWeeks';
 
 /** The props for the {@link Table} component. */
@@ -15,8 +18,8 @@ export interface TableProps {
   displayMonth: Date;
 }
 
-/** Render the table with the calendar. */
 export function Table(props: TableProps): JSX.Element {
+  const [currentMonth, setCurrentMonth] = useState(props.displayMonth);
   const {
     locale,
     classNames,
@@ -27,9 +30,10 @@ export function Table(props: TableProps): JSX.Element {
     weekStartsOn,
     firstWeekContainsDate,
     ISOWeek,
+    onMonthChange, // Add this to DayPicker context if not exists
   } = useDayPicker();
 
-  const weeks = getMonthWeeks(props.displayMonth, {
+  const weeks = getMonthWeeks(currentMonth, {
     useFixedWeeks: Boolean(fixedWeeks),
     ISOWeek,
     locale,
@@ -37,29 +41,61 @@ export function Table(props: TableProps): JSX.Element {
     firstWeekContainsDate,
   });
 
+  const handleNextMonth = useCallback(() => {
+    const nextMonth = addMonths(currentMonth, 1);
+    setCurrentMonth(nextMonth);
+    onMonthChange?.(nextMonth);
+  }, [currentMonth, onMonthChange]);
+
+  const handlePrevMonth = useCallback(() => {
+    const prevMonth = subMonths(currentMonth, 1);
+    setCurrentMonth(prevMonth);
+    onMonthChange?.(prevMonth);
+  }, [currentMonth, onMonthChange]);
+
+  const onCarouselSelect = useCallback(
+    (index: number) => {
+      // If at last slide and trying to go forward
+      if (index >= weeks.length - 1) {
+        handleNextMonth();
+      }
+      // If at first slide and trying to go backward
+      else if (index <= 0) {
+        handlePrevMonth();
+      }
+    },
+    [weeks.length, handleNextMonth, handlePrevMonth],
+  );
+
   const HeadComponent = components?.Head ?? Head;
   const RowComponent = components?.Row ?? Row;
   const FooterComponent = components?.Footer ?? Footer;
+
   return (
-    <table
+    <div
       id={props.id}
       className={classNames.table}
       style={styles.table}
       role="grid"
       aria-labelledby={props['aria-labelledby']}
     >
-      {!hideHead && <HeadComponent />}
-      <tbody className={classNames.tbody} style={styles.tbody}>
-        {weeks.map((week) => (
-          <RowComponent
-            displayMonth={props.displayMonth}
-            key={week.weekNumber}
-            dates={week.dates}
-            weekNumber={week.weekNumber}
-          />
-        ))}
-      </tbody>
-      <FooterComponent displayMonth={props.displayMonth} />
-    </table>
+      <div className={classNames.tbody} style={styles.tbody}>
+        <Carousel plugins={[WheelGesturesPlugin()]} onSelect={() => onCarouselSelect}>
+          <CarouselContent>
+            {weeks.map((week) => (
+              <CarouselItem key={week.dates[1].getTime()}>
+                {!hideHead && <HeadComponent />}
+                <RowComponent
+                  displayMonth={currentMonth}
+                  dates={week.dates}
+                  weekNumber={week.weekNumber}
+                />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+      </div>
+      <FooterComponent displayMonth={currentMonth} />
+    </div>
   );
 }
