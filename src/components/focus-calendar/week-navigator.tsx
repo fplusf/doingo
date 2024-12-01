@@ -5,7 +5,7 @@ import * as React from 'react';
 import { Mousewheel, Pagination } from 'swiper/modules';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FocusRoute } from '../../routes/routes';
-// import Swiper styles
+// Swiper styles
 import 'swiper/css/bundle';
 
 const DATE_FORMAT = 'yyyy-MM-dd';
@@ -105,10 +105,10 @@ export function WeekNavigator({
       return (
         <div
           className={cn(
-            'flex h-full w-full flex-col items-center justify-center rounded-lg p-2',
+            'flex h-full w-full flex-col items-center justify-center rounded p-4',
             'cursor-pointer transition-all duration-200',
             {
-              'scale-105 bg-gray-800 ring-2 ring-white': isSelected,
+              'scale-105 bg-gray-800 ring-1 ring-white': isSelected,
               'ring-2 ring-green-500': isToday && !isSelected,
               'hover:bg-gray-800/50': !isSelected,
             },
@@ -127,11 +127,9 @@ export function WeekNavigator({
   );
 
   return (
-    <div className={cn('mx-auto w-full max-w-4xl rounded-xl bg-black p-4 text-white', className)}>
+    <div className={cn('mx-auto w-full bg-sidebar text-white', className)}>
       <Swiper
         direction={'horizontal'}
-        slidesPerView={1}
-        slidesPerGroup={1}
         speed={300}
         spaceBetween={30}
         cssMode={true}
@@ -140,10 +138,12 @@ export function WeekNavigator({
           onlyInViewport: true,
         }}
         modules={[Mousewheel, Pagination]}
+        className="w-full"
       >
         {weeks.map((week) => (
           <SwiperSlide key={week.id}>
-            <div className="grid w-full grid-cols-7 gap-2">
+            <div className="grid w-full grid-cols-7">
+              {/* <div className="flex max-h-full w-full justify-between"> */}
               {week.dates.map((date, i) => (
                 <div key={`${week.id}-${i}`}>{renderDayCell(date)}</div>
               ))}

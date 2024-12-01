@@ -30,7 +30,7 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
 
             {/* KEEP THIS COMPONENT HERE FOR SIDEBAR TO TOGGLE PROPERLY */}
             <TopSidebarTrigger />
-            <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+            <div className="flex flex-1 flex-col gap-4 pt-0">{children}</div>
           </SidebarInset>
         </SidebarProvider>
       </div>
