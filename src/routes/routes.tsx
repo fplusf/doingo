@@ -1,8 +1,9 @@
+import { TagDetails } from '@/components/tags';
 import AboutPage from '@/pages/AboutPage';
+import FocusPage from '@/pages/FocusPage';
+import Tags from '@/pages/Tags';
 import { createRoute } from '@tanstack/react-router';
 import { z } from 'zod';
-import FocusPage from '../pages/FocusPage';
-import Groups from '../pages/Groups';
 import { RootRoute } from './__root';
 
 // TODO: Steps to add a new route:
@@ -40,10 +41,18 @@ export const FocusRoute = createRoute({
   validateSearch: weeklyCalendarSchema,
 });
 
-export const GroupRoute = createRoute({
+// Parent route for /tags
+export const TagsRoute = createRoute({
   getParentRoute: () => RootRoute,
-  path: '/groups/$name',
-  component: Groups,
+  path: '/tags',
+  component: Tags, // This will be your wrapper component
+});
+
+// Child route for /tags/$tagName
+export const TagDetailsRoute = createRoute({
+  getParentRoute: () => TagsRoute, // Make this a child of TagsRoute
+  path: '$tagName', // No need for /tags/ since it's nested
+  component: TagDetails,
 });
 
 export const AboutRoute = createRoute({
@@ -52,4 +61,4 @@ export const AboutRoute = createRoute({
   component: AboutPage,
 });
 
-export const rootTree = RootRoute.addChildren([FocusRoute, GroupRoute, AboutRoute]);
+export const rootTree = RootRoute.addChildren([FocusRoute, TagsRoute, AboutRoute, TagDetailsRoute]);
