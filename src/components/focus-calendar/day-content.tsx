@@ -32,7 +32,7 @@ const DayContent: React.FC<DayContentProps> = ({ selectedDate, onDateChange }) =
 
   return (
     <div
-      className="flex-grow bg-gray-700 p-4"
+      className="flex-grow rounded-2xl p-4"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >

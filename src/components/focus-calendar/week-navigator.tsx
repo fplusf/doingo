@@ -7,6 +7,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { FocusRoute } from '../../routes/routes';
 // Swiper styles
 import 'swiper/css/bundle';
+import DayChart from './day-chart';
 
 const DATE_FORMAT = 'yyyy-MM-dd';
 const WINDOW_SIZE = 5; // Keep 5 weeks in memory: 2 before, current, 2 after
@@ -66,18 +67,22 @@ export function WeekNavigator({
     const center = startOfWeek(centerDate, { weekStartsOn: 1 });
     const start = subWeeks(center, 26); // 52 weeks in a year, so 26 weeks before the center
 
-    return Array.from({ length: 52 }).map((_, i) => createWeekData(addWeeks(start, i)));
+    return Array.from({ length: 2 }).map((_, i) => createWeekData(addWeeks(start, i)));
   });
 
   // Memoize date selection handler
-  const handleDateSelect = React.useCallback((date: Date) => {
-    navigate({
-      search: (prev) => ({
-        ...prev,
-        date: format(date, DATE_FORMAT),
-      }),
-    });
-  }, []);
+  const handleDateSelect = React.useCallback(
+    (date: Date) => {
+      navigate({
+        search: (prev) => ({
+          ...prev,
+          date: format(date, DATE_FORMAT),
+        }),
+      });
+      onDateSelect(date);
+    },
+    [navigate, onDateSelect],
+  );
 
   // Update weeks when selectedDate at the edge of the year
   React.useEffect(() => {
@@ -85,7 +90,7 @@ export function WeekNavigator({
     setCenterDate(newCenterDate);
 
     const start = subWeeks(newCenterDate, 26);
-    const newWeeksForYear = Array.from({ length: 52 }).map((_, i) =>
+    const newWeeksForYear = Array.from({ length: 2 }).map((_, i) =>
       createWeekData(addWeeks(start, i)),
     );
 
@@ -97,37 +102,8 @@ export function WeekNavigator({
     console.log('weeks: ', { weeks, selectedDate });
   }, [selectedDate]);
 
-  const renderDayCell = React.useCallback(
-    (date: Date) => {
-      const isSelected = isSameDay(date, selectedDate);
-      const isToday = isSameDay(date, new Date());
-
-      return (
-        <div
-          className={cn(
-            'flex h-full w-full flex-col items-center justify-center rounded p-4',
-            'cursor-pointer transition-all duration-200',
-            {
-              'scale-105 bg-gray-800 ring-1 ring-white': isSelected,
-              'ring-2 ring-green-500': isToday && !isSelected,
-              'hover:bg-gray-800/50': !isSelected,
-            },
-          )}
-          onClick={() => {
-            handleDateSelect(date);
-            onDateSelect(date);
-          }}
-        >
-          <span className="text-sm font-medium text-gray-400">{format(date, 'EEE')}</span>
-          <span className="my-1 text-lg font-bold">{format(date, 'd')}</span>
-        </div>
-      );
-    },
-    [selectedDate, handleDateSelect, onDateSelect],
-  );
-
   return (
-    <div className={cn('mx-auto w-full bg-sidebar text-white', className)}>
+    <div className={cn('mx-auto h-[104px] w-full overflow-hidden pt-2 text-white', className)}>
       <Swiper
         direction={'horizontal'}
         speed={300}
@@ -138,14 +114,20 @@ export function WeekNavigator({
           onlyInViewport: true,
         }}
         modules={[Mousewheel, Pagination]}
-        className="w-full"
+        className="h-full w-full"
       >
         {weeks.map((week) => (
-          <SwiperSlide key={week.id}>
+          <SwiperSlide key={week.id} className="h-full">
             <div className="grid w-full grid-cols-7">
-              {/* <div className="flex max-h-full w-full justify-between"> */}
               {week.dates.map((date, i) => (
-                <div key={`${week.id}-${i}`}>{renderDayCell(date)}</div>
+                <div key={`${week.id}-${i}`} onClick={() => handleDateSelect(date)}>
+                  <DayChart
+                    date={format(date, 'yyyy-MM-dd')}
+                    isSelected={isSameDay(date, selectedDate)}
+                    isToday={isSameDay(date, new Date())}
+                    progress={isSameDay(date, selectedDate) ? 65 : 0}
+                  />
+                </div>
               ))}
             </div>
           </SwiperSlide>

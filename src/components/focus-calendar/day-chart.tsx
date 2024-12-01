@@ -1,63 +1,78 @@
-import { Label, PolarGrid, PolarRadiusAxis, RadialBar, RadialBarChart } from 'recharts';
+import { format } from 'date-fns';
+import { memo } from 'react';
+import { PolarAngleAxis, RadialBar, RadialBarChart } from 'recharts';
+import { cn } from '../../lib/utils';
+import { ChartConfig, ChartContainer } from '../ui/chart';
 
-import { ChartConfig } from '@/components/ui/chart';
-import React from 'react';
-const chartData = [{ browser: 'safari', visitors: 200, fill: 'var(--color-safari)' }];
+export type DayChartProps = {
+  progress: number;
+  date: string;
+  isSelected: boolean;
+  isToday: boolean;
+};
 
 const chartConfig = {
-  visitors: {
-    label: 'Visitors',
+  desktop: {
+    label: 'Desktop',
+    color: '#red',
   },
-  safari: {
-    label: 'Safari',
-    color: 'hsl(var(--chart-2))',
+  mobile: {
+    label: 'Mobile',
+    color: '#60a5fa',
   },
 } satisfies ChartConfig;
 
-export function DayChart() {
+function DayChart({ date, progress, isSelected, isToday }: DayChartProps) {
+  // Convert percentage string to number properly
+  // const value = parseInt(progress.replace('%', ''));
+  const data = [{ value: progress }]; // Simple array with value object
+
   return (
-    <RadialBarChart
-      data={chartData}
-      startAngle={0}
-      endAngle={250}
-      innerRadius={80}
-      outerRadius={110}
-    >
-      <PolarGrid
-        gridType="circle"
-        radialLines={false}
-        stroke="none"
-        className="first:fill-muted last:fill-background"
-        polarRadius={[86, 74]}
-      />
-      <RadialBar dataKey="visitors" background cornerRadius={10} />
-      <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
-        <Label
-          content={({ viewBox }) => {
-            if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
-              return (
-                <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                  <tspan
-                    x={viewBox.cx}
-                    y={viewBox.cy}
-                    className="fill-foreground text-4xl font-bold"
-                  >
-                    {/* {chartData[0].visitors.toLocaleString()} */}
-                    <span>8 / 13</span>
-                  </tspan>
-                  <tspan
-                    x={viewBox.cx}
-                    y={(viewBox.cy || 0) + 24}
-                    className="fill-muted-foreground"
-                  >
-                    {/* 8 / 13 */}
-                  </tspan>
-                </text>
-              );
-            }
-          }}
-        />
-      </PolarRadiusAxis>
-    </RadialBarChart>
+    <div className="flex w-full cursor-pointer flex-col items-center">
+      <div
+        className={cn(
+          'text-center text-xs font-light text-gray-400/90',
+          isSelected && 'font-semibold text-white',
+          isToday && 'text-green-600',
+        )}
+      >
+        {format(new Date(date), 'EEE')}
+      </div>
+      <ChartContainer config={chartConfig} className={'h-20 w-full'}>
+        <RadialBarChart
+          width={100}
+          height={100}
+          data={data}
+          innerRadius="70%"
+          outerRadius="100%"
+          startAngle={90}
+          endAngle={-270}
+        >
+          <RadialBar
+            background
+            dataKey="value"
+            data={[{ value: progress }]}
+            cornerRadius={5}
+            fill="hsl(var(--ring))"
+          />
+          <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+          <text
+            x="50%"
+            y="50%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className={cn(
+              'fill-gray-400 text-xs',
+              isSelected && 'fill-white font-semibold',
+              isToday && 'font-semibold',
+            )}
+          >
+            {format(new Date(date), 'd')}
+          </text>
+        </RadialBarChart>
+      </ChartContainer>
+    </div>
   );
 }
+
+export default memo(DayChart);

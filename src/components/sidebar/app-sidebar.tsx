@@ -1,4 +1,4 @@
-import { Component, Focus, Hash, PaintBucket } from 'lucide-react';
+import { Component, Focus } from 'lucide-react';
 import * as React from 'react';
 
 import { NavUser } from '@/components/sidebar/nav-user';
@@ -19,34 +19,6 @@ const data = {
     email: '',
     avatar: '/avatars/shadcn.jpg',
   },
-  navMain: [
-    {
-      title: 'Backglog',
-      url: 'groups/backlog',
-      icon: PaintBucket,
-      isActive: true,
-      iconColor: 'gray',
-    },
-    {
-      title: 'Work',
-      url: 'groups/work',
-      icon: Hash,
-      isActive: false,
-      iconColor: 'yellow',
-    },
-    {
-      title: 'Personal',
-      url: 'groups/personal',
-      icon: Hash,
-      iconColor: 'lightblue',
-    },
-    {
-      title: 'Side hustle',
-      url: 'groups/side-hustle',
-      icon: Hash,
-      iconColor: 'lightgreen',
-    },
-  ],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
