@@ -21,43 +21,63 @@ function createWeekData(startDate: Date): WeekData {
   };
 }
 
-export function WeekNavigator({
-  className,
-  onDateSelect,
-}: {
-  className?: string;
-  onDateSelect: (date: Date) => void;
-}) {
-  const [currentIndex, setCurrentIndex] = React.useState(2); // initial middle position
+export function WeekNavigator({ className }: { className?: string }) {
   const [isTransitioning, setIsTransitioning] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   const search = useSearch({ from: '/' });
   const navigate = useNavigate({ from: FocusRoute.fullPath });
   const today = new Date();
-  const selectedDate = React.useMemo(
-    () => (search.date ? parse(search.date, DATE_FORMAT, today) : today),
-    [search.date],
+
+  const [selectedDate, setSelectedDate] = React.useState(() =>
+    search.date ? parse(search.date, DATE_FORMAT, today) : today,
   );
 
   const [weeks, setWeeks] = React.useState(() => {
     const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-    return Array.from({ length: 5 }).map((_, offset) => {
-      const weekStart = addWeeks(currentWeekStart, offset - 2); // offset - 2 puts current week in center
+    return Array.from({ length: 3 }).map((_, offset) => {
+      const weekStart = addWeeks(currentWeekStart, offset - 1);
       return createWeekData(weekStart);
     });
   });
 
   const weekContainerRef = React.useRef<HTMLDivElement>(null);
   const weekRef = React.useRef<HTMLDivElement>(null);
+
+  // Initialize with today's date immediately if no date in URL
+  React.useEffect(() => {
+    gsap.set('.week', { xPercent: -100 });
+
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        date: format(today, DATE_FORMAT),
+      }),
+    });
+  }, []);
+
+  const handleDateSelect = React.useCallback(
+    (date: Date) => {
+      setSelectedDate(date);
+
+      navigate({
+        search: (prev) => ({
+          ...prev,
+          date: format(date, DATE_FORMAT),
+        }),
+      });
+    },
+    [search.date],
+  );
+
   const handleNext = React.useCallback(() => {
-    setWeeks((current) => {
-      const lastWeek = current[current.length - 1];
-      const newWeeks = [
-        ...current.slice(1),
-        createWeekData(addWeeks(startOfWeek(lastWeek.dates[0]), 1)),
-      ];
-      return newWeeks;
+    const nextDate = addWeeks(selectedDate, 1);
+    setSelectedDate(nextDate);
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        date: format(nextDate, DATE_FORMAT),
+      }),
     });
 
     gsap.fromTo(
@@ -67,28 +87,18 @@ export function WeekNavigator({
         xPercent: '-=100',
         duration: 0.4,
         ease: 'power1.inOut',
-        onComplete: () => {
-          // TODO: To solve the long wheel events issue, as a last resort we can clone the container and replace it
-          // and then attach / hydrate the events again to the new container element
-          // const weeksContainer = containerRef.current;
-          // const newWeeksContainer = weeksContainer?.cloneNode(true);
-          // if (!weeksContainer || !newWeeksContainer) return;
-          // weeksContainer?.parentNode?.replaceChild(newWeeksContainer, weeksContainer);
-          // SOMEHOW, hydrate the new container with the events here?
-        },
       },
     );
-    setCurrentIndex(2); // Reset to middle position
-  }, []);
+  }, [selectedDate, navigate]);
 
   const handlePrev = React.useCallback(() => {
-    setWeeks((current) => {
-      const firstWeek = current[0];
-      const newWeeks = [
-        createWeekData(addWeeks(startOfWeek(firstWeek.dates[0]), -1)),
-        ...current.slice(0, -1),
-      ];
-      return newWeeks;
+    const prevDate = addWeeks(selectedDate, -1);
+    setSelectedDate(prevDate);
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        date: format(prevDate, DATE_FORMAT),
+      }),
     });
 
     gsap.fromTo(
@@ -100,21 +110,18 @@ export function WeekNavigator({
         ease: 'power1.inOut',
       },
     );
-    setCurrentIndex(2); // Reset to middle position
-  }, []);
+  }, [selectedDate, navigate]);
 
-  const handleDateSelect = React.useCallback(
-    (date: Date) => {
-      navigate({
-        search: (prev) => ({
-          ...prev,
-          date: format(date, DATE_FORMAT),
-        }),
-      });
-      onDateSelect(date);
-    },
-    [navigate, onDateSelect],
-  );
+  // Update weeks when selectedDate changes
+  React.useEffect(() => {
+    const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+    setWeeks(
+      Array.from({ length: 3 }).map((_, offset) => {
+        const weekStart = addWeeks(currentWeekStart, offset - 1);
+        return createWeekData(weekStart);
+      }),
+    );
+  }, [selectedDate]);
 
   useGesture(
     {
@@ -147,20 +154,14 @@ export function WeekNavigator({
   return (
     <div
       ref={containerRef}
-      className={cn('relative mx-auto h-[104px] w-full overflow-hidden pt-2 text-white', className)}
+      className={cn(
+        'relative mx-auto h-[104px] w-full overflow-hidden pt-2 text-white [touch-action:none]',
+        className,
+      )}
     >
       <div ref={weekContainerRef} className="flex h-full w-full">
-        {weeks.map((weekData, index) => (
-          <div
-            ref={weekRef}
-            key={weekData.id}
-            className={cn(
-              'week w-full flex-shrink-0',
-              // TODO: it's a bit janky, need to fix
-              // why we see the pre-pre week over the current week?
-              index === currentIndex ? 'bg-background' : 'bg-background',
-            )}
-          >
+        {weeks.map((weekData) => (
+          <div ref={weekRef} key={weekData.id} className="week w-full flex-shrink-0 bg-background">
             <div className="grid w-full grid-cols-7">
               {weekData.dates.map((date, i) => (
                 <div key={i} onClick={() => handleDateSelect(date)}>

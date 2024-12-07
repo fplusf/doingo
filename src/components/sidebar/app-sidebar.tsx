@@ -30,6 +30,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton size="lg" asChild>
               <Link
                 to="/"
+                search={{ date: new Date().toISOString().split('T')[0] }}
                 activeProps={{ className: 'active' }}
                 inactiveProps={{ className: 'inactive' }}
               >

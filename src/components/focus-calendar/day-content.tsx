@@ -1,3 +1,4 @@
+import { useSearch } from '@tanstack/react-router';
 import React, { TouchEvent, useRef } from 'react';
 
 interface DayContentProps {
@@ -5,14 +6,15 @@ interface DayContentProps {
   onDateChange: (newDate: Date) => void;
 }
 
-const DayContent: React.FC<DayContentProps> = ({ selectedDate, onDateChange }) => {
+const DayContent: React.FC<DayContentProps> = () => {
+  const search = useSearch({ from: '/' });
   const touchStartX = useRef<number | null>(null);
 
-  const handleSwipe = (direction: 'left' | 'right') => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(selectedDate.getDate() + (direction === 'left' ? 1 : -1));
-    onDateChange(newDate);
-  };
+  // const handleSwipe = (direction: 'left' | 'right') => {
+  //   const newDate = new Date(selectedDate);
+  //   newDate.setDate(selectedDate.getDate() + (direction === 'left' ? 1 : -1));
+  //   onDateChange(newDate);
+  // };
 
   const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
     touchStartX.current = e.touches[0].clientX;
@@ -24,8 +26,8 @@ const DayContent: React.FC<DayContentProps> = ({ selectedDate, onDateChange }) =
     const touchEndX = e.changedTouches[0].clientX;
     const diff = touchStartX.current - touchEndX;
 
-    if (diff > 50) handleSwipe('left');
-    else if (diff < -50) handleSwipe('right');
+    // if (diff > 50) handleSwipe('left');
+    // else if (diff < -50) handleSwipe('right');
 
     touchStartX.current = null;
   };
@@ -36,7 +38,7 @@ const DayContent: React.FC<DayContentProps> = ({ selectedDate, onDateChange }) =
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <h2 className="text-xl">Content for {selectedDate.toDateString()}</h2>
+      <h2 className="text-xl">Content for {search.date}</h2>
       {/* Add day-specific content here */}
     </div>
   );
