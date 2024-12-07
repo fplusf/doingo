@@ -5,15 +5,35 @@ import {
   TopSidebarTriggerVisible,
 } from '@/components/sidebar/left-sidebar-trigger';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { useSearch } from '@tanstack/react-router';
+import { format } from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import React from 'react';
+import { Button } from '../components/ui/button';
+import { useWeekNavigation } from '../hooks/use-week-navigation';
 
 export default function BaseLayout({ children }: { children: React.ReactNode }) {
+  const search = useSearch({ from: '/' });
+  const { handleNext, handlePrev } = useWeekNavigation();
+
   return (
     <div className="flex h-screen flex-col">
       <DragWindowRegion>
         <TopSidebarTriggerVisible />
-        <div className="ml-32 flex max-w-max">
-          Today, 18 Nov <span className="font-semibold text-green-600">&nbsp;2024</span>
+        <div className="ml-12 flex max-w-max">
+          {/* Today, 18 Nov <span className="font-semibold text-green-600">&nbsp;2024</span> */}
+
+          <div className="flex items-center justify-center">
+            <Button onClick={handlePrev} variant="ghost" size="icon" className="h-7 w-7">
+              <ChevronLeft />
+            </Button>
+            <span className="mx-2 w-[127px] text-center">
+              {format(search.date ? new Date(search.date) : new Date(), 'MMMM yyyy')}
+            </span>
+            <Button onClick={handleNext} variant="ghost" size="icon" className="h-7 w-7">
+              <ChevronRight />
+            </Button>
+          </div>
         </div>
       </DragWindowRegion>
 

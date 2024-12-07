@@ -1,13 +1,10 @@
-import { gsap } from '@/lib/gsap';
 import { cn } from '@/lib/utils';
-import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useGesture } from '@use-gesture/react';
-import { addDays, addWeeks, format, isSameDay, parse, startOfWeek } from 'date-fns';
+import { addDays, addWeeks, format, isSameDay, startOfWeek } from 'date-fns';
 import * as React from 'react';
-import { FocusRoute } from '../../routes/routes';
+import { useWeekNavigation } from '../../hooks/use-week-navigation';
+import { DATE_FORMAT } from '../../shared/constants/date';
 import DayChart from './day-chart';
-
-const DATE_FORMAT = 'yyyy-MM-dd';
 
 interface WeekData {
   id: string;
@@ -22,16 +19,9 @@ function createWeekData(startDate: Date): WeekData {
 }
 
 export function WeekNavigator({ className }: { className?: string }) {
+  const { selectedDate, handleDateSelect, handleNext, handlePrev } = useWeekNavigation();
   const [isTransitioning, setIsTransitioning] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
-
-  const search = useSearch({ from: '/' });
-  const navigate = useNavigate({ from: FocusRoute.fullPath });
-  const today = new Date();
-
-  const [selectedDate, setSelectedDate] = React.useState(() =>
-    search.date ? parse(search.date, DATE_FORMAT, today) : today,
-  );
 
   const [weeks, setWeeks] = React.useState(() => {
     const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
@@ -44,75 +34,6 @@ export function WeekNavigator({ className }: { className?: string }) {
   const weekContainerRef = React.useRef<HTMLDivElement>(null);
   const weekRef = React.useRef<HTMLDivElement>(null);
 
-  // Initialize with today's date immediately if no date in URL
-  React.useEffect(() => {
-    gsap.set('.week', { xPercent: -100 });
-
-    navigate({
-      search: (prev) => ({
-        ...prev,
-        date: format(today, DATE_FORMAT),
-      }),
-    });
-  }, []);
-
-  const handleDateSelect = React.useCallback(
-    (date: Date) => {
-      setSelectedDate(date);
-
-      navigate({
-        search: (prev) => ({
-          ...prev,
-          date: format(date, DATE_FORMAT),
-        }),
-      });
-    },
-    [search.date],
-  );
-
-  const handleNext = React.useCallback(() => {
-    const nextDate = addWeeks(selectedDate, 1);
-    setSelectedDate(nextDate);
-    navigate({
-      search: (prev) => ({
-        ...prev,
-        date: format(nextDate, DATE_FORMAT),
-      }),
-    });
-
-    gsap.fromTo(
-      '.week',
-      { xPercent: 0 },
-      {
-        xPercent: '-=100',
-        duration: 0.4,
-        ease: 'power1.inOut',
-      },
-    );
-  }, [selectedDate, navigate]);
-
-  const handlePrev = React.useCallback(() => {
-    const prevDate = addWeeks(selectedDate, -1);
-    setSelectedDate(prevDate);
-    navigate({
-      search: (prev) => ({
-        ...prev,
-        date: format(prevDate, DATE_FORMAT),
-      }),
-    });
-
-    gsap.fromTo(
-      '.week',
-      { xPercent: -200 },
-      {
-        xPercent: -100,
-        duration: 0.4,
-        ease: 'power1.inOut',
-      },
-    );
-  }, [selectedDate, navigate]);
-
-  // Update weeks when selectedDate changes
   React.useEffect(() => {
     const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
     setWeeks(
@@ -125,14 +46,14 @@ export function WeekNavigator({ className }: { className?: string }) {
 
   useGesture(
     {
-      onDragEnd: ({ direction: [xDir] }) => {
-        if (isTransitioning) return;
-        if (xDir < 0) {
-          handleNext();
-        } else if (xDir > 0) {
-          handlePrev();
-        }
-      },
+      // onDragEnd: ({ direction: [xDir] }) => {
+      //   if (isTransitioning) return;
+      //   if (xDir < 0) {
+      //     handleNext();
+      //   } else if (xDir > 0) {
+      //     handlePrev();
+      //   }
+      // },
       onWheel: ({ delta: [dx] }) => {
         if (isTransitioning) return;
 
@@ -168,7 +89,7 @@ export function WeekNavigator({ className }: { className?: string }) {
                   <DayChart
                     date={format(date, 'yyyy-MM-dd')}
                     isSelected={isSameDay(date, selectedDate)}
-                    isToday={isSameDay(date, today)}
+                    isToday={isSameDay(date, new Date())}
                     progress={isSameDay(date, selectedDate) ? 65 : 0}
                   />
                 </div>
