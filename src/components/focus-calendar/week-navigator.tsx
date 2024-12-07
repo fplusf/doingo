@@ -1,11 +1,9 @@
+import { gsap } from '@/lib/gsap';
 import { cn } from '@/lib/utils';
 import { useNavigate, useSearch } from '@tanstack/react-router';
+import { useGesture } from '@use-gesture/react';
 import { addDays, addWeeks, format, isSameDay, parse, startOfWeek } from 'date-fns';
 import * as React from 'react';
-import 'swiper/css';
-import 'swiper/css/virtual';
-import { Mousewheel, Virtual } from 'swiper/modules';
-import { Swiper, SwiperClass, SwiperSlide } from 'swiper/react';
 import { FocusRoute } from '../../routes/routes';
 import DayChart from './day-chart';
 
@@ -30,9 +28,9 @@ export function WeekNavigator({
   className?: string;
   onDateSelect: (date: Date) => void;
 }) {
-  const [swiperRef, setSwiperRef] = React.useState<SwiperClass | null>(null);
-  const appendWeekRef = React.useRef(1);
-  const prependWeekRef = React.useRef(-1);
+  const [currentIndex, setCurrentIndex] = React.useState(2); // initial middle position
+  const [isTransitioning, setIsTransitioning] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   const search = useSearch({ from: '/' });
   const navigate = useNavigate({ from: FocusRoute.fullPath });
@@ -42,58 +40,68 @@ export function WeekNavigator({
     [search.date],
   );
 
-  // Initialize with 3 weeks
   const [weeks, setWeeks] = React.useState(() => {
-    const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 2 });
-    return [-1, 0, 1].map((offset) => {
-      const weekStart = addWeeks(currentWeekStart, offset);
+    const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+    return Array.from({ length: 5 }).map((_, offset) => {
+      const weekStart = addWeeks(currentWeekStart, offset - 2); // offset - 2 puts current week in center
       return createWeekData(weekStart);
     });
   });
 
-  const appendWeek = React.useCallback(() => {
-    console.log('appendWeek');
-    setWeeks((current) => [
-      ...current,
-      createWeekData(
-        addWeeks(startOfWeek(selectedDate, { weekStartsOn: 2 }), ++appendWeekRef.current),
-      ),
-    ]);
-  }, [selectedDate]);
-
-  const prependWeek = React.useCallback(() => {
-    console.log('prependWeek');
+  const weekContainerRef = React.useRef<HTMLDivElement>(null);
+  const weekRef = React.useRef<HTMLDivElement>(null);
+  const handleNext = React.useCallback(() => {
     setWeeks((current) => {
+      const lastWeek = current[current.length - 1];
       const newWeeks = [
-        createWeekData(
-          addWeeks(startOfWeek(selectedDate, { weekStartsOn: 2 }), --prependWeekRef.current),
-        ),
-        ...current,
+        ...current.slice(1),
+        createWeekData(addWeeks(startOfWeek(lastWeek.dates[0]), 1)),
       ];
-      swiperRef?.slideTo(swiperRef.activeIndex + 1, 0);
       return newWeeks;
     });
-  }, [selectedDate, swiperRef]);
 
-  // const handleWheel = React.useCallback(
-  //   (event: WheelEvent) => {
-  //     if (event.deltaY > 0) {
-  //       appendWeek();
-  //     } else {
-  //       prependWeek();
-  //     }
-  //   },
-  //   [appendWeek, prependWeek],
-  // );
+    gsap.fromTo(
+      '.week',
+      { xPercent: 0 },
+      {
+        xPercent: '-=100',
+        duration: 0.4,
+        ease: 'power1.inOut',
+        onComplete: () => {
+          // TODO: To solve the long wheel events issue, as a last resort we can clone the container and replace it
+          // and then attach / hydrate the events again to the new container element
+          // const weeksContainer = containerRef.current;
+          // const newWeeksContainer = weeksContainer?.cloneNode(true);
+          // if (!weeksContainer || !newWeeksContainer) return;
+          // weeksContainer?.parentNode?.replaceChild(newWeeksContainer, weeksContainer);
+          // SOMEHOW, hydrate the new container with the events here?
+        },
+      },
+    );
+    setCurrentIndex(2); // Reset to middle position
+  }, []);
 
-  // Add wheel event listener
-  // React.useEffect(() => {
-  //   const element = document.querySelector('.swiper-wrapper');
-  //   if (element) {
-  //     element.addEventListener('wheel', handleWheel as EventListener);
-  //     return () => element.removeEventListener('wheel', handleWheel as EventListener);
-  //   }
-  // }, [handleWheel]);
+  const handlePrev = React.useCallback(() => {
+    setWeeks((current) => {
+      const firstWeek = current[0];
+      const newWeeks = [
+        createWeekData(addWeeks(startOfWeek(firstWeek.dates[0]), -1)),
+        ...current.slice(0, -1),
+      ];
+      return newWeeks;
+    });
+
+    gsap.fromTo(
+      '.week',
+      { xPercent: -200 },
+      {
+        xPercent: -100,
+        duration: 0.4,
+        ease: 'power1.inOut',
+      },
+    );
+    setCurrentIndex(2); // Reset to middle position
+  }, []);
 
   const handleDateSelect = React.useCallback(
     (date: Date) => {
@@ -108,44 +116,51 @@ export function WeekNavigator({
     [navigate, onDateSelect],
   );
 
-  const onWheel = React.useCallback((event: WheelEvent) => {
-    console.log('onWheel', event.deltaY);
-    if (event.deltaY > 0) {
-      appendWeek();
-    } else {
-      prependWeek();
-    }
-  }, []);
+  useGesture(
+    {
+      onDragEnd: ({ direction: [xDir] }) => {
+        if (isTransitioning) return;
+        if (xDir < 0) {
+          handleNext();
+        } else if (xDir > 0) {
+          handlePrev();
+        }
+      },
+      onWheel: ({ delta: [dx] }) => {
+        if (isTransitioning) return;
 
-  // Find the current week index
-  const currentWeekIndex = React.useMemo(() => {
-    return weeks.findIndex((week) => week.dates.some((date) => isSameDay(date, selectedDate)));
-  }, [weeks, selectedDate]);
+        if (dx > 0) {
+          handleNext();
+        } else {
+          handlePrev();
+        }
+      },
+      onWheelStart: ({ delta: [dx] }) => {
+        setIsTransitioning(true);
+      },
+      onTouchEnd: () => setIsTransitioning(false),
+      onWheelEnd: () => setIsTransitioning(false),
+    },
+    { target: containerRef },
+  );
 
   return (
-    <div className={cn('mx-auto h-[104px] w-full overflow-hidden pt-2 text-white', className)}>
-      <Swiper
-        modules={[Virtual, Mousewheel]}
-        onSwiper={setSwiperRef}
-        cssMode={true}
-        direction="horizontal"
-        speed={300}
-        spaceBetween={30}
-        initialSlide={1}
-        mousewheel={true}
-        onNavigationNext={appendWeek}
-        onNavigationPrev={prependWeek}
-        onWheel={() => onWheel}
-        virtual={{
-          enabled: true,
-          addSlidesBefore: 1,
-          addSlidesAfter: 1,
-          cache: true,
-        }}
-        className="h-full w-full"
-      >
+    <div
+      ref={containerRef}
+      className={cn('relative mx-auto h-[104px] w-full overflow-hidden pt-2 text-white', className)}
+    >
+      <div ref={weekContainerRef} className="flex h-full w-full">
         {weeks.map((weekData, index) => (
-          <SwiperSlide key={weekData.id} virtualIndex={index} className="h-full">
+          <div
+            ref={weekRef}
+            key={weekData.id}
+            className={cn(
+              'week w-full flex-shrink-0',
+              // TODO: it's a bit janky, need to fix
+              // why we see the pre-pre week over the current week?
+              index === currentIndex ? 'bg-background' : 'bg-background',
+            )}
+          >
             <div className="grid w-full grid-cols-7">
               {weekData.dates.map((date, i) => (
                 <div key={i} onClick={() => handleDateSelect(date)}>
@@ -158,9 +173,9 @@ export function WeekNavigator({
                 </div>
               ))}
             </div>
-          </SwiperSlide>
+          </div>
         ))}
-      </Swiper>
+      </div>
     </div>
   );
 }
