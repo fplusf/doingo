@@ -1,8 +1,20 @@
 import { gsap } from '@/lib/gsap';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { addWeeks, format, parse } from 'date-fns';
+import { addDays, addWeeks, format, parse, startOfWeek } from 'date-fns';
 import { useCallback, useEffect, useState } from 'react';
 import { DATE_FORMAT } from '../shared/constants/date';
+
+interface WeekData {
+  id: string;
+  dates: Date[];
+}
+
+function createWeekData(startDate: Date): WeekData {
+  return {
+    id: format(startDate, DATE_FORMAT),
+    dates: Array.from({ length: 7 }).map((_, i) => addDays(startDate, i)),
+  };
+}
 
 export function useWeekNavigation() {
   const navigate = useNavigate({ from: '/' });
@@ -13,6 +25,24 @@ export function useWeekNavigation() {
     search.date ? parse(search.date, DATE_FORMAT, today) : today,
   );
 
+  const [weeks, setWeeks] = useState(() => {
+    const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+    return Array.from({ length: 3 }).map((_, offset) => {
+      const weekStart = addWeeks(currentWeekStart, offset - 1);
+      return createWeekData(weekStart);
+    });
+  });
+
+  useEffect(() => {
+    const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+    setWeeks(
+      Array.from({ length: 3 }).map((_, offset) => {
+        const weekStart = addWeeks(currentWeekStart, offset - 1);
+        return createWeekData(weekStart);
+      }),
+    );
+  }, [selectedDate]);
+
   useEffect(() => {
     if (!search.date) {
       navigate({
@@ -22,13 +52,13 @@ export function useWeekNavigation() {
         }),
       });
     } else {
-      setSelectedDate(parse(search.date, DATE_FORMAT, today));
+      const newDate = parse(search.date, DATE_FORMAT, today);
+      setSelectedDate(newDate);
     }
   }, [search.date]);
 
   const handleDateSelect = useCallback(
     (date: Date) => {
-      setSelectedDate(date);
       navigate({
         search: (prev) => ({
           ...prev,
@@ -41,7 +71,6 @@ export function useWeekNavigation() {
 
   const handleNext = useCallback(() => {
     const nextDate = addWeeks(selectedDate, 1);
-    setSelectedDate(nextDate);
     navigate({
       search: (prev) => ({
         ...prev,
@@ -62,7 +91,6 @@ export function useWeekNavigation() {
 
   const handlePrev = useCallback(() => {
     const prevDate = addWeeks(selectedDate, -1);
-    setSelectedDate(prevDate);
     navigate({
       search: (prev) => ({
         ...prev,
@@ -83,6 +111,7 @@ export function useWeekNavigation() {
 
   return {
     selectedDate,
+    weeks,
     handleDateSelect,
     handleNext,
     handlePrev,

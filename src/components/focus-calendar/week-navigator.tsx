@@ -1,61 +1,21 @@
 import { cn } from '@/lib/utils';
 import { useGesture } from '@use-gesture/react';
-import { addDays, addWeeks, format, isSameDay, startOfWeek } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import * as React from 'react';
 import { useWeekNavigation } from '../../hooks/use-week-navigation';
-import { DATE_FORMAT } from '../../shared/constants/date';
 import DayChart from './day-chart';
 
-interface WeekData {
-  id: string;
-  dates: Date[];
-}
+let isTransitioning = false;
 
-function createWeekData(startDate: Date): WeekData {
-  return {
-    id: format(startDate, DATE_FORMAT),
-    dates: Array.from({ length: 7 }).map((_, i) => addDays(startDate, i)),
-  };
-}
-
-export function WeekNavigator({ className }: { className?: string }) {
-  const { selectedDate, handleDateSelect, handleNext, handlePrev } = useWeekNavigation();
-  const [isTransitioning, setIsTransitioning] = React.useState(false);
+function WeekNavigator({ className }: { className?: string }) {
+  const { selectedDate, weeks, handleDateSelect, handleNext, handlePrev } = useWeekNavigation();
   const containerRef = React.useRef<HTMLDivElement>(null);
-
-  const [weeks, setWeeks] = React.useState(() => {
-    const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-    return Array.from({ length: 3 }).map((_, offset) => {
-      const weekStart = addWeeks(currentWeekStart, offset - 1);
-      return createWeekData(weekStart);
-    });
-  });
-
-  const weekContainerRef = React.useRef<HTMLDivElement>(null);
-  const weekRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-    setWeeks(
-      Array.from({ length: 3 }).map((_, offset) => {
-        const weekStart = addWeeks(currentWeekStart, offset - 1);
-        return createWeekData(weekStart);
-      }),
-    );
-  }, [selectedDate]);
 
   useGesture(
     {
-      // onDragEnd: ({ direction: [xDir] }) => {
-      //   if (isTransitioning) return;
-      //   if (xDir < 0) {
-      //     handleNext();
-      //   } else if (xDir > 0) {
-      //     handlePrev();
-      //   }
-      // },
       onWheel: ({ delta: [dx] }) => {
         if (isTransitioning) return;
+        isTransitioning = true;
 
         if (dx > 0) {
           handleNext();
@@ -63,11 +23,9 @@ export function WeekNavigator({ className }: { className?: string }) {
           handlePrev();
         }
       },
-      onWheelStart: ({ delta: [dx] }) => {
-        setIsTransitioning(true);
+      onWheelEnd: () => {
+        isTransitioning = false;
       },
-      onTouchEnd: () => setIsTransitioning(false),
-      onWheelEnd: () => setIsTransitioning(false),
     },
     { target: containerRef },
   );
@@ -80,9 +38,9 @@ export function WeekNavigator({ className }: { className?: string }) {
         className,
       )}
     >
-      <div ref={weekContainerRef} className="flex h-full w-full">
+      <div className="flex h-full w-full">
         {weeks.map((weekData) => (
-          <div ref={weekRef} key={weekData.id} className="week w-full flex-shrink-0 bg-background">
+          <div key={weekData.id} className="week w-full flex-shrink-0 bg-background">
             <div className="grid w-full grid-cols-7">
               {weekData.dates.map((date, i) => (
                 <div key={i} onClick={() => handleDateSelect(date)}>
@@ -101,3 +59,5 @@ export function WeekNavigator({ className }: { className?: string }) {
     </div>
   );
 }
+
+export default React.memo(WeekNavigator);
