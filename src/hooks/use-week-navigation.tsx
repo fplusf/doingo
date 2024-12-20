@@ -1,6 +1,14 @@
 import { gsap } from '@/lib/gsap';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { addDays, addWeeks, format, parse, startOfWeek } from 'date-fns';
+import {
+  addDays,
+  addWeeks,
+  differenceInWeeks,
+  format,
+  isSameWeek,
+  parse,
+  startOfWeek,
+} from 'date-fns';
 import { useCallback, useEffect, useState } from 'react';
 import { DATE_FORMAT } from '../shared/constants/date';
 
@@ -24,23 +32,33 @@ export function useWeekNavigation() {
   const [selectedDate, setSelectedDate] = useState(() =>
     search.date ? parse(search.date, DATE_FORMAT, today) : today,
   );
+  const [viewDate, setViewDate] = useState(() => selectedDate);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const [weeks, setWeeks] = useState(() => {
-    const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+    const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
     return Array.from({ length: 3 }).map((_, offset) => {
       const weekStart = addWeeks(currentWeekStart, offset - 1);
       return createWeekData(weekStart);
     });
   });
 
+  // Position to middle week immediately without animation
   useEffect(() => {
-    const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-    setWeeks(
-      Array.from({ length: 3 }).map((_, offset) => {
-        const weekStart = addWeeks(currentWeekStart, offset - 1);
-        return createWeekData(weekStart);
-      }),
-    );
+    if (!isInitialized) {
+      gsap.set('.week', { xPercent: -100 }); // Ensure middle week is shown
+      setIsInitialized(true);
+    }
+  }, [isInitialized]);
+
+  useEffect(() => {
+    const currentWeekStart = startOfWeek(viewDate, { weekStartsOn: 1 });
+    const newWeeks = Array.from({ length: 3 }).map((_, offset) => {
+      const weekStart = addWeeks(currentWeekStart, offset - 1);
+      return createWeekData(weekStart);
+    });
+    setWeeks(newWeeks);
+    console.log('weeks', weeks);
   }, [selectedDate]);
 
   useEffect(() => {
@@ -53,7 +71,9 @@ export function useWeekNavigation() {
       });
     } else {
       const newDate = parse(search.date, DATE_FORMAT, today);
+      const newWeekStart = startOfWeek(newDate, { weekStartsOn: 1 });
       setSelectedDate(newDate);
+      setViewDate(newWeekStart); // It's causing the issue of re-renders
     }
   }, [search.date]);
 
@@ -70,7 +90,9 @@ export function useWeekNavigation() {
   );
 
   const handleNext = useCallback(() => {
-    const nextDate = addWeeks(selectedDate, 1);
+    const nextDate = addWeeks(viewDate, 1);
+    const nextWeekStart = startOfWeek(nextDate, { weekStartsOn: 1 });
+    setViewDate(nextWeekStart);
     navigate({
       search: (prev) => ({
         ...prev,
@@ -78,19 +100,13 @@ export function useWeekNavigation() {
       }),
     });
 
-    gsap.fromTo(
-      '.week',
-      { xPercent: 0 },
-      {
-        xPercent: '-=100',
-        duration: 0.4,
-        ease: 'power1.inOut',
-      },
-    );
-  }, [selectedDate, navigate]);
+    nextAnimation();
+  }, [viewDate, navigate]);
 
   const handlePrev = useCallback(() => {
-    const prevDate = addWeeks(selectedDate, -1);
+    const prevDate = addWeeks(viewDate, -1);
+    const prevWeekStart = startOfWeek(prevDate, { weekStartsOn: 1 });
+    setViewDate(prevWeekStart);
     navigate({
       search: (prev) => ({
         ...prev,
@@ -98,6 +114,51 @@ export function useWeekNavigation() {
       }),
     });
 
+    prevAnimation();
+  }, [viewDate, navigate]);
+
+  const navigateToDate = useCallback(
+    (targetDate: Date) => {
+      if (!targetDate) return;
+
+      const targetWeekStart = startOfWeek(targetDate, { weekStartsOn: 1 });
+
+      // Update viewDate first to trigger weeks update
+      setViewDate(targetWeekStart);
+
+      // Then update URL with the actual target date
+      navigate({
+        search: (prev) => ({
+          ...prev,
+          date: format(targetDate, DATE_FORMAT),
+        }),
+      });
+
+      const isSame = isSameWeek(targetDate, selectedDate, {
+        weekStartsOn: 1,
+      });
+
+      // if the target date is the same as the selected date, just update search param
+      // and do not animate
+      if (isSame) {
+        return;
+      }
+
+      setTimeout(() => {
+        const isBefore = targetDate < selectedDate;
+
+        // Ensure middle week is shown
+        if (isBefore) {
+          prevAnimation();
+        } else {
+          nextAnimation();
+        }
+      }, 100);
+    },
+    [navigate, selectedDate],
+  );
+
+  const prevAnimation = () => {
     gsap.fromTo(
       '.week',
       { xPercent: -200 },
@@ -107,7 +168,19 @@ export function useWeekNavigation() {
         ease: 'power1.inOut',
       },
     );
-  }, [selectedDate, navigate]);
+  };
+
+  const nextAnimation = () => {
+    gsap.fromTo(
+      '.week',
+      { xPercent: 0 },
+      {
+        xPercent: '-=100',
+        duration: 0.4,
+        ease: 'power1.inOut',
+      },
+    );
+  };
 
   return {
     selectedDate,
@@ -115,5 +188,6 @@ export function useWeekNavigation() {
     handleDateSelect,
     handleNext,
     handlePrev,
+    navigateToDate,
   };
 }

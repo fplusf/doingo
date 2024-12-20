@@ -3,7 +3,10 @@ import React, { type ReactNode } from 'react';
 
 interface DragWindowRegionProps {
   title?: ReactNode;
-  children?: ReactNode;
+  children?: {
+    left: ReactNode;
+    right: ReactNode;
+  };
 }
 
 export default function DragWindowRegion({ title, children }: DragWindowRegionProps) {
@@ -21,10 +24,11 @@ export default function DragWindowRegion({ title, children }: DragWindowRegionPr
             </div>
           )}
           {/* Interactive elements with explicit no-drag */}
-          <div className="no-drag items-centerd my-2.5 ml-20 flex">{children}</div>
+          <div className="no-drag items-centerd my-2.5 ml-20 flex">{children?.left}</div>
           <div className="draglayer flex-1 bg-sidebar">
             {/* it's just adding drag zone in between of the action area */}
           </div>
+          <div>{children?.right}</div>
         </div>
       </div>
     </div>
