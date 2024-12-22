@@ -11,6 +11,7 @@ import {
 } from 'date-fns';
 import { useCallback, useEffect, useState } from 'react';
 import { DATE_FORMAT } from '../shared/constants/date';
+import { FocusRoute } from '../routes/routes';
 
 interface WeekData {
   id: string;
@@ -25,8 +26,8 @@ function createWeekData(startDate: Date): WeekData {
 }
 
 export function useWeekNavigation() {
-  const navigate = useNavigate({ from: '/' });
-  const search = useSearch({ from: '/' });
+  const navigate = useNavigate({ from: FocusRoute.fullPath });
+  const search = useSearch({ from: FocusRoute.fullPath });
   const today = new Date();
 
   const [selectedDate, setSelectedDate] = useState(() =>
@@ -58,7 +59,6 @@ export function useWeekNavigation() {
       return createWeekData(weekStart);
     });
     setWeeks(newWeeks);
-    console.log('weeks', weeks);
   }, [selectedDate]);
 
   useEffect(() => {

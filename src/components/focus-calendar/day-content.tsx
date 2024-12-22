@@ -1,5 +1,6 @@
 import { useSearch } from '@tanstack/react-router';
 import React, { TouchEvent, useRef } from 'react';
+import { FocusRoute } from '../../routes/routes';
 
 interface DayContentProps {
   selectedDate: Date;
@@ -7,7 +8,7 @@ interface DayContentProps {
 }
 
 const DayContent: React.FC<DayContentProps> = () => {
-  const search = useSearch({ from: '/' });
+  const search = useSearch({ from: FocusRoute.fullPath });
   const touchStartX = useRef<number | null>(null);
 
   // const handleSwipe = (direction: 'left' | 'right') => {

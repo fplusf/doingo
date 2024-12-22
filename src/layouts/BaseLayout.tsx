@@ -12,10 +12,11 @@ import React from 'react';
 import { DatePicker } from '@/components/calendar/header-calendar';
 import { Button } from '@/components/ui/button';
 import { useWeekNavigation } from '../hooks/use-week-navigation';
+import { RootRoute } from '../routes/__root';
 
 export default function BaseLayout({ children }: { children: React.ReactNode }) {
-  const search = useSearch({ from: '/' });
-  const { handleNext, handlePrev } = useWeekNavigation();
+  const search = useSearch({ from: RootRoute.fullPath });
+  const { handleNext, handlePrev, navigateToDate } = useWeekNavigation();
 
   return (
     <div className="flex h-screen flex-col">
@@ -25,13 +26,17 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
             <>
               <TopSidebarTriggerVisible />
               <div className="ml-12 flex max-w-max">
-                {/* Today, 18 Nov <span className="font-semibold text-green-600">&nbsp;2024</span> */}
-
                 <div className="flex items-center justify-center">
                   <Button onClick={handlePrev} variant="ghost" size="icon" className="h-7 w-7">
                     <ChevronLeft />
                   </Button>
-                  <span className="mx-2 w-[127px] text-center">
+                  {/* Navigate to Today when clicked on the Month label */}
+                  <span
+                    onClick={() => {
+                      navigateToDate(new Date());
+                    }}
+                    className="mx-2 w-[127px] cursor-pointer text-center"
+                  >
                     {format(search.date ? new Date(search.date) : new Date(), 'MMMM yyyy')}
                   </span>
                   <Button onClick={handleNext} variant="ghost" size="icon" className="h-7 w-7">

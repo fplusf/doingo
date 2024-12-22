@@ -28,7 +28,7 @@ export default function DragWindowRegion({ title, children }: DragWindowRegionPr
           <div className="draglayer flex-1 bg-sidebar">
             {/* it's just adding drag zone in between of the action area */}
           </div>
-          <div>{children?.right}</div>
+          <div className="no-drag">{children?.right}</div>
         </div>
       </div>
     </div>

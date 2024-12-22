@@ -1,39 +1,42 @@
 import * as React from 'react';
-import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
-
-import { cn } from '@/lib/utils';
+import { CalendarDays, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useWeekNavigation } from '../../hooks/use-week-navigation';
 
 export function DatePicker() {
-  const { navigateToDate } = useWeekNavigation();
+  const { navigateToDate, selectedDate } = useWeekNavigation();
   const [date, setDate] = React.useState<Date>();
 
+  const onselect = (date?: Date) => {
+    if (!date) return;
+
+    setDate(date);
+    navigateToDate(date);
+  };
+
   React.useEffect(() => {
-    if (date) {
-      navigateToDate(date);
-    }
-  }, [date]);
+    // sync the calendar with the current week.
+    setDate(selectedDate);
+  }, [selectedDate]);
 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          variant={'outline'}
-          className={cn(
-            'w-[280px] justify-start text-left font-normal',
-            !date && 'text-muted-foreground',
-          )}
-        >
-          <CalendarIcon />
-          {date ? format(date, 'PPP') : <span>Pick a date</span>}
+        <Button variant="ghost" size="icon" className="h-7 w-7">
+          <CalendarDays />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
-        <Calendar mode="single" weekStartsOn={1} selected={date} onSelect={setDate} initialFocus />
+        <Calendar
+          mode="single"
+          weekStartsOn={1}
+          selected={date}
+          defaultMonth={selectedDate}
+          onSelect={onselect}
+          initialFocus
+        />
       </PopoverContent>
     </Popover>
   );
