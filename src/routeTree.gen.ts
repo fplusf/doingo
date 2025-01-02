@@ -11,10 +11,17 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as SearchParamsImport } from './routes/searchParams'
 import { Route as RoutesImport } from './routes/routes'
 import { Route as RouterImport } from './routes/router'
 
 // Create/Update Routes
+
+const SearchParamsRoute = SearchParamsImport.update({
+  id: '/searchParams',
+  path: '/searchParams',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const RoutesRoute = RoutesImport.update({
   id: '/routes',
@@ -46,6 +53,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoutesImport
       parentRoute: typeof rootRoute
     }
+    '/searchParams': {
+      id: '/searchParams'
+      path: '/searchParams'
+      fullPath: '/searchParams'
+      preLoaderRoute: typeof SearchParamsImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -54,36 +68,41 @@ declare module '@tanstack/react-router' {
 export interface FileRoutesByFullPath {
   '/router': typeof RouterRoute
   '/routes': typeof RoutesRoute
+  '/searchParams': typeof SearchParamsRoute
 }
 
 export interface FileRoutesByTo {
   '/router': typeof RouterRoute
   '/routes': typeof RoutesRoute
+  '/searchParams': typeof SearchParamsRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/router': typeof RouterRoute
   '/routes': typeof RoutesRoute
+  '/searchParams': typeof SearchParamsRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/router' | '/routes'
+  fullPaths: '/router' | '/routes' | '/searchParams'
   fileRoutesByTo: FileRoutesByTo
-  to: '/router' | '/routes'
-  id: '__root__' | '/router' | '/routes'
+  to: '/router' | '/routes' | '/searchParams'
+  id: '__root__' | '/router' | '/routes' | '/searchParams'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   RouterRoute: typeof RouterRoute
   RoutesRoute: typeof RoutesRoute
+  SearchParamsRoute: typeof SearchParamsRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   RouterRoute: RouterRoute,
   RoutesRoute: RoutesRoute,
+  SearchParamsRoute: SearchParamsRoute,
 }
 
 export const routeTree = rootRoute
@@ -97,7 +116,8 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/router",
-        "/routes"
+        "/routes",
+        "/searchParams"
       ]
     },
     "/router": {
@@ -105,6 +125,9 @@ export const routeTree = rootRoute
     },
     "/routes": {
       "filePath": "routes.tsx"
+    },
+    "/searchParams": {
+      "filePath": "searchParams.ts"
     }
   }
 }

@@ -3,8 +3,18 @@ import AboutPage from '@/pages/AboutPage';
 import FocusPage from '@/pages/FocusPage';
 import Tags from '@/pages/Tags';
 import { createRoute } from '@tanstack/react-router';
-import { z } from 'zod';
 import { RootRoute } from './__root';
+import BaseLayout from '@/layouts/BaseLayout';
+
+const withBaseLayout = (Component: React.ComponentType<any>) => {
+  return function WrappedComponent(props: any) {
+    return (
+      <BaseLayout>
+        <Component {...props} />
+      </BaseLayout>
+    );
+  };
+};
 
 // TODO: Steps to add a new route:
 // 1. Create a new page component in the '../pages/' directory (e.g., NewPage.tsx)
@@ -25,40 +35,30 @@ import { RootRoute } from './__root';
 // 4. Add to routeTree: RootRoute.addChildren([HomeRoute, NewRoute, ...])
 // 5. Add Link: <Link to="/new">New Page</Link>
 
-// Define the search params schema
-const weeklyCalendarSchema = z.object({
-  week: z.string().default(new Date().toISOString().split('T')[0]).optional(),
-  date: z.string().default(new Date().toISOString().split('T')[0]).optional(),
-});
-
-// Create type from schema
-export type WeeklyCalendarSearch = z.infer<typeof weeklyCalendarSchema>;
-
 export const FocusRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: '/',
-  component: FocusPage,
-  validateSearch: weeklyCalendarSchema,
+  component: withBaseLayout(FocusPage),
 });
 
 // Parent route for /tags
 export const TagsRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: '/tags',
-  component: Tags, // This will be your wrapper component
+  component: withBaseLayout(Tags),
 });
 
 // Child route for /tags/$tagName
 export const TagDetailsRoute = createRoute({
-  getParentRoute: () => TagsRoute, // Make this a child of TagsRoute
-  path: '$tagName', // No need for /tags/ since it's nested
-  component: TagDetails,
+  getParentRoute: () => TagsRoute,
+  path: '$tagName',
+  component: withBaseLayout(TagDetails),
 });
 
 export const AboutRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: '/about',
-  component: AboutPage,
+  component: withBaseLayout(AboutPage),
 });
 
 export const rootTree = RootRoute.addChildren([FocusRoute, TagsRoute, AboutRoute, TagDetailsRoute]);
