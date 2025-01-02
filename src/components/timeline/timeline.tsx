@@ -106,13 +106,21 @@ export const CustomTimelineItem = ({
   ...props
 }: CustomTimelineItemProps) => {
   const lineHeight = React.useMemo(() => {
-    if (!startTime || !nextStartTime) return undefined;
+    if (!startTime || !nextStartTime) return 70; // default height
 
     // Calculate time difference in minutes
-    const timeDiff = (nextStartTime.getTime() - startTime.getTime()) / (1000 * 60);
+    const timeDiffMinutes = (nextStartTime.getTime() - startTime.getTime()) / (1000 * 60);
+    const timeDiffHours = timeDiffMinutes / 60;
 
-    // Convert time difference to pixels using the provided ratio
-    return Math.max(50, timeDiff * pixelsPerMinute);
+    // Different height thresholds based on duration
+    if (timeDiffHours > 3) {
+      return 170; // Max height for tasks longer than 3 hours
+    } else if (timeDiffHours >= 1) {
+      return 100; // Medium height for tasks between 1-3 hours
+    } else {
+      // For tasks less than 1 hour, use standard size with some proportional scaling
+      return Math.max(70, Math.min(85, (timeDiffMinutes * pixelsPerMinute) / 2));
+    }
   }, [startTime, nextStartTime, pixelsPerMinute]);
 
   return (

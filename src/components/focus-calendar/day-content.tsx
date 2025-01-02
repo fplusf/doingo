@@ -22,7 +22,7 @@ const DayContent: React.FC<DayContentProps> = () => {
 
   return (
     <div
-      className="mx-auto h-[calc(100vh-200px)] w-full max-w-[1100px] flex-grow overflow-y-auto rounded-2xl pb-20 pl-6 pr-16"
+      className="mx-auto h-[calc(100vh-200px)] w-full max-w-[1200px] flex-grow overflow-y-auto rounded-2xl pb-20 pl-6 pr-16"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -52,6 +52,7 @@ const DayContent: React.FC<DayContentProps> = () => {
           time="10:20—10:35 (15 min)"
           startTime={new Date('2024-01-01T10:20:00')}
           completed={true}
+          strikethrough={true}
           nextStartTime={new Date('2024-01-01T10:35:00')}
         >
           <h3 className="font-medium">Add</h3>
@@ -61,6 +62,7 @@ const DayContent: React.FC<DayContentProps> = () => {
           dotColor="#22C55E"
           time="10:45—11:00 (15 min)"
           completed={true}
+          strikethrough={true}
           startTime={new Date('2024-01-01T10:45:00')}
           nextStartTime={new Date('2024-01-01T11:00:00')}
         >
