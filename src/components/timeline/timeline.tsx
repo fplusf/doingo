@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Timeline as MuiTimeline,
   TimelineItem as MuiTimelineItem,
@@ -7,10 +6,57 @@ import {
   TimelineContent,
   TimelineDot,
 } from '@mui/lab';
+import { Box } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { Check } from 'lucide-react';
+import React from 'react';
+import { TaskPriority } from '@/store/tasks.store';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import './timeline.css';
+
+interface PriorityColors {
+  high: string;
+  medium: string;
+  low: string;
+  none: string;
+}
+
+interface PriorityLabels {
+  high: string;
+  medium: string;
+  low: string;
+  none: string;
+}
+
+const PRIORITY_COLORS: PriorityColors = {
+  high: '#ef4444', // text-red-500
+  medium: '#eab308', // text-yellow-500
+  low: '#3b82f6', // text-blue-500
+  none: '#64748b', // text-slate-500
+};
+
+const PRIORITY_LABELS: PriorityLabels = {
+  high: 'High Priority',
+  medium: 'Medium Priority',
+  low: 'Low Priority',
+  none: 'No Priority',
+};
+
+interface CustomTimelineItemProps {
+  children: React.ReactNode;
+  time: string;
+  startTime: Date;
+  nextStartTime: Date;
+  dotColor: TaskPriority;
+  completed?: boolean;
+  strikethrough?: boolean;
+  onPriorityChange?: (priority: TaskPriority) => void;
+}
+
+interface CustomTimelineProps {
+  children: React.ReactNode;
+}
 
 // Styled components to match the existing UI
 const StyledTimeline = styled(MuiTimeline)({
@@ -41,118 +87,93 @@ const StyledTimelineItem = styled(MuiTimelineItem)({
   },
 });
 
-export interface CustomTimelineProps {
-  children: React.ReactNode;
-  className?: string;
-  pixelsPerMinute?: number;
-}
-
-export const CustomTimeline = ({
-  children,
-  className,
-  pixelsPerMinute = 2,
-  ...props
-}: CustomTimelineProps) => {
-  // Convert children to array to access adjacent items
-  const childrenArray = React.Children.toArray(children);
-
-  return (
-    <StyledTimeline className={cn('custom-timeline', className)} {...props}>
-      {childrenArray.map((child, index) => {
-        if (React.isValidElement<CustomTimelineItemProps>(child)) {
-          // Pass the next item's start time to the current item
-          const nextStartTime =
-            index < childrenArray.length - 1 &&
-            React.isValidElement<CustomTimelineItemProps>(childrenArray[index + 1])
-              ? (childrenArray[index + 1] as React.ReactElement<CustomTimelineItemProps>).props
-                  .startTime
-              : undefined;
-
-          return React.cloneElement(child, {
-            ...child.props,
-            nextStartTime,
-            pixelsPerMinute,
-            key: index,
-          });
-        }
-        return child;
-      })}
-    </StyledTimeline>
-  );
-};
-
-export interface CustomTimelineItemProps {
-  children: React.ReactNode;
-  dotColor?: string;
-  time?: string;
-  startTime?: Date;
-  nextStartTime?: Date;
-  pixelsPerMinute?: number;
-  className?: string;
-  completed?: boolean;
-  strikethrough?: boolean;
-}
-
 export const CustomTimelineItem = ({
   children,
-  dotColor = '#3B82F6',
   time,
   startTime,
   nextStartTime,
-  pixelsPerMinute = 2,
-  className,
+  dotColor,
   completed = false,
   strikethrough = false,
-  ...props
+  onPriorityChange,
 }: CustomTimelineItemProps) => {
+  const timeDiffMinutes = React.useMemo(() => {
+    return (nextStartTime.getTime() - startTime.getTime()) / (1000 * 60);
+  }, [startTime, nextStartTime]);
+
   const lineHeight = React.useMemo(() => {
-    if (!startTime || !nextStartTime) return 70; // default height
-
-    // Calculate time difference in minutes
-    const timeDiffMinutes = (nextStartTime.getTime() - startTime.getTime()) / (1000 * 60);
     const timeDiffHours = timeDiffMinutes / 60;
-
-    // Different height thresholds based on duration
     if (timeDiffHours > 3) {
       return 170; // Max height for tasks longer than 3 hours
     } else if (timeDiffHours >= 1) {
       return 100; // Medium height for tasks between 1-3 hours
     } else {
-      // For tasks less than 1 hour, use standard size with some proportional scaling
-      return Math.max(70, Math.min(85, (timeDiffMinutes * pixelsPerMinute) / 2));
+      return Math.max(70, Math.min(85, timeDiffMinutes));
     }
-  }, [startTime, nextStartTime, pixelsPerMinute]);
+  }, [timeDiffMinutes]);
 
-  return (
-    <StyledTimelineItem
-      className={cn(
-        'timeline-item-wrapper',
-        className,
-        strikethrough && 'text-gray-500 line-through',
-      )}
-      sx={{
-        minHeight: lineHeight ? `${lineHeight}px` : '50px',
-      }}
-      {...props}
-    >
-      <TimelineSeparator>
+  const InteractiveDot = () => (
+    <Popover>
+      <PopoverTrigger asChild>
         <TimelineDot
           sx={{
             width: '12px',
             height: '12px',
             margin: '14px 0 0 19px',
             padding: 0,
-            backgroundColor: dotColor,
+            backgroundColor: PRIORITY_COLORS[dotColor],
             boxShadow: 'none',
             position: 'relative',
             zIndex: 1,
+            cursor: 'pointer',
+            '&:hover': {
+              backgroundColor: PRIORITY_COLORS[dotColor],
+              opacity: 0.8,
+            },
           }}
+          aria-label={`Current priority: ${PRIORITY_LABELS[dotColor]}`}
         />
+      </PopoverTrigger>
+      {onPriorityChange && (
+        <PopoverContent className="w-48 p-2">
+          <div className="flex flex-col gap-1">
+            {(Object.keys(PRIORITY_LABELS) as TaskPriority[]).map((priority) => (
+              <Button
+                key={priority}
+                variant="ghost"
+                className={cn(
+                  'flex items-center justify-start gap-2 px-2',
+                  dotColor === priority && 'bg-accent',
+                )}
+                onClick={() => onPriorityChange(priority)}
+              >
+                <div
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: PRIORITY_COLORS[priority] }}
+                />
+                <span className="text-sm">{PRIORITY_LABELS[priority]}</span>
+              </Button>
+            ))}
+          </div>
+        </PopoverContent>
+      )}
+    </Popover>
+  );
+
+  return (
+    <StyledTimelineItem
+      className={cn('timeline-item-wrapper', strikethrough && 'text-gray-500 line-through')}
+      sx={{
+        minHeight: `${lineHeight}px`,
+      }}
+    >
+      <TimelineSeparator>
+        <InteractiveDot />
         <TimelineConnector
           sx={{
             width: '2px',
             backgroundColor: '#374151',
-            height: lineHeight ? `${lineHeight - 32}px` : 'calc(100% - 32px)',
+            height: `${lineHeight - 32}px`,
             transition: 'height 0.3s ease-in-out',
             position: 'absolute',
             left: '25px',
@@ -167,21 +188,22 @@ export const CustomTimelineItem = ({
           height: '100%',
         }}
       >
-        <div className="flex w-full flex-col">
-          {time && <div className="mb-1 text-sm text-gray-400">{time}</div>}
-          <div className="flex w-full items-start justify-between">
-            <div className="flex-grow">{children}</div>
-            <div
-              className={cn(
-                'ml-4 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-gray-600',
-                completed && 'border-green-500 bg-green-500',
-              )}
-            >
-              {completed && <Check className="h-4 w-4 text-white" />}
-            </div>
-          </div>
-        </div>
+        <Box
+          sx={{
+            marginBottom: '24px',
+            marginTop: '12px',
+            textDecoration: strikethrough ? 'line-through' : 'none',
+            opacity: completed ? 0.5 : 1,
+          }}
+        >
+          <div className="text-sm text-muted-foreground">{time}</div>
+          {children}
+        </Box>
       </TimelineContent>
     </StyledTimelineItem>
   );
+};
+
+export const CustomTimeline: React.FC<CustomTimelineProps> = ({ children }) => {
+  return <StyledTimeline>{children}</StyledTimeline>;
 };
