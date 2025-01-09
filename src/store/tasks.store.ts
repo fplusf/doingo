@@ -11,6 +11,7 @@ export interface Task {
   nextStartTime: Date;
   completed: boolean;
   priority: TaskPriority;
+  dueDate?: Date;
 }
 
 interface TasksState {

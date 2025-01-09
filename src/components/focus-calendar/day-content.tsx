@@ -5,31 +5,106 @@ import { CustomTimeline, CustomTimelineItem } from '../timeline/timeline';
 import {
   TaskPriority,
   addTask,
-  deleteTask,
   tasksStore,
   updateTask,
   toggleTaskCompletion,
 } from '@/store/tasks.store';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2, Check, Calendar } from 'lucide-react';
+import { Plus, Check, Calendar, GripVertical } from 'lucide-react';
 import { useStore } from '@tanstack/react-store';
 import { Input } from '@/components/ui/input';
-import { parse } from 'date-fns';
+import { parse, addMinutes, format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DurationPicker } from './duration-picker';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface DayContentProps {}
+
+const DragHandle = () => {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="-ml-10 mb-7 h-8 w-8 cursor-grab opacity-0 transition-opacity hover:bg-accent/25 active:cursor-grabbing group-hover:opacity-40"
+    >
+      <GripVertical className="h-4 w-4" />
+    </Button>
+  );
+};
+
+const SortableTaskItem = ({ task, children }: { task: any; children: React.ReactNode }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    width: '100%',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} className="group w-full">
+      <div className="flex w-full items-center">
+        <div {...listeners} className="flex items-center">
+          <DragHandle />
+        </div>
+        <div className="w-full">{children}</div>
+      </div>
+    </div>
+  );
+};
 
 const DayContent: React.FC<DayContentProps> = () => {
   const search = useSearch({ from: FocusRoute.fullPath });
   const touchStartX = useRef<number | null>(null);
   const tasks = useStore(tasksStore, (state) => state.tasks);
   const [isCreating, setIsCreating] = useState(false);
-  const [startTime, setStartTime] = useState('10:00');
-  const [endTime, setEndTime] = useState('10:30');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [duration, setDuration] = useState('');
+  const [dueDate, setDueDate] = useState<Date>();
   const [newTask, setNewTask] = useState({
     title: '',
     priority: 'none' as TaskPriority,
   });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = tasks.findIndex((task) => task.id === active.id);
+      const newIndex = tasks.findIndex((task) => task.id === over.id);
+      const newTasks = arrayMove(tasks, oldIndex, newIndex);
+      tasksStore.setState((state) => ({
+        tasks: newTasks,
+      }));
+    }
+  };
 
   const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
     touchStartX.current = e.touches[0].clientX;
@@ -42,26 +117,35 @@ const DayContent: React.FC<DayContentProps> = () => {
     touchStartX.current = null;
   };
 
-  const handleAddTask = () => {
-    if (!newTask.title || !startTime || !endTime) return;
+  const handleDurationChange = (value: string) => {
+    setDuration(value);
+    if (startTime) {
+      const start = parse(startTime, 'HH:mm', new Date());
+      const durationInMinutes = value.includes('hr') ? parseInt(value) * 60 : parseInt(value);
+      const end = addMinutes(start, durationInMinutes);
+      setEndTime(format(end, 'HH:mm'));
+    }
+  };
 
-    const timeString = `${startTime}—${endTime}`;
-    const parsedStartTime = parse(startTime, 'HH:mm', new Date());
-    const parsedEndTime = parse(endTime, 'HH:mm', new Date());
+  const handleAddTask = () => {
+    if (!newTask.title) return;
 
     const task = {
       title: newTask.title,
-      time: timeString,
-      startTime: parsedStartTime,
-      nextStartTime: parsedEndTime,
+      time: startTime && endTime ? `${startTime}—${endTime}` : '',
+      startTime: startTime ? parse(startTime, 'HH:mm', new Date()) : new Date(),
+      nextStartTime: endTime ? parse(endTime, 'HH:mm', new Date()) : new Date(),
+      dueDate,
       completed: false,
       priority: newTask.priority,
     };
 
     addTask(task);
     setNewTask({ title: '', priority: 'none' });
-    setStartTime('10:00');
-    setEndTime('10:30');
+    setStartTime('');
+    setEndTime('');
+    setDuration('');
+    setDueDate(undefined);
     setIsCreating(false);
   };
 
@@ -72,120 +156,114 @@ const DayContent: React.FC<DayContentProps> = () => {
     } else if (e.key === 'Escape') {
       setIsCreating(false);
       setNewTask({ title: '', priority: 'none' });
+      setStartTime('');
+      setEndTime('');
+      setDuration('');
+      setDueDate(undefined);
     }
   };
 
   return (
     <div
-      className="relative mx-auto h-[calc(100vh-200px)] w-full max-w-[1200px] flex-grow overflow-y-auto rounded-2xl pb-20 pl-6 pr-16"
+      className="relative mx-auto h-[calc(100vh-200px)] w-full max-w-[1200px] flex-grow overflow-y-auto rounded-2xl pb-20 pl-10 pr-14"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       <CustomTimeline>
-        {tasks.map((task) => (
-          <CustomTimelineItem
-            key={task.id}
-            dotColor={task.priority}
-            time={task.time}
-            startTime={task.startTime}
-            nextStartTime={task.nextStartTime}
-            completed={task.completed}
-            strikethrough={task.completed}
-            onPriorityChange={(priority) => updateTask(task.id, { priority })}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext
+            items={tasks.map((task) => task.id)}
+            strategy={verticalListSortingStrategy}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h3 className="font-medium">{task.title}</h3>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => updateTask(task.id, { title: task.title })}
-                  className="h-8 w-8"
-                  aria-label="Edit task"
+            {tasks.map((task) => (
+              <SortableTaskItem key={task.id} task={task}>
+                <CustomTimelineItem
+                  dotColor={task.priority}
+                  time={task.time}
+                  startTime={task.startTime}
+                  nextStartTime={task.nextStartTime}
+                  completed={task.completed}
+                  strikethrough={task.completed}
+                  onPriorityChange={(priority) => updateTask(task.id, { priority })}
                 >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => deleteTask(task.id)}
-                  className="h-8 w-8 text-destructive"
-                  aria-label="Delete task"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-                <button
-                  type="button"
-                  onClick={() => toggleTaskCompletion(task.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      toggleTaskCompletion(task.id);
-                    }
-                  }}
-                  className={`ml-4 flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-600 transition-colors hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
-                    task.completed ? 'border-green-500 bg-green-500' : ''
-                  }`}
-                  role="checkbox"
-                  aria-checked={task.completed}
-                  aria-label="Toggle task completion"
-                  tabIndex={0}
-                >
-                  {task.completed && <Check className="h-4 w-4 text-white" />}
-                </button>
-              </div>
-            </div>
-          </CustomTimelineItem>
-        ))}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium">{task.title}</h3>
+                      {task.dueDate && (
+                        <span className="text-sm text-muted-foreground">
+                          Due: {format(task.dueDate, 'MMM d, yyyy')}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleTaskCompletion(task.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleTaskCompletion(task.id);
+                          }
+                        }}
+                        className={`ml-4 flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-600 transition-colors hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+                          task.completed ? 'border-green-500 bg-green-500' : ''
+                        }`}
+                        role="checkbox"
+                        aria-checked={task.completed}
+                        aria-label="Toggle task completion"
+                        tabIndex={0}
+                      >
+                        {task.completed && <Check className="h-4 w-4 text-white" />}
+                      </button>
+                    </div>
+                  </div>
+                </CustomTimelineItem>
+              </SortableTaskItem>
+            ))}
+          </SortableContext>
+        </DndContext>
 
         {isCreating ? (
           <CustomTimelineItem
             dotColor={newTask.priority}
-            time={`${startTime}—${endTime}`}
-            startTime={parse(startTime, 'HH:mm', new Date())}
-            nextStartTime={parse(endTime, 'HH:mm', new Date())}
+            time={startTime && endTime ? `${startTime}—${endTime}` : 'No time set'}
+            startTime={startTime ? parse(startTime, 'HH:mm', new Date()) : new Date()}
+            nextStartTime={endTime ? parse(endTime, 'HH:mm', new Date()) : new Date()}
             onPriorityChange={(priority) => setNewTask({ ...newTask, priority })}
           >
             <div className="flex items-center gap-4">
               <div className="flex flex-grow flex-col gap-2">
                 <div className="flex items-center gap-2">
+                  <Input
+                    value={newTask.title}
+                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                    onKeyDown={handleKeyDown}
+                    placeholder="What needs to be done?"
+                    className="border-none bg-transparent px-0 focus-visible:ring-0"
+                    autoFocus
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <DurationPicker value={duration} onValueChange={handleDurationChange} />
+
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" size="sm" className="gap-2">
                         <Calendar className="h-4 w-4" />
-                        Due to
+                        {dueDate ? format(dueDate, 'MMM d, yyyy') : 'Due Date'}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-2">
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="time"
-                          value={startTime}
-                          onChange={(e) => setStartTime(e.target.value)}
-                          className="w-24"
-                        />
-                        <span>—</span>
-                        <Input
-                          type="time"
-                          value={endTime}
-                          onChange={(e) => setEndTime(e.target.value)}
-                          className="w-24"
-                        />
-                      </div>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={dueDate}
+                        onSelect={setDueDate}
+                        initialFocus
+                      />
                     </PopoverContent>
                   </Popover>
                 </div>
-                <Input
-                  value={newTask.title}
-                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                  onKeyDown={handleKeyDown}
-                  placeholder="What needs to be done?"
-                  className="border-none bg-transparent px-0 focus-visible:ring-0"
-                  autoFocus
-                />
               </div>
             </div>
           </CustomTimelineItem>

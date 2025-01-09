@@ -15,7 +15,7 @@ export default function FocusPage() {
       )}
     >
       {/* Week Navigator */}
-      <WeekNavigator className="mb-6 rounded-t-2xl" />
+      <WeekNavigator className="mb-24 rounded-t-2xl" />
 
       {/* Day Content */}
       <DayContent />

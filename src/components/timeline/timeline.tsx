@@ -2,9 +2,9 @@ import {
   Timeline as MuiTimeline,
   TimelineItem as MuiTimelineItem,
   TimelineSeparator,
-  TimelineConnector,
   TimelineContent,
   TimelineDot,
+  TimelineConnector,
 } from '@mui/lab';
 import { Box } from '@mui/material';
 import { styled } from '@mui/material/styles';
@@ -13,7 +13,6 @@ import { TaskPriority } from '@/store/tasks.store';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import './timeline.css';
 
 interface PriorityColors {
   high: string;
@@ -52,6 +51,7 @@ interface CustomTimelineItemProps {
   completed?: boolean;
   strikethrough?: boolean;
   onPriorityChange?: (priority: TaskPriority) => void;
+  isNew?: boolean;
 }
 
 interface CustomTimelineProps {
@@ -71,7 +71,7 @@ const StyledTimelineItem = styled(MuiTimelineItem)({
   minHeight: '50px',
   padding: 0,
   '&:last-child .MuiTimelineConnector-root': {
-    display: 'none',
+    display: 'block',
   },
   '& .MuiTimelineSeparator-root': {
     width: '2px',
@@ -82,8 +82,9 @@ const StyledTimelineItem = styled(MuiTimelineItem)({
     backgroundColor: '#374151',
     position: 'absolute',
     width: '2px',
-    left: '24px',
+    left: '19px',
     top: '35px',
+    minHeight: '100%',
   },
 });
 
@@ -96,6 +97,7 @@ export const CustomTimelineItem = ({
   completed = false,
   strikethrough = false,
   onPriorityChange,
+  isNew = false,
 }: CustomTimelineItemProps) => {
   const timeDiffMinutes = React.useMemo(() => {
     return (nextStartTime.getTime() - startTime.getTime()) / (1000 * 60);
@@ -115,24 +117,31 @@ export const CustomTimelineItem = ({
   const InteractiveDot = () => (
     <Popover>
       <PopoverTrigger asChild>
-        <TimelineDot
-          sx={{
-            width: '12px',
-            height: '12px',
-            margin: '14px 0 0 19px',
-            padding: 0,
-            backgroundColor: PRIORITY_COLORS[dotColor],
-            boxShadow: 'none',
-            position: 'relative',
-            zIndex: 1,
-            cursor: 'pointer',
-            '&:hover': {
+        <div className="-ml-[19px] flex items-center gap-2">
+          <TimelineDot
+            sx={{
+              width: '12px',
+              height: '12px',
+              margin: '14px 0 0 19px',
+              padding: 0,
               backgroundColor: PRIORITY_COLORS[dotColor],
-              opacity: 0.8,
-            },
-          }}
-          aria-label={`Current priority: ${PRIORITY_LABELS[dotColor]}`}
-        />
+              boxShadow: 'none',
+              position: 'relative',
+              zIndex: 1,
+              cursor: 'pointer',
+              '&:hover': {
+                backgroundColor: PRIORITY_COLORS[dotColor],
+                opacity: 0.8,
+              },
+            }}
+            aria-label={`Current priority: ${PRIORITY_LABELS[dotColor]}`}
+          />
+          {isNew && (
+            <span className="mt-3.5 text-xs font-medium text-muted-foreground">
+              {PRIORITY_LABELS[dotColor]}
+            </span>
+          )}
+        </div>
       </PopoverTrigger>
       {onPriorityChange && (
         <PopoverContent className="w-48 p-2">
@@ -172,19 +181,19 @@ export const CustomTimelineItem = ({
         <TimelineConnector
           sx={{
             width: '2px',
-            backgroundColor: '#374151',
-            height: `${lineHeight - 32}px`,
+            height: `${Math.max(lineHeight - 10, 40)}px`,
             transition: 'height 0.3s ease-in-out',
-            position: 'absolute',
-            left: '25px',
-            top: '32px',
+            // position: 'absolute',
+            // left: '0px',
+            top: '25px',
+            backgroundColor: '#374151',
           }}
         />
       </TimelineSeparator>
       <TimelineContent
         sx={{
           padding: '0 0 0 60px',
-          width: 'calc(100% - 80px)',
+          width: '100%',
           height: '100%',
         }}
       >
@@ -194,6 +203,7 @@ export const CustomTimelineItem = ({
             marginTop: '12px',
             textDecoration: strikethrough ? 'line-through' : 'none',
             opacity: completed ? 0.5 : 1,
+            width: '100%',
           }}
         >
           <div className="text-sm text-muted-foreground">{time}</div>
