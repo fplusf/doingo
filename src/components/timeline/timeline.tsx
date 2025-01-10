@@ -28,14 +28,14 @@ interface PriorityLabels {
   none: string;
 }
 
-const PRIORITY_COLORS: PriorityColors = {
+const PRIORITY_COLORS: Record<TaskPriority, string> = {
   high: '#ef4444', // text-red-500
   medium: '#eab308', // text-yellow-500
   low: '#3b82f6', // text-blue-500
   none: '#64748b', // text-slate-500
 };
 
-const PRIORITY_LABELS: PriorityLabels = {
+const PRIORITY_LABELS: Record<TaskPriority, string> = {
   high: 'High Priority',
   medium: 'Medium Priority',
   low: 'Low Priority',
@@ -58,35 +58,43 @@ interface CustomTimelineProps {
   children: React.ReactNode;
 }
 
+interface StyledTimelineItemProps {
+  connectorColor: string;
+  className?: string;
+  sx?: React.CSSProperties;
+}
+
 // Styled components to match the existing UI
 const StyledTimeline = styled(MuiTimeline)({
   marginLeft: '20px',
   padding: 0,
 });
 
-const StyledTimelineItem = styled(MuiTimelineItem)({
-  '&:before': {
-    display: 'none',
-  },
-  minHeight: '50px',
-  padding: 0,
-  '&:last-child .MuiTimelineConnector-root': {
-    display: 'block',
-  },
-  '& .MuiTimelineSeparator-root': {
-    width: '2px',
+const StyledTimelineItem = styled(MuiTimelineItem)<StyledTimelineItemProps>(
+  ({ connectorColor }) => ({
+    '&:before': {
+      display: 'none',
+    },
     minHeight: '50px',
-    position: 'relative',
-  },
-  '& .MuiTimelineConnector-root': {
-    backgroundColor: '#374151',
-    position: 'absolute',
-    width: '2px',
-    left: '19px',
-    top: '35px',
-    minHeight: '100%',
-  },
-});
+    padding: 0,
+    '&:last-child .MuiTimelineConnector-root': {
+      display: 'block',
+    },
+    '& .MuiTimelineSeparator-root': {
+      width: '2px',
+      minHeight: '50px',
+      position: 'relative',
+    },
+    '& .MuiTimelineConnector-root': {
+      background: `linear-gradient(${connectorColor} 70%, transparent)`,
+      position: 'absolute',
+      width: '2px',
+      // left: '19px',
+      top: '25px',
+      minHeight: '100%',
+    },
+  }),
+);
 
 export const CustomTimelineItem = ({
   children,
@@ -175,20 +183,11 @@ export const CustomTimelineItem = ({
       sx={{
         minHeight: `${lineHeight}px`,
       }}
+      connectorColor={PRIORITY_COLORS[dotColor]}
     >
       <TimelineSeparator>
         <InteractiveDot />
-        <TimelineConnector
-          sx={{
-            width: '2px',
-            height: `${Math.max(lineHeight - 10, 40)}px`,
-            transition: 'height 0.3s ease-in-out',
-            // position: 'absolute',
-            // left: '0px',
-            top: '25px',
-            backgroundColor: '#374151',
-          }}
-        />
+        <TimelineConnector />
       </TimelineSeparator>
       <TimelineContent
         sx={{
