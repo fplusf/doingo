@@ -9,16 +9,19 @@ export default function FocusPage() {
   return (
     <div
       className={cn(
-        'flex h-full transition-all duration-100',
-        sidebar.open ? 'w-[calc(100vw-6rem)]' : 'w-[calc(100vw-2rem)]',
+        'flex h-full bg-sidebar transition-all duration-100',
+        sidebar.open ? 'w-[calc(100vw-88px)]' : 'w-[calc(100vw-10px)]',
         'flex-col text-white',
       )}
     >
       {/* Week Navigator */}
-      <WeekNavigator className="mb-24 rounded-t-2xl" />
-
+      <div className="bg-sidebar">
+        <WeekNavigator className="mb-6 rounded-t-2xl bg-sidebar" />
+      </div>
       {/* Day Content */}
-      <DayContent />
+      <div className="rounded-t-2xl bg-background">
+        <DayContent />
+      </div>
     </div>
   );
 }

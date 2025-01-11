@@ -10,7 +10,7 @@ import {
   toggleTaskCompletion,
 } from '@/store/tasks.store';
 import { Button } from '@/components/ui/button';
-import { Plus, Check, Calendar, GripVertical } from 'lucide-react';
+import { Plus, Check, Calendar, GripVertical, X } from 'lucide-react';
 import { useStore } from '@tanstack/react-store';
 import { Input } from '@/components/ui/input';
 import { parse, addMinutes, format } from 'date-fns';
@@ -78,6 +78,7 @@ const DayContent: React.FC<DayContentProps> = () => {
   const touchStartX = useRef<number | null>(null);
   const tasks = useStore(tasksStore, (state) => state.tasks);
   const [isCreating, setIsCreating] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [duration, setDuration] = useState('');
@@ -152,20 +153,183 @@ const DayContent: React.FC<DayContentProps> = () => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleAddTask();
+      if (editingTaskId) {
+        handleSaveEdit();
+      } else {
+        handleAddTask();
+      }
     } else if (e.key === 'Escape') {
-      setIsCreating(false);
-      setNewTask({ title: '', priority: 'none' });
-      setStartTime('');
-      setEndTime('');
-      setDuration('');
-      setDueDate(undefined);
+      if (editingTaskId) {
+        handleCancelEdit();
+      } else {
+        setIsCreating(false);
+        setNewTask({ title: '', priority: 'none' });
+        setStartTime('');
+        setEndTime('');
+        setDuration('');
+        setDueDate(undefined);
+      }
     }
+  };
+
+  const handleStartEdit = (task: any) => {
+    setEditingTaskId(task.id);
+    setNewTask({
+      title: task.title,
+      priority: task.priority,
+    });
+    if (task.time) {
+      const [start, end] = task.time.split('—');
+      setStartTime(start);
+      setEndTime(end);
+      // Calculate duration from start and end time
+      const startDate = parse(start, 'HH:mm', new Date());
+      const endDate = parse(end, 'HH:mm', new Date());
+      const diffInMinutes = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60));
+      if (diffInMinutes >= 60) {
+        const hours = Math.floor(diffInMinutes / 60);
+        setDuration(`${hours} hr${hours > 1 ? 's' : ''}`);
+      } else {
+        setDuration(`${diffInMinutes} min`);
+      }
+    }
+    setDueDate(task.dueDate);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingTaskId || !newTask.title) return;
+
+    const updatedTask = {
+      title: newTask.title,
+      time: startTime && endTime ? `${startTime}—${endTime}` : '',
+      startTime: startTime ? parse(startTime, 'HH:mm', new Date()) : new Date(),
+      nextStartTime: endTime ? parse(endTime, 'HH:mm', new Date()) : new Date(),
+      dueDate,
+      priority: newTask.priority,
+    };
+
+    updateTask(editingTaskId, updatedTask);
+    handleCancelEdit();
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTaskId(null);
+    setNewTask({ title: '', priority: 'none' });
+    setStartTime('');
+    setEndTime('');
+    setDuration('');
+    setDueDate(undefined);
+  };
+
+  const renderTaskContent = (task: any) => {
+    if (editingTaskId === task.id) {
+      return (
+        <div className="flex items-center gap-4">
+          <div className="flex flex-grow flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Input
+                value={newTask.title}
+                onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                onKeyDown={handleKeyDown}
+                placeholder="What needs to be done?"
+                className="border-none bg-transparent px-0 focus-visible:ring-0"
+                autoFocus
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <DurationPicker value={duration} onValueChange={handleDurationChange} />
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Calendar className="h-4 w-4" />
+                    {dueDate ? format(dueDate, 'MMM d, yyyy') : 'Due Date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dueDate}
+                    onSelect={setDueDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSaveEdit}
+                  className="h-8 hover:bg-green-500/10 hover:text-green-500"
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelEdit}
+                  className="h-8 hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center justify-between">
+        <div
+          className="flex flex-grow cursor-pointer items-center gap-2"
+          onClick={() => handleStartEdit(task)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleStartEdit(task);
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          <h3 className="font-medium">{task.title}</h3>
+          {task.dueDate && (
+            <span className="text-sm text-muted-foreground">
+              Due: {format(task.dueDate, 'MMM d, yyyy')}
+            </span>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleTaskCompletion(task.id);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleTaskCompletion(task.id);
+              }
+            }}
+            className={`ml-4 flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-600 transition-colors hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+              task.completed ? 'border-green-500 bg-green-500' : ''
+            }`}
+            role="checkbox"
+            aria-checked={task.completed}
+            aria-label="Toggle task completion"
+            tabIndex={0}
+          >
+            {task.completed && <Check className="h-4 w-4 text-white" />}
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
     <div
-      className="relative mx-auto h-[calc(100vh-200px)] w-full max-w-[1200px] flex-grow overflow-y-auto rounded-2xl pb-20 pl-10 pr-14"
+      className="rounded-2xlpb-20 relative mx-auto h-[calc(100vh-200px)] w-full max-w-[1200px] flex-grow overflow-y-auto pl-10 pr-14 pt-10"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -186,38 +350,7 @@ const DayContent: React.FC<DayContentProps> = () => {
                   strikethrough={task.completed}
                   onPriorityChange={(priority) => updateTask(task.id, { priority })}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium">{task.title}</h3>
-                      {task.dueDate && (
-                        <span className="text-sm text-muted-foreground">
-                          Due: {format(task.dueDate, 'MMM d, yyyy')}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleTaskCompletion(task.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            toggleTaskCompletion(task.id);
-                          }
-                        }}
-                        className={`ml-4 flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-600 transition-colors hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
-                          task.completed ? 'border-green-500 bg-green-500' : ''
-                        }`}
-                        role="checkbox"
-                        aria-checked={task.completed}
-                        aria-label="Toggle task completion"
-                        tabIndex={0}
-                      >
-                        {task.completed && <Check className="h-4 w-4 text-white" />}
-                      </button>
-                    </div>
-                  </div>
+                  {renderTaskContent(task)}
                 </CustomTimelineItem>
               </SortableTaskItem>
             ))}
