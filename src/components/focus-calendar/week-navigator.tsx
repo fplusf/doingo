@@ -13,13 +13,16 @@ function WeekNavigator({ className }: { className?: string }) {
 
   useGesture(
     {
-      onWheel: ({ delta: [dx] }) => {
+      onWheel: ({ delta: [dx, dy], direction: [dirX] }) => {
+        // Ignore if vertical scroll is more significant than horizontal
+        if (Math.abs(dy) > Math.abs(dx)) return;
         if (isTransitioning) return;
         isTransitioning = true;
 
-        if (dx > 0) {
+        // Only respond to horizontal gestures
+        if (dirX > 0) {
           handleNext();
-        } else {
+        } else if (dirX < 0) {
           handlePrev();
         }
       },
@@ -34,7 +37,7 @@ function WeekNavigator({ className }: { className?: string }) {
     <div
       ref={containerRef}
       className={cn(
-        'bg-sidebar-background relative mx-auto h-[104px] w-full overflow-hidden pt-2 text-white [touch-action:none]',
+        'bg-sidebar-background relative mx-auto h-[104px] w-full overflow-hidden pt-2 text-white',
         className,
       )}
     >

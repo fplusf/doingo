@@ -10,13 +10,13 @@ export default function FocusPage() {
     <div
       className={cn(
         'flex h-full bg-sidebar transition-all duration-100',
-        sidebar.open ? 'w-[calc(100vw-88px)]' : 'w-[calc(100vw-10px)]',
+        sidebar.open ? 'w-[calc(100vw-88px)]' : 'w-[calc(100vw-16px)]',
         'flex-col text-white',
       )}
     >
       {/* Week Navigator */}
       <div className="bg-sidebar">
-        <WeekNavigator className="mb-6 rounded-t-2xl bg-sidebar" />
+        <WeekNavigator className="mb-4 rounded-t-2xl bg-sidebar" />
       </div>
       {/* Day Content */}
       <div className="rounded-t-2xl bg-background">
