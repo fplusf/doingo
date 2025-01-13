@@ -70,31 +70,30 @@ const StyledTimeline = styled(MuiTimeline)({
   padding: 0,
 });
 
-const StyledTimelineItem = styled(MuiTimelineItem)<StyledTimelineItemProps>(
-  ({ connectorColor }) => ({
-    '&:before': {
-      display: 'none',
-    },
+const StyledTimelineItem = styled(MuiTimelineItem, {
+  shouldForwardProp: (prop) => prop !== 'connectorColor',
+})<StyledTimelineItemProps>(({ connectorColor }) => ({
+  '&:before': {
+    display: 'none',
+  },
+  minHeight: '50px',
+  padding: 0,
+  '&:last-child .MuiTimelineConnector-root': {
+    display: 'block',
+  },
+  '& .MuiTimelineSeparator-root': {
+    width: '2px',
     minHeight: '50px',
-    padding: 0,
-    '&:last-child .MuiTimelineConnector-root': {
-      display: 'block',
-    },
-    '& .MuiTimelineSeparator-root': {
-      width: '2px',
-      minHeight: '50px',
-      position: 'relative',
-    },
-    '& .MuiTimelineConnector-root': {
-      background: `linear-gradient(${connectorColor} 70%, transparent)`,
-      position: 'absolute',
-      width: '2px',
-      // left: '19px',
-      top: '25px',
-      minHeight: '100%',
-    },
-  }),
-);
+    position: 'relative',
+  },
+  '& .MuiTimelineConnector-root': {
+    background: `linear-gradient(${connectorColor} 70%, transparent)`,
+    position: 'absolute',
+    width: '2px',
+    top: '25px',
+    minHeight: '100%',
+  },
+}));
 
 export const CustomTimelineItem = ({
   children,

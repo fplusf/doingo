@@ -19,7 +19,7 @@ export default function FocusPage() {
         <WeekNavigator className="mb-4 rounded-t-2xl bg-sidebar" />
       </div>
       {/* Day Content */}
-      <div className="rounded-t-2xl bg-background">
+      <div className="rounded-t-2xl bg-background shadow-[0_4px_10px_-4px_rgba(0,0,0,0.1)]">
         <DayContent />
       </div>
     </div>

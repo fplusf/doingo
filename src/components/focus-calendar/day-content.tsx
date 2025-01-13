@@ -1,5 +1,5 @@
 import { useSearch } from '@tanstack/react-router';
-import React, { TouchEvent, useRef, useState } from 'react';
+import React, { TouchEvent, useRef, useState, useEffect } from 'react';
 import { FocusRoute } from '../../routes/routes';
 import { CustomTimeline, CustomTimelineItem } from '../timeline/timeline';
 import {
@@ -15,7 +15,8 @@ import { useStore } from '@tanstack/react-store';
 import { Input } from '@/components/ui/input';
 import { parse, addMinutes, format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { DurationPicker } from './duration-picker';
+import { DurationPicker, durations, DurationOption } from './duration-picker';
+import { TimeSelect } from './time-select';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import {
   DndContext,
@@ -81,7 +82,7 @@ const DayContent: React.FC<DayContentProps> = () => {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [duration, setDuration] = useState('');
+  const [duration, setDuration] = useState('1 hr');
   const [dueDate, setDueDate] = useState<Date>();
   const [newTask, setNewTask] = useState({
     title: '',
@@ -122,11 +123,25 @@ const DayContent: React.FC<DayContentProps> = () => {
     setDuration(value);
     if (startTime) {
       const start = parse(startTime, 'HH:mm', new Date());
-      const durationInMinutes = value.includes('hr') ? parseInt(value) * 60 : parseInt(value);
-      const end = addMinutes(start, durationInMinutes);
-      setEndTime(format(end, 'HH:mm'));
+      const durationOption = durations.find((d: DurationOption) => d.label === value);
+      if (durationOption) {
+        const end = addMinutes(start, durationOption.minutes);
+        setEndTime(format(end, 'HH:mm'));
+      }
     }
   };
+
+  // Update end time when start time changes
+  useEffect(() => {
+    if (startTime) {
+      const start = parse(startTime, 'HH:mm', new Date());
+      const durationOption = durations.find((d: DurationOption) => d.label === duration);
+      if (durationOption) {
+        const end = addMinutes(start, durationOption.minutes);
+        setEndTime(format(end, 'HH:mm'));
+      }
+    }
+  }, [startTime, duration]);
 
   const handleAddTask = () => {
     if (!newTask.title) return;
@@ -145,7 +160,7 @@ const DayContent: React.FC<DayContentProps> = () => {
     setNewTask({ title: '', priority: 'none' });
     setStartTime('');
     setEndTime('');
-    setDuration('');
+    setDuration('1 hr');
     setDueDate(undefined);
     setIsCreating(false);
   };
@@ -166,7 +181,7 @@ const DayContent: React.FC<DayContentProps> = () => {
         setNewTask({ title: '', priority: 'none' });
         setStartTime('');
         setEndTime('');
-        setDuration('');
+        setDuration('1 hr');
         setDueDate(undefined);
       }
     }
@@ -191,6 +206,13 @@ const DayContent: React.FC<DayContentProps> = () => {
         setDuration(`${hours} hr${hours > 1 ? 's' : ''}`);
       } else {
         setDuration(`${diffInMinutes} min`);
+      }
+    } else {
+      setDuration('1 hr');
+      if (startTime) {
+        const start = parse(startTime, 'HH:mm', new Date());
+        const end = addMinutes(start, 60); // 1 hour default
+        setEndTime(format(end, 'HH:mm'));
       }
     }
     setDueDate(task.dueDate);
@@ -217,7 +239,7 @@ const DayContent: React.FC<DayContentProps> = () => {
     setNewTask({ title: '', priority: 'none' });
     setStartTime('');
     setEndTime('');
-    setDuration('');
+    setDuration('1 hr'); // Reset to default duration
     setDueDate(undefined);
   };
 
@@ -227,6 +249,22 @@ const DayContent: React.FC<DayContentProps> = () => {
         <div className="flex items-center gap-4">
           <div className="flex flex-grow flex-col gap-2">
             <div className="flex items-center gap-2">
+              <TimeSelect
+                value={startTime}
+                endTime={duration ? endTime : undefined}
+                onChange={(time) => {
+                  setStartTime(time);
+                  if (duration) {
+                    const start = parse(time, 'HH:mm', new Date());
+                    const durationInMinutes = duration.includes('hr')
+                      ? parseInt(duration) * 60
+                      : parseInt(duration);
+                    const end = addMinutes(start, durationInMinutes);
+                    setEndTime(format(end, 'HH:mm'));
+                  }
+                }}
+                className="text-muted-foreground"
+              />
               <Input
                 value={newTask.title}
                 onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
@@ -364,10 +402,27 @@ const DayContent: React.FC<DayContentProps> = () => {
             startTime={startTime ? parse(startTime, 'HH:mm', new Date()) : new Date()}
             nextStartTime={endTime ? parse(endTime, 'HH:mm', new Date()) : new Date()}
             onPriorityChange={(priority) => setNewTask({ ...newTask, priority })}
+            isNew
           >
             <div className="flex items-center gap-4">
               <div className="flex flex-grow flex-col gap-2">
                 <div className="flex items-center gap-2">
+                  <TimeSelect
+                    value={startTime}
+                    endTime={duration ? endTime : undefined}
+                    onChange={(time) => {
+                      setStartTime(time);
+                      if (duration) {
+                        const start = parse(time, 'HH:mm', new Date());
+                        const durationInMinutes = duration.includes('hr')
+                          ? parseInt(duration) * 60
+                          : parseInt(duration);
+                        const end = addMinutes(start, durationInMinutes);
+                        setEndTime(format(end, 'HH:mm'));
+                      }
+                    }}
+                    className="text-muted-foreground"
+                  />
                   <Input
                     value={newTask.title}
                     onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
