@@ -4,6 +4,7 @@ import { LocalStorageAdapter } from './adapters/local-storage-adapter';
 import { StorageAdapter } from './adapters/storage-adapter';
 
 export type TaskPriority = 'high' | 'medium' | 'low' | 'none';
+export type TaskCategory = 'work' | 'passion' | 'play';
 
 export interface Task {
   id: string;
@@ -13,6 +14,7 @@ export interface Task {
   nextStartTime: Date;
   completed: boolean;
   priority: TaskPriority;
+  category: TaskCategory;
   dueDate?: Date;
 }
 

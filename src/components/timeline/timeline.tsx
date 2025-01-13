@@ -212,6 +212,21 @@ export const CustomTimelineItem = ({
   );
 };
 
+export const TIMELINE_CATEGORIES = {
+  work: {
+    label: 'Work',
+    color: '#3b82f6', // blue
+  },
+  passion: {
+    label: 'Passion',
+    color: '#f97316', // orange
+  },
+  play: {
+    label: 'Play',
+    color: '#10b981', // green
+  },
+} as const;
+
 export const CustomTimeline: React.FC<CustomTimelineProps> = ({ children }) => {
   return <StyledTimeline>{children}</StyledTimeline>;
 };
