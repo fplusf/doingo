@@ -12,14 +12,10 @@ import {
   toggleTaskCompletion,
 } from '@/store/tasks.store';
 import { Button } from '@/components/ui/button';
-import { Plus, Check, Calendar, GripVertical, X } from 'lucide-react';
+import { Plus, Check, GripVertical } from 'lucide-react';
 import { useStore } from '@tanstack/react-store';
-import { Input } from '@/components/ui/input';
 import { parse, addMinutes, format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { DurationPicker, durations, DurationOption } from './duration-picker';
-import { TimeSelect } from './time-select';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { durations, DurationOption } from './duration-picker';
 import { CategoryLine } from '../timeline/category-line';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -39,6 +35,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { TaskDialog } from '../task-input/dialog';
 
 interface DayContentProps {}
 
@@ -277,80 +274,6 @@ const DayContent: React.FC<DayContentProps> = () => {
   };
 
   const renderTaskContent = (task: any) => {
-    if (editingTaskId === task.id) {
-      return (
-        <div className="flex items-center gap-4">
-          <div className="flex flex-grow flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <TimeSelect
-                value={startTime}
-                endTime={duration ? endTime : undefined}
-                onChange={(time) => {
-                  setStartTime(time);
-                  if (duration) {
-                    const start = parse(time, 'HH:mm', new Date());
-                    const durationInMinutes = duration.includes('hr')
-                      ? parseInt(duration) * 60
-                      : parseInt(duration);
-                    const end = addMinutes(start, durationInMinutes);
-                    setEndTime(format(end, 'HH:mm'));
-                  }
-                }}
-                className="text-muted-foreground"
-              />
-              <Input
-                value={newTask.title}
-                onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                onKeyDown={handleKeyDown}
-                placeholder="What needs to be done?"
-                className="border-none bg-transparent px-0 focus-visible:ring-0"
-                autoFocus
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <DurationPicker value={duration} onValueChange={handleDurationChange} />
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Calendar className="h-4 w-4" />
-                    {dueDate ? format(dueDate, 'MMM d, yyyy') : 'Due Date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={dueDate}
-                    onSelect={setDueDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSaveEdit}
-                  className="h-8 hover:bg-green-500/10 hover:text-green-500"
-                >
-                  <Check className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCancelEdit}
-                  className="h-8 hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="flex items-center justify-between">
         <div
@@ -435,80 +358,18 @@ const DayContent: React.FC<DayContentProps> = () => {
                       </CustomTimelineItem>
                     </SortableTaskItem>
                   ))}
-                  {isCreating && activeCategory === 'work' ? (
-                    <CustomTimelineItem
-                      dotColor={newTask.priority}
-                      time={startTime && endTime ? `${startTime}—${endTime}` : 'No time set'}
-                      startTime={startTime ? parse(startTime, 'HH:mm', new Date()) : new Date()}
-                      nextStartTime={endTime ? parse(endTime, 'HH:mm', new Date()) : new Date()}
-                      onPriorityChange={(priority) => setNewTask({ ...newTask, priority })}
-                      isNew
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="flex flex-grow flex-col gap-2">
-                          <div className="flex items-center gap-2">
-                            <TimeSelect
-                              value={startTime}
-                              endTime={duration ? endTime : undefined}
-                              onChange={(time) => {
-                                setStartTime(time);
-                                if (duration) {
-                                  const start = parse(time, 'HH:mm', new Date());
-                                  const durationInMinutes = duration.includes('hr')
-                                    ? parseInt(duration) * 60
-                                    : parseInt(duration);
-                                  const end = addMinutes(start, durationInMinutes);
-                                  setEndTime(format(end, 'HH:mm'));
-                                }
-                              }}
-                              className="text-muted-foreground"
-                            />
-                            <Input
-                              value={newTask.title}
-                              onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                              onKeyDown={handleKeyDown}
-                              placeholder="What needs to be done?"
-                              className="border-none bg-transparent px-0 focus-visible:ring-0"
-                              autoFocus
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <DurationPicker value={duration} onValueChange={handleDurationChange} />
-
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="gap-2">
-                                  <Calendar className="h-4 w-4" />
-                                  {dueDate ? format(dueDate, 'MMM d, yyyy') : 'Due Date'}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <CalendarComponent
-                                  mode="single"
-                                  selected={dueDate}
-                                  onSelect={setDueDate}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        </div>
-                      </div>
-                    </CustomTimelineItem>
-                  ) : (
-                    <Button
-                      onClick={() => {
-                        setIsCreating(true);
-                        setActiveCategory('work');
-                        setNewTask((prev) => ({ ...prev, category: 'work' }));
-                      }}
-                      variant="ghost"
-                      className="ml-12 mt-4 w-full justify-start gap-2 bg-transparent text-muted-foreground hover:bg-transparent"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add new task
-                    </Button>
-                  )}
+                  <Button
+                    onClick={() => {
+                      setIsCreating(true);
+                      setActiveCategory('work');
+                      setNewTask((prev) => ({ ...prev, category: 'work' }));
+                    }}
+                    variant="ghost"
+                    className="ml-12 mt-4 w-full justify-start gap-2 bg-transparent text-muted-foreground hover:bg-transparent"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add new task
+                  </Button>
                 </div>
               </div>
 
@@ -536,80 +397,18 @@ const DayContent: React.FC<DayContentProps> = () => {
                       </CustomTimelineItem>
                     </SortableTaskItem>
                   ))}
-                  {isCreating && activeCategory === 'passion' ? (
-                    <CustomTimelineItem
-                      dotColor={newTask.priority}
-                      time={startTime && endTime ? `${startTime}—${endTime}` : 'No time set'}
-                      startTime={startTime ? parse(startTime, 'HH:mm', new Date()) : new Date()}
-                      nextStartTime={endTime ? parse(endTime, 'HH:mm', new Date()) : new Date()}
-                      onPriorityChange={(priority) => setNewTask({ ...newTask, priority })}
-                      isNew
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="flex flex-grow flex-col gap-2">
-                          <div className="flex items-center gap-2">
-                            <TimeSelect
-                              value={startTime}
-                              endTime={duration ? endTime : undefined}
-                              onChange={(time) => {
-                                setStartTime(time);
-                                if (duration) {
-                                  const start = parse(time, 'HH:mm', new Date());
-                                  const durationInMinutes = duration.includes('hr')
-                                    ? parseInt(duration) * 60
-                                    : parseInt(duration);
-                                  const end = addMinutes(start, durationInMinutes);
-                                  setEndTime(format(end, 'HH:mm'));
-                                }
-                              }}
-                              className="text-muted-foreground"
-                            />
-                            <Input
-                              value={newTask.title}
-                              onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                              onKeyDown={handleKeyDown}
-                              placeholder="What needs to be done?"
-                              className="border-none bg-transparent px-0 focus-visible:ring-0"
-                              autoFocus
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <DurationPicker value={duration} onValueChange={handleDurationChange} />
-
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="gap-2">
-                                  <Calendar className="h-4 w-4" />
-                                  {dueDate ? format(dueDate, 'MMM d, yyyy') : 'Due Date'}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <CalendarComponent
-                                  mode="single"
-                                  selected={dueDate}
-                                  onSelect={setDueDate}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        </div>
-                      </div>
-                    </CustomTimelineItem>
-                  ) : (
-                    <Button
-                      onClick={() => {
-                        setIsCreating(true);
-                        setActiveCategory('passion');
-                        setNewTask((prev) => ({ ...prev, category: 'passion' }));
-                      }}
-                      variant="ghost"
-                      className="ml-12 mt-4 w-full justify-start gap-2 bg-transparent text-muted-foreground hover:bg-transparent"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add new task
-                    </Button>
-                  )}
+                  <Button
+                    onClick={() => {
+                      setIsCreating(true);
+                      setActiveCategory('passion');
+                      setNewTask((prev) => ({ ...prev, category: 'passion' }));
+                    }}
+                    variant="ghost"
+                    className="ml-12 mt-4 w-full justify-start gap-2 bg-transparent text-muted-foreground hover:bg-transparent"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add new task
+                  </Button>
                 </div>
               </div>
 
@@ -637,86 +436,96 @@ const DayContent: React.FC<DayContentProps> = () => {
                       </CustomTimelineItem>
                     </SortableTaskItem>
                   ))}
-                  {isCreating && activeCategory === 'play' ? (
-                    <CustomTimelineItem
-                      dotColor={newTask.priority}
-                      time={startTime && endTime ? `${startTime}—${endTime}` : 'No time set'}
-                      startTime={startTime ? parse(startTime, 'HH:mm', new Date()) : new Date()}
-                      nextStartTime={endTime ? parse(endTime, 'HH:mm', new Date()) : new Date()}
-                      onPriorityChange={(priority) => setNewTask({ ...newTask, priority })}
-                      isNew
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="flex flex-grow flex-col gap-2">
-                          <div className="flex items-center gap-2">
-                            <TimeSelect
-                              value={startTime}
-                              endTime={duration ? endTime : undefined}
-                              onChange={(time) => {
-                                setStartTime(time);
-                                if (duration) {
-                                  const start = parse(time, 'HH:mm', new Date());
-                                  const durationInMinutes = duration.includes('hr')
-                                    ? parseInt(duration) * 60
-                                    : parseInt(duration);
-                                  const end = addMinutes(start, durationInMinutes);
-                                  setEndTime(format(end, 'HH:mm'));
-                                }
-                              }}
-                              className="text-muted-foreground"
-                            />
-                            <Input
-                              value={newTask.title}
-                              onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                              onKeyDown={handleKeyDown}
-                              placeholder="What needs to be done?"
-                              className="border-none bg-transparent px-0 focus-visible:ring-0"
-                              autoFocus
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <DurationPicker value={duration} onValueChange={handleDurationChange} />
-
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="gap-2">
-                                  <Calendar className="h-4 w-4" />
-                                  {dueDate ? format(dueDate, 'MMM d, yyyy') : 'Due Date'}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <CalendarComponent
-                                  mode="single"
-                                  selected={dueDate}
-                                  onSelect={setDueDate}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        </div>
-                      </div>
-                    </CustomTimelineItem>
-                  ) : (
-                    <Button
-                      onClick={() => {
-                        setIsCreating(true);
-                        setActiveCategory('play');
-                        setNewTask((prev) => ({ ...prev, category: 'play' }));
-                      }}
-                      variant="ghost"
-                      className="ml-12 mt-4 w-full justify-start gap-2 bg-transparent text-muted-foreground hover:bg-transparent"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add new task
-                    </Button>
-                  )}
+                  <Button
+                    onClick={() => {
+                      setIsCreating(true);
+                      setActiveCategory('play');
+                      setNewTask((prev) => ({ ...prev, category: 'play' }));
+                    }}
+                    variant="ghost"
+                    className="ml-12 mt-4 w-full justify-start gap-2 bg-transparent text-muted-foreground hover:bg-transparent"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add new task
+                  </Button>
                 </div>
               </div>
             </SortableContext>
           </DndContext>
         </CustomTimeline>
       </div>
+
+      {/* Create Task Dialog */}
+      <TaskDialog
+        open={isCreating}
+        onOpenChange={setIsCreating}
+        mode="create"
+        initialValues={{
+          title: newTask.title,
+          startTime,
+          endTime,
+          duration,
+          dueDate,
+          priority: newTask.priority,
+          category: activeCategory,
+        }}
+        onSubmit={(values) => {
+          const task = {
+            title: values.title,
+            time: `${values.startTime}—${values.endTime}`,
+            startTime: parse(values.startTime, 'HH:mm', new Date()),
+            nextStartTime: parse(values.endTime, 'HH:mm', new Date()),
+            dueDate: values.dueDate,
+            completed: false,
+            priority: values.priority,
+            category: values.category,
+          };
+
+          addTask(task);
+          setNewTask({ title: '', priority: 'none', category: activeCategory });
+          setStartTime('');
+          setEndTime('');
+          setDuration('1 hr');
+          setDueDate(undefined);
+        }}
+      />
+
+      {/* Edit Task Dialog */}
+      {editingTaskId && (
+        <TaskDialog
+          open={!!editingTaskId}
+          onOpenChange={(open) => {
+            if (!open) setEditingTaskId(null);
+          }}
+          mode="edit"
+          initialValues={{
+            title: newTask.title,
+            startTime: startTime || '',
+            endTime: endTime || '',
+            duration,
+            dueDate,
+            priority: newTask.priority,
+            category: newTask.category,
+          }}
+          onSubmit={(values) => {
+            updateTask(editingTaskId, {
+              title: values.title,
+              time: `${values.startTime}—${values.endTime}`,
+              startTime: parse(values.startTime, 'HH:mm', new Date()),
+              nextStartTime: parse(values.endTime, 'HH:mm', new Date()),
+              dueDate: values.dueDate,
+              priority: values.priority,
+              category: values.category,
+            });
+            setEditingTaskId(null);
+            setNewTask({ title: '', priority: 'none', category: activeCategory });
+            setStartTime('');
+            setEndTime('');
+            setDuration('1 hr');
+            setDueDate(undefined);
+          }}
+        />
+      )}
     </ScrollArea>
   );
 };
