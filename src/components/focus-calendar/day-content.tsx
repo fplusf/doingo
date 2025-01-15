@@ -399,7 +399,7 @@ const DayContent: React.FC<DayContentProps> = () => {
   };
 
   return (
-    <ScrollArea className="relative h-[calc(100vh-200px)] w-full">
+    <ScrollArea className="relative h-[calc(100vh-200px)] w-full overflow-y-auto">
       <div className="mx-auto w-full max-w-[1200px] px-10">
         <CustomTimeline>
           <DndContext

@@ -20,13 +20,25 @@ export const CategoryLine: React.FC<CategoryLineProps> = ({
     const element = document.getElementById(id);
     if (!element) return;
 
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Find the scrollable container (ScrollArea component)
+    const scrollContainer = document.querySelector('[data-radix-scroll-area-viewport]');
+    if (!scrollContainer) return;
+
+    // Calculate the scroll position
+    const elementPosition = element.offsetTop - (element.parentElement?.offsetTop || 0);
+
+    // Smooth scroll to the position
+    scrollContainer.scrollTo({
+      top: elementPosition,
+      behavior: 'smooth',
+    });
   };
 
   return (
     <div
       className={cn(
-        'relative -mx-10 flex scroll-mt-20 items-center justify-center bg-background py-4 opacity-80',
+        'relative -mx-10 flex scroll-mt-20 items-center justify-center py-4 opacity-90',
+        'bg-gradient-to-b from-background via-background to-transparent',
         isSticky && 'sticky top-0 z-30',
         className,
       )}
@@ -41,7 +53,7 @@ export const CategoryLine: React.FC<CategoryLineProps> = ({
       </div>
       <button
         onClick={handleClick}
-        className="relative z-10 w-32 cursor-pointer rounded-full px-6 py-1 text-center text-sm font-medium transition-all hover:opacity-80 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-95"
+        className="relative z-10 w-32 cursor-pointer rounded-full px-6 py-1 text-center text-sm font-medium opacity-100 transition-all hover:shadow-md focus:outline-none active:scale-95"
         style={{
           backgroundColor: color,
           color: '#fff',
