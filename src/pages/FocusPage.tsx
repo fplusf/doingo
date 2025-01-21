@@ -2,9 +2,31 @@ import DayContent from '../components/focus-calendar/day-content';
 import WeekNavigator from '../components/focus-calendar/week-navigator';
 import { useSidebar } from '../components/ui/sidebar';
 import { cn } from '../lib/utils';
+import { useEffect, useRef } from 'react';
 
 export default function FocusPage() {
   const sidebar = useSidebar();
+  const dayContentRef = useRef<{ setIsCreating: (value: boolean) => void } | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only trigger if no input/textarea is focused
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA'
+      ) {
+        return;
+      }
+
+      if (e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        dayContentRef.current?.setIsCreating(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div
@@ -20,7 +42,7 @@ export default function FocusPage() {
       </div>
       {/* Day Content */}
       <div className="rounded-t-2xl bg-background shadow-[0_4px_10px_-4px_rgba(0,0,0,0.1)]">
-        <DayContent />
+        <DayContent ref={dayContentRef} />
       </div>
     </div>
   );

@@ -38,7 +38,7 @@ function DayChart({ date, progress, isSelected, isToday }: DayChartProps) {
       >
         {format(new Date(date), 'EEE')}
       </div>
-      <ChartContainer config={chartConfig} className={'h-20 w-full'}>
+      <ChartContainer config={chartConfig} className={'h-16 w-full xl:h-20'}>
         <RadialBarChart
           width={100}
           height={100}

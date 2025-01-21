@@ -37,7 +37,7 @@ function WeekNavigator({ className }: { className?: string }) {
     <div
       ref={containerRef}
       className={cn(
-        'bg-sidebar-background relative mx-auto h-[104px] w-full overflow-hidden pt-2 text-white',
+        'bg-sidebar-background relative mx-auto h-[90px] w-full overflow-hidden pt-2 text-white xl:h-[104px]',
         className,
       )}
     >
