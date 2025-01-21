@@ -2,7 +2,12 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { format, isBefore, startOfDay, addMinutes } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Check } from 'lucide-react';
 
@@ -15,7 +20,7 @@ interface TimeSelectProps {
 
 export const TimeSelect = ({ value, endTime, onChange, className }: TimeSelectProps) => {
   const [open, setOpen] = useState(false);
-  const selectedTimeRef = useRef<HTMLButtonElement>(null);
+  const selectedTimeRef = useRef<HTMLDivElement>(null);
 
   // Generate time options starting from current time + 1 minute, then 15-minute intervals
   const timeOptions = useMemo(() => {
@@ -53,15 +58,14 @@ export const TimeSelect = ({ value, endTime, onChange, className }: TimeSelectPr
 
   useLayoutEffect(() => {
     if (open) {
-      // Small delay to ensure the PopoverContent is rendered
       const timeoutId = setTimeout(() => {
         if (selectedTimeRef.current) {
           selectedTimeRef.current.scrollIntoView({
             block: 'center',
-            behavior: 'instant',
+            behavior: 'smooth',
           });
         }
-      }, 0);
+      }, 100);
 
       return () => clearTimeout(timeoutId);
     }
@@ -78,8 +82,8 @@ export const TimeSelect = ({ value, endTime, onChange, className }: TimeSelectPr
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="sm"
@@ -91,37 +95,33 @@ export const TimeSelect = ({ value, endTime, onChange, className }: TimeSelectPr
         >
           {value && endTime ? `${value} - ${endTime}` : value || format(new Date(), 'HH:mm')}
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0" align="start">
-        <ScrollArea className="h-80">
-          <div className="p-1">
-            {timeOptions.map((time) => {
-              const timeString = format(time, 'HH:mm');
-              const isSelected = timeString === value;
-              const isDisabled = isTimeDisabled(time);
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-[200px] p-0" align="start">
+        <ScrollArea className="h-80 overflow-y-auto">
+          {timeOptions.map((time) => {
+            const timeString = format(time, 'HH:mm');
+            const isSelected = timeString === value;
+            const isDisabled = isTimeDisabled(time);
 
-              return (
-                <Button
-                  key={timeString}
-                  ref={isSelected ? selectedTimeRef : null}
-                  variant="ghost"
-                  size="sm"
-                  disabled={isDisabled}
-                  className={cn(
-                    'w-full justify-start gap-2 rounded-sm px-2 py-1.5 text-left text-sm',
-                    isSelected && 'bg-accent',
-                    isDisabled && 'text-muted-foreground opacity-50',
-                  )}
-                  onClick={() => handleTimeSelect(timeString)}
-                >
-                  {timeString}
-                  {isSelected && <Check className="ml-auto h-4 w-4" />}
-                </Button>
-              );
-            })}
-          </div>
+            return (
+              <DropdownMenuItem
+                key={timeString}
+                ref={isSelected ? selectedTimeRef : null}
+                disabled={isDisabled}
+                onSelect={() => handleTimeSelect(timeString)}
+                className={cn(
+                  'flex w-full items-center justify-between gap-2 px-2 py-1.5',
+                  isSelected && 'bg-accent',
+                  isDisabled && 'text-muted-foreground opacity-50',
+                )}
+              >
+                {timeString}
+                {isSelected && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+            );
+          })}
         </ScrollArea>
-      </PopoverContent>
-    </Popover>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };

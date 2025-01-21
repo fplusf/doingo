@@ -9,9 +9,11 @@ export type TaskCategory = 'work' | 'passion' | 'play';
 export interface Task {
   id: string;
   title: string;
-  time: string;
+  description?: string;
+  time: string; // Human readable format for display
   startTime: Date;
   nextStartTime: Date;
+  duration: number; // Duration in milliseconds
   completed: boolean;
   priority: TaskPriority;
   category: TaskCategory;

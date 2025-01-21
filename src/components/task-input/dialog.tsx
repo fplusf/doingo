@@ -1,8 +1,14 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import TaskInput from './input';
 import { TaskPriority, TaskCategory } from '@/store/tasks.store';
-
+import { DurationOption } from '@/components/focus-calendar/duration-picker';
 interface TaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -11,7 +17,7 @@ interface TaskDialogProps {
     description?: string;
     startTime?: string;
     endTime?: string;
-    duration?: string;
+    duration?: DurationOption;
     dueDate?: Date;
     priority?: TaskPriority;
     category?: TaskCategory;
@@ -21,7 +27,7 @@ interface TaskDialogProps {
     description?: string;
     startTime: string;
     endTime: string;
-    duration: string;
+    duration: DurationOption;
     dueDate?: Date;
     priority: TaskPriority;
     category: TaskCategory;
@@ -39,15 +45,21 @@ export function TaskDialog({
   className,
 }: TaskDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        overlayClassName="bg-black/10"
         className={cn(
-          'fixed left-1/2 top-1/2 z-50 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-card p-6 shadow-[0_0_30px_rgba(0,0,0,0.15)] dark:shadow-[0_0_30px_rgba(0,0,0,0.3)]',
+          'fixed left-1/2 top-[50%] z-50 w-full max-w-full -translate-x-1/2 -translate-y-1/2 rounded-lg border border-none border-zinc-800 bg-card p-6 text-zinc-400 shadow-[0_0_30px_rgba(0,0,0,0.8)] duration-75 dark:shadow-[0_0_30px_rgba(0,0,0,0.8)] sm:max-w-2xl',
           className,
         )}
       >
-        <DialogHeader>
-          <DialogTitle>{mode === 'create' ? 'Create New Task' : 'Edit Task'}</DialogTitle>
+        <DialogHeader className="absolute -top-10 rounded-md border border-gray-700 bg-card p-2 text-sm">
+          <DialogTitle className="text-xs">
+            {mode === 'create' ? 'Add task' : 'Edit task'}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {mode === 'create' ? 'Add a new task to your timeline' : 'Edit an existing task'}
+          </DialogDescription>
         </DialogHeader>
         <TaskInput
           initialValues={initialValues}
