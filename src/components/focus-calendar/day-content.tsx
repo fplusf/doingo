@@ -13,7 +13,7 @@ import {
   deleteTask,
 } from '@/store/tasks.store';
 import { Button } from '@/components/ui/button';
-import { Plus, Check, GripVertical, Trash2, Focus } from 'lucide-react';
+import { Plus, GripVertical, Trash2, Focus } from 'lucide-react';
 import { useStore } from '@tanstack/react-store';
 import { parse, format, intervalToDuration } from 'date-fns';
 import { CategoryLine } from '../timeline/category-line';
@@ -42,6 +42,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { cn } from '@/lib/utils';
 
 interface DayContentProps {
   ref: React.RefObject<{ setIsCreating: (value: boolean) => void }>;
@@ -339,42 +340,21 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
                 role="button"
                 tabIndex={0}
               >
-                <div className="flex flex-col gap-1">
-                  <h3 className="font-medium">{task.title}</h3>
-                  {task.description && (
-                    <p className="text-sm text-muted-foreground">{task.description}</p>
+                <div className="flex w-full flex-col gap-1 overflow-hidden">
+                  <h3
+                    className={cn(
+                      'font-medium',
+                      task.duration > 2 * 60 * 60 * 1000 ? 'line-clamp-3' : 'line-clamp-2',
+                    )}
+                  >
+                    {task.title}
+                  </h3>
+                  {task.dueDate && (
+                    <span className="text-sm text-muted-foreground">
+                      Due: {format(task.dueDate, 'MMM d, yyyy')}
+                    </span>
                   )}
                 </div>
-                {task.dueDate && (
-                  <span className="text-sm text-muted-foreground">
-                    Due: {format(task.dueDate, 'MMM d, yyyy')}
-                  </span>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleTaskCompletion(task.id);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      toggleTaskCompletion(task.id);
-                    }
-                  }}
-                  className={`ml-4 flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-600 transition-colors hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
-                    task.completed ? 'border-green-500 bg-green-500' : ''
-                  }`}
-                  role="checkbox"
-                  aria-checked={task.completed}
-                  aria-label="Toggle task completion"
-                  tabIndex={0}
-                >
-                  {task.completed && <Check className="h-4 w-4 text-white" />}
-                </button>
               </div>
             </div>
           </ContextMenuTrigger>
@@ -427,6 +407,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
                           completed={task.completed}
                           strikethrough={task.completed}
                           onPriorityChange={(priority) => updateTask(task.id, { priority })}
+                          onCompletedChange={(completed) => toggleTaskCompletion(task.id)}
                         >
                           {renderTaskContent(task)}
                         </CustomTimelineItem>
@@ -475,6 +456,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
                           completed={task.completed}
                           strikethrough={task.completed}
                           onPriorityChange={(priority) => updateTask(task.id, { priority })}
+                          onCompletedChange={(completed) => toggleTaskCompletion(task.id)}
                         >
                           {renderTaskContent(task)}
                         </CustomTimelineItem>
@@ -523,6 +505,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
                           completed={task.completed}
                           strikethrough={task.completed}
                           onPriorityChange={(priority) => updateTask(task.id, { priority })}
+                          onCompletedChange={(completed) => toggleTaskCompletion(task.id)}
                         >
                           {renderTaskContent(task)}
                         </CustomTimelineItem>

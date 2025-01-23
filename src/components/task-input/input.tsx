@@ -193,7 +193,7 @@ export default function TaskInput({
                     <ClipboardList className="mr-1 h-3.5 w-3.5" />
                   )}
                   <SelectValue>
-                    {category === 'work' ? 'Work' : category === 'passion' ? 'Pass' : 'Play'}
+                    {category === 'work' ? 'Work' : category === 'passion' ? 'Passion' : 'Play'}
                   </SelectValue>
                 </div>
               </SelectTrigger>
@@ -207,13 +207,68 @@ export default function TaskInput({
                 <SelectItem value="passion">
                   <div className="flex items-center">
                     <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                    Pass
+                    Passion
                   </div>
                 </SelectItem>
                 <SelectItem value="play">
                   <div className="flex items-center">
                     <ClipboardList className="mr-1 h-3.5 w-3.5" />
                     Play
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={priority} onValueChange={(value: TaskPriority) => setPriority(value)}>
+              <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
+                <div className="flex items-center">
+                  <div
+                    className="mr-1.5 h-2.5 w-2.5 rounded-full"
+                    style={{
+                      backgroundColor:
+                        priority === 'high'
+                          ? '#ef4444'
+                          : priority === 'medium'
+                            ? '#eab308'
+                            : priority === 'low'
+                              ? '#3b82f6'
+                              : '#64748b',
+                    }}
+                  />
+                  <SelectValue>
+                    {priority === 'high'
+                      ? 'High'
+                      : priority === 'medium'
+                        ? 'Medium'
+                        : priority === 'low'
+                          ? 'Low'
+                          : 'None'}
+                  </SelectValue>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="high">
+                  <div className="flex items-center">
+                    <div className="mr-1.5 h-2.5 w-2.5 rounded-full bg-red-500" />
+                    High
+                  </div>
+                </SelectItem>
+                <SelectItem value="medium">
+                  <div className="flex items-center">
+                    <div className="mr-1.5 h-2.5 w-2.5 rounded-full bg-yellow-500" />
+                    Medium
+                  </div>
+                </SelectItem>
+                <SelectItem value="low">
+                  <div className="flex items-center">
+                    <div className="mr-1.5 h-2.5 w-2.5 rounded-full bg-blue-500" />
+                    Low
+                  </div>
+                </SelectItem>
+                <SelectItem value="none">
+                  <div className="flex items-center">
+                    <div className="mr-1.5 h-2.5 w-2.5 rounded-full bg-slate-500" />
+                    None
                   </div>
                 </SelectItem>
               </SelectContent>
