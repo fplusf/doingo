@@ -13,10 +13,10 @@ export function Connector({ progress, className }: ConnectorProps) {
   return (
     <div className={cn('relative h-full w-[2.5px]', className)}>
       <div
-        className="absolute inset-0 rounded-full bg-gray-300"
+        className="absolute inset-0 rounded-full"
         style={{
           backgroundImage:
-            'repeating-linear-gradient(0deg, transparent, transparent 2px, #fff 2px, #fff 4px)',
+            'repeating-linear-gradient(0deg, transparent, transparent 4px, #767a81 4px, #767a81 8px)',
         }}
       />
       <Progress
