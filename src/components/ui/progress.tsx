@@ -16,10 +16,7 @@ const Progress = React.forwardRef<
     {...props}
   >
     <ProgressPrimitive.Indicator
-      className={cn(
-        'h-full w-full flex-1 animate-[progress_100ms_ease-in-out] bg-primary',
-        indicatorClassName,
-      )}
+      className={cn('h-full w-full flex-1 bg-primary', indicatorClassName)}
       style={{
         transform: isVertical
           ? `translateY(-${100 - (value || 0)}%)`

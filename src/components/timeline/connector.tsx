@@ -22,7 +22,7 @@ export function Connector({ progress, className }: ConnectorProps) {
       <Progress
         value={progress}
         isVertical
-        indicatorClassName="bg-green-500"
+        indicatorClassName="bg-green-500 transition-all duration-500"
         className="h-full w-full bg-transparent"
       />
     </div>

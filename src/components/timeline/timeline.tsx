@@ -65,20 +65,7 @@ export const CustomTimelineItem = ({
   const [progress, setProgress] = React.useState(completed ? 100 : 0);
 
   React.useEffect(() => {
-    if (completed) {
-      const timer = setInterval(() => {
-        setProgress((prevProgress) => {
-          if (prevProgress >= 100) {
-            clearInterval(timer);
-            return 100;
-          }
-          return prevProgress + 1;
-        });
-      }, 5);
-      return () => clearInterval(timer);
-    } else {
-      setProgress(0);
-    }
+    setProgress(completed ? 100 : 0);
   }, [completed]);
 
   const handleCompletedChange = (checked: boolean) => {
