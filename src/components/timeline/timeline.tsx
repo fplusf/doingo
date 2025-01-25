@@ -22,9 +22,7 @@ export const TIMELINE_CATEGORIES = {
 const DEFAULT_CATEGORY = 'work';
 const DEFAULT_COLOR = '#64748b'; // slate-500
 
-interface CustomTimelineItemProps {
-  children: React.ReactNode;
-  time: string;
+interface TimelineItemProps {
   startTime: Date;
   nextStartTime: Date;
   completed?: boolean;
@@ -36,13 +34,11 @@ interface CustomTimelineItemProps {
   onPriorityChange?: (priority: TaskPriority) => void;
 }
 
-interface CustomTimelineProps {
+interface TimelineProps {
   children: React.ReactNode;
 }
 
-export const CustomTimelineItem = ({
-  children,
-  time,
+export const TimelineItem = ({
   startTime,
   nextStartTime,
   completed = false,
@@ -52,7 +48,7 @@ export const CustomTimelineItem = ({
   isNew = false,
   dotColor,
   onPriorityChange,
-}: CustomTimelineItemProps) => {
+}: TimelineItemProps) => {
   const timeDiffMinutes = React.useMemo(() => {
     return (nextStartTime.getTime() - startTime.getTime()) / (1000 * 60);
   }, [startTime, nextStartTime]);
@@ -77,8 +73,7 @@ export const CustomTimelineItem = ({
   return (
     <div
       className={cn(
-        'relative flex pl-10',
-        strikethrough && 'text-gray-500 line-through',
+        'relative flex',
         lineHeight ? 'h-[100px] lg:h-[170px]' : 'h-[80px] lg:h-[130px]',
       )}
     >
@@ -102,29 +97,27 @@ export const CustomTimelineItem = ({
               handleCompletedChange(!completed);
             }
           }}
-          className={`flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-600 transition-colors hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
-            completed ? 'border-green-500 bg-green-500' : 'bg-background'
-          }`}
+          className={cn(
+            'flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-600 outline-none ring-0 transition-colors hover:border-green-500 focus:outline-none focus:ring-green-500',
+            completed ? 'border-green-500 bg-green-500' : 'bg-background',
+          )}
           role="checkbox"
           aria-checked={completed}
           aria-label="Toggle task completion"
           tabIndex={0}
         >
-          {completed && <Check className="h-4 w-4 text-white" />}
+          <Check
+            className={cn(
+              'h-4 w-4',
+              completed ? 'text-white opacity-100' : 'text-gray-400 opacity-50',
+            )}
+          />
         </button>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 pt-3 lg:pt-4">
-        <div className="text-sm text-muted-foreground">{time}</div>
-        <div className={cn('mt-1', completed && 'opacity-50', strikethrough && 'line-through')}>
-          {children}
-        </div>
       </div>
     </div>
   );
 };
 
-export const CustomTimeline: React.FC<CustomTimelineProps> = ({ children }) => {
-  return <div className="relative pl-4">{children}</div>;
-};
+// export const Timeline: React.FC<TimelineProps> = ({ children }) => {
+//   return <div className="relative">{children}</div>;
+// };

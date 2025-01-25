@@ -10,6 +10,7 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
+  emoji?: string;
   time: string; // Human readable format for display
   startTime: Date;
   nextStartTime: Date;

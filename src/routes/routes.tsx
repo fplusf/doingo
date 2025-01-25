@@ -5,13 +5,16 @@ import Tags from '@/pages/Tags';
 import { createRoute } from '@tanstack/react-router';
 import { RootRoute } from './__root';
 import BaseLayout from '@/layouts/BaseLayout';
+import { ThemeProvider } from '../components/theme-provider';
 
 const withBaseLayout = (Component: React.ComponentType<any>) => {
   return function WrappedComponent(props: any) {
     return (
-      <BaseLayout>
-        <Component {...props} />
-      </BaseLayout>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <BaseLayout>
+          <Component {...props} />
+        </BaseLayout>
+      </ThemeProvider>
     );
   };
 };

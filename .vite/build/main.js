@@ -92,12 +92,12 @@ function createWindow() {
     }
   });
   registerListeners(mainWindow);
-  const appUrl = "http://localhost:5173";
+  const appUrl = "http://localhost:5174";
   mainWindow.loadURL(appUrl);
   {
     mainWindow.webContents.openDevTools();
     console.log("Opening DevTools");
-    openBrowser("http://localhost:5173");
+    openBrowser("http://localhost:5174");
   }
   if (inDevelopment) {
     child_process.exec("npm run dev", (error, stdout, stderr) => {

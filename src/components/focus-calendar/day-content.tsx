@@ -1,7 +1,8 @@
+import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { useSearch } from '@tanstack/react-router';
 import React, { TouchEvent, useRef, useState, useEffect } from 'react';
 import { FocusRoute } from '../../routes/routes';
-import { CustomTimeline, CustomTimelineItem, TIMELINE_CATEGORIES } from '../timeline/timeline';
+import { TimelineItem, TIMELINE_CATEGORIES } from '../timeline/timeline';
 import {
   TaskPriority,
   TaskCategory,
@@ -13,7 +14,7 @@ import {
   deleteTask,
 } from '@/store/tasks.store';
 import { Button } from '@/components/ui/button';
-import { Plus, GripVertical, Trash2, Focus } from 'lucide-react';
+import { Plus, GripVertical, Trash2, Focus, Smile } from 'lucide-react';
 import { useStore } from '@tanstack/react-store';
 import { parse, format, intervalToDuration } from 'date-fns';
 import { CategoryLine } from '../timeline/category-line';
@@ -26,6 +27,8 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -65,22 +68,149 @@ const DragHandle = () => {
 const SortableTaskItem = ({ task, children }: { task: any; children: React.ReactNode }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
+    transition: {
+      duration: 200,
+      easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+    },
   });
 
-  const style = {
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
     width: '100%',
+    position: 'relative',
+    zIndex: isDragging ? 1 : 0,
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} className="group w-full">
+    <div ref={setNodeRef} style={style} {...attributes} className="group ml-16 w-full">
       <div className="flex w-full items-center">
-        <div {...listeners} className="flex items-center">
+        <div className="w-full">{children}</div>
+        <div {...listeners} className="flex items-center justify-items-center">
           <DragHandle />
         </div>
-        <div className="w-full">{children}</div>
+      </div>
+    </div>
+  );
+};
+
+const TaskCard = ({ task, onEdit }: { task: any; onEdit: (task: any) => void }) => {
+  return (
+    <div
+      className={cn(
+        'relative rounded-lg p-4 shadow-sm transition-all hover:bg-card hover:shadow-md',
+        task.completed && 'opacity-50',
+      )}
+    >
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <div
+            className="flex flex-grow cursor-pointer items-start gap-4"
+            onClick={() => onEdit(task)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onEdit(task);
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-accent/10 p-2">
+              {task.emoji ? (
+                <span className="text-3xl">{task.emoji}</span>
+              ) : (
+                <Smile className="h-8 w-8 text-muted-foreground" />
+              )}
+            </div>
+            <div className="flex w-full flex-col gap-1">
+              <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
+                {task.time}
+              </span>
+              <h3
+                className={cn(
+                  'font-medium',
+                  task.duration > 2 * 60 * 60 * 1000 ? 'line-clamp-3' : 'line-clamp-2',
+                )}
+              >
+                {task.title}
+              </h3>
+              {task.dueDate && (
+                <span className="text-sm text-muted-foreground">
+                  Due: {format(task.dueDate, 'MMM d, yyyy')}
+                </span>
+              )}
+            </div>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent className="w-64">
+          <ContextMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={() => deleteTask(task.id)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete Task
+          </ContextMenuItem>
+          <ContextMenuItem className="flex items-center gap-2">
+            <Focus className="mr-2 h-4 w-4" />
+            Focus
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+    </div>
+  );
+};
+
+const CategorySection = ({
+  category,
+  tasks,
+  onAddTask,
+  onEditTask,
+}: {
+  category: TaskCategory;
+  tasks: Task[];
+  onAddTask: () => void;
+  onEditTask: (task: Task) => void;
+}) => {
+  return (
+    <div className="relative mb-16 min-h-8" id={`category-${category}`}>
+      <CategoryLine
+        id={`category-${category}`}
+        label={TIMELINE_CATEGORIES[category].label}
+        color={TIMELINE_CATEGORIES[category].color}
+        isSticky
+      />
+      <div className="relative mt-4">
+        {/* Task Cards with Timeline Items */}
+        <div className="space-y-4">
+          {tasks.map((task) => (
+            <div key={task.id} className="relative">
+              {/* Timeline Item */}
+              <div className="absolute left-0 right-10 top-1/2 -translate-y-1/2">
+                <TimelineItem
+                  dotColor={task.priority}
+                  startTime={task.startTime}
+                  nextStartTime={task.nextStartTime}
+                  completed={task.completed}
+                  strikethrough={task.completed}
+                  onPriorityChange={(priority) => updateTask(task.id, { priority })}
+                  onCompletedChange={() => toggleTaskCompletion(task.id)}
+                />
+              </div>
+
+              {/* Task Card */}
+              <SortableTaskItem task={task}>
+                <TaskCard task={task} onEdit={onEditTask} />
+              </SortableTaskItem>
+            </div>
+          ))}
+          <Button
+            onClick={onAddTask}
+            variant="ghost"
+            className="ml-16 w-[calc(100%-4rem)] justify-start gap-2 bg-transparent text-muted-foreground hover:bg-transparent"
+          >
+            <Plus className="h-4 w-4" />
+            Add new task
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -101,9 +231,11 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
     const [newTask, setNewTask] = useState({
       title: '',
       description: '',
+      emoji: '',
       priority: 'none' as TaskPriority,
       category: 'work' as TaskCategory,
     });
+    const [activeId, setActiveId] = useState<string | null>(null);
 
     // Expose setIsCreating through ref
     React.useImperativeHandle(ref, () => ({
@@ -113,6 +245,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
           setNewTask({
             title: '',
             description: '',
+            emoji: '',
             priority: 'none',
             category: 'work',
           });
@@ -141,13 +274,24 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
     }, [tasks]);
 
     const sensors = useSensors(
-      useSensor(PointerSensor),
+      useSensor(PointerSensor, {
+        activationConstraint: {
+          distance: 8, // 8px movement required before activation
+        },
+      }),
       useSensor(KeyboardSensor, {
         coordinateGetter: sortableKeyboardCoordinates,
       }),
     );
 
+    const handleDragStart = (event: DragStartEvent) => {
+      setActiveId(event.active.id as string);
+      document.body.style.cursor = 'grabbing';
+    };
+
     const handleDragEnd = (event: DragEndEvent) => {
+      setActiveId(null);
+      document.body.style.cursor = '';
       const { active, over } = event;
       if (!over) return;
 
@@ -166,6 +310,11 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
         // If tasks are in different categories, update the category
         updateTask(activeTask.id, { category: overTask.category });
       }
+    };
+
+    const handleDragCancel = () => {
+      setActiveId(null);
+      document.body.style.cursor = '';
     };
 
     const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
@@ -234,7 +383,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
       };
 
       addTask(task);
-      setNewTask({ title: '', description: '', priority: 'none', category: 'work' });
+      setNewTask({ title: '', description: '', emoji: '', priority: 'none', category: 'work' });
       setStartTime('');
       setEndTime('');
       setDuration(ONE_HOUR_IN_MS);
@@ -255,7 +404,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
           handleCancelEdit();
         } else {
           setIsCreating(false);
-          setNewTask({ title: '', description: '', priority: 'none', category: 'work' });
+          setNewTask({ title: '', description: '', emoji: '', priority: 'none', category: 'work' });
           setStartTime('');
           setEndTime('');
           setDuration(ONE_HOUR_IN_MS);
@@ -269,6 +418,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
       setNewTask({
         title: task.title,
         description: task.description || '',
+        emoji: task.emoji || '',
         priority: task.priority,
         category: task.category,
       });
@@ -319,224 +469,143 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
 
     const handleCancelEdit = () => {
       setEditingTaskId(null);
-      setNewTask({ title: '', description: '', priority: 'none', category: 'work' });
+      setNewTask({ title: '', description: '', emoji: '', priority: 'none', category: 'work' });
       setStartTime('');
       setEndTime('');
       setDuration(ONE_HOUR_IN_MS);
       setDueDate(undefined);
     };
 
-    const renderTaskContent = (task: any) => {
-      return (
-        <ContextMenu>
-          <ContextMenuTrigger>
-            <div className="flex items-center justify-between">
-              <div
-                className="flex flex-grow cursor-pointer items-center gap-2"
-                onClick={() => handleStartEdit(task)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleStartEdit(task);
-                }}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="flex w-full flex-col gap-1 overflow-hidden">
-                  <h3
-                    className={cn(
-                      'font-medium',
-                      task.duration > 2 * 60 * 60 * 1000 ? 'line-clamp-3' : 'line-clamp-2',
-                    )}
-                  >
-                    {task.title}
-                  </h3>
-                  {task.dueDate && (
-                    <span className="text-sm text-muted-foreground">
-                      Due: {format(task.dueDate, 'MMM d, yyyy')}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </ContextMenuTrigger>
-          <ContextMenuContent className="w-64">
-            <ContextMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => deleteTask(task.id)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Task
-            </ContextMenuItem>
-            <ContextMenuItem className="flex items-center gap-2">
-              <Focus className="mr-2 h-4 w-4" />
-              Focus
-            </ContextMenuItem>
-          </ContextMenuContent>
-        </ContextMenu>
-      );
-    };
+    const activeTask = activeId ? tasks.find((task) => task.id === activeId) : null;
+
+    console.log(activeTask);
 
     return (
       <ScrollArea className="relative h-[calc(100vh-200px)] w-full overflow-y-auto">
         <div className="mx-auto w-full max-w-[1200px] px-10">
-          <CustomTimeline>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
+          >
+            <SortableContext
+              items={tasks.map((task) => task.id)}
+              strategy={verticalListSortingStrategy}
             >
-              <SortableContext
-                items={tasks.map((task) => task.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {/* Work Category */}
-                <div className="relative mb-16 min-h-8 w-full" id="category-work">
-                  <CategoryLine
-                    id="category-work"
-                    label={TIMELINE_CATEGORIES.work.label}
-                    color={TIMELINE_CATEGORIES.work.color}
-                    isSticky
-                  />
-                  <div className="mt-4">
-                    {tasksByCategory.work.map((task) => (
-                      <SortableTaskItem key={task.id} task={task}>
-                        <CustomTimelineItem
-                          dotColor={task.priority}
-                          time={task.time}
-                          startTime={task.startTime}
-                          nextStartTime={task.nextStartTime}
-                          completed={task.completed}
-                          strikethrough={task.completed}
-                          onPriorityChange={(priority) => updateTask(task.id, { priority })}
-                          onCompletedChange={(completed) => toggleTaskCompletion(task.id)}
-                        >
-                          {renderTaskContent(task)}
-                        </CustomTimelineItem>
-                      </SortableTaskItem>
-                    ))}
-                    <Button
-                      onClick={() => {
-                        setNewTask({
-                          title: '',
-                          description: '',
-                          priority: 'none',
-                          category: 'work',
-                        });
-                        setStartTime('');
-                        setEndTime('');
-                        setDuration(ONE_HOUR_IN_MS);
-                        setDueDate(undefined);
-                        setIsCreating(true);
-                        setActiveCategory('work');
-                      }}
-                      variant="ghost"
-                      className="ml-12 mt-4 w-full justify-start gap-2 bg-transparent text-muted-foreground hover:bg-transparent"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add new task
-                    </Button>
-                  </div>
-                </div>
+              {/* Work Category */}
+              <CategorySection
+                category="work"
+                tasks={tasksByCategory.work}
+                onEditTask={handleStartEdit}
+                onAddTask={() => {
+                  setNewTask({
+                    title: '',
+                    description: '',
+                    emoji: '',
+                    priority: 'none',
+                    category: 'work',
+                  });
+                  setStartTime('');
+                  setEndTime('');
+                  setDuration(ONE_HOUR_IN_MS);
+                  setDueDate(undefined);
+                  setIsCreating(true);
+                  setActiveCategory('work');
+                }}
+              />
 
-                {/* Passion Category */}
-                <div className="relative mb-16 min-h-8" id="category-passion">
-                  <CategoryLine
-                    id="category-passion"
-                    label={TIMELINE_CATEGORIES.passion.label}
-                    color={TIMELINE_CATEGORIES.passion.color}
-                    isSticky
-                  />
-                  <div className="mt-4">
-                    {tasksByCategory.passion.map((task) => (
-                      <SortableTaskItem key={task.id} task={task}>
-                        <CustomTimelineItem
-                          dotColor={task.priority}
-                          time={task.time}
-                          startTime={task.startTime}
-                          nextStartTime={task.nextStartTime}
-                          completed={task.completed}
-                          strikethrough={task.completed}
-                          onPriorityChange={(priority) => updateTask(task.id, { priority })}
-                          onCompletedChange={(completed) => toggleTaskCompletion(task.id)}
-                        >
-                          {renderTaskContent(task)}
-                        </CustomTimelineItem>
-                      </SortableTaskItem>
-                    ))}
-                    <Button
-                      onClick={() => {
-                        setNewTask({
-                          title: '',
-                          description: '',
-                          priority: 'none',
-                          category: 'passion',
-                        });
-                        setStartTime('');
-                        setEndTime('');
-                        setDuration(ONE_HOUR_IN_MS);
-                        setDueDate(undefined);
-                        setIsCreating(true);
-                        setActiveCategory('passion');
-                      }}
-                      variant="ghost"
-                      className="ml-12 mt-4 w-full justify-start gap-2 bg-transparent text-muted-foreground hover:bg-transparent"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add new task
-                    </Button>
-                  </div>
-                </div>
+              {/* Passion Category */}
+              <CategorySection
+                category="passion"
+                tasks={tasksByCategory.passion}
+                onEditTask={handleStartEdit}
+                onAddTask={() => {
+                  setNewTask({
+                    title: '',
+                    description: '',
+                    emoji: '',
+                    priority: 'none',
+                    category: 'passion',
+                  });
+                  setStartTime('');
+                  setEndTime('');
+                  setDuration(ONE_HOUR_IN_MS);
+                  setDueDate(undefined);
+                  setIsCreating(true);
+                  setActiveCategory('passion');
+                }}
+              />
 
-                {/* Play Category */}
-                <div className="relative mb-16 min-h-[calc(100vh-200px)]" id="category-play">
-                  <CategoryLine
-                    id="category-play"
-                    label={TIMELINE_CATEGORIES.play.label}
-                    color={TIMELINE_CATEGORIES.play.color}
-                    isSticky
-                  />
-                  <div className="mt-4">
-                    {tasksByCategory.play.map((task) => (
-                      <SortableTaskItem key={task.id} task={task}>
-                        <CustomTimelineItem
-                          dotColor={task.priority}
-                          time={task.time}
-                          startTime={task.startTime}
-                          nextStartTime={task.nextStartTime}
-                          completed={task.completed}
-                          strikethrough={task.completed}
-                          onPriorityChange={(priority) => updateTask(task.id, { priority })}
-                          onCompletedChange={(completed) => toggleTaskCompletion(task.id)}
-                        >
-                          {renderTaskContent(task)}
-                        </CustomTimelineItem>
-                      </SortableTaskItem>
-                    ))}
-                    <Button
-                      onClick={() => {
-                        setNewTask({
-                          title: '',
-                          description: '',
-                          priority: 'none',
-                          category: 'play',
-                        });
-                        setStartTime('');
-                        setEndTime('');
-                        setDuration(ONE_HOUR_IN_MS);
-                        setDueDate(undefined);
-                        setIsCreating(true);
-                        setActiveCategory('play');
-                      }}
-                      variant="ghost"
-                      className="ml-12 mt-4 w-full justify-start gap-2 bg-transparent text-muted-foreground hover:bg-transparent"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add new task
-                    </Button>
+              {/* Play Category */}
+              <CategorySection
+                category="play"
+                tasks={tasksByCategory.play}
+                onEditTask={handleStartEdit}
+                onAddTask={() => {
+                  setNewTask({
+                    title: '',
+                    description: '',
+                    emoji: '',
+                    priority: 'none',
+                    category: 'play',
+                  });
+                  setStartTime('');
+                  setEndTime('');
+                  setDuration(ONE_HOUR_IN_MS);
+                  setDueDate(undefined);
+                  setIsCreating(true);
+                  setActiveCategory('play');
+                }}
+              />
+            </SortableContext>
+
+            <DragOverlay
+              modifiers={[restrictToWindowEdges]}
+              className="left-12 right-0"
+              style={{
+                left: 100,
+                right: 0,
+              }}
+              dropAnimation={{
+                duration: 500,
+                easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+              }}
+            >
+              {activeTask ? (
+                <div className="animate-pop ml-80 w-full max-w-[calc(100vw-200px)] rounded-lg border bg-card p-4 shadow-xl">
+                  <div className="flex flex-grow cursor-grabbing items-start gap-2">
+                    {activeTask.emoji ? (
+                      <span className="text-lg">{activeTask.emoji}</span>
+                    ) : (
+                      <Smile className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <div className="flex w-full flex-col gap-1">
+                      <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
+                        {activeTask.time}
+                      </span>
+                      <h3
+                        className={cn(
+                          'font-medium',
+                          activeTask.duration > 2 * 60 * 60 * 1000
+                            ? 'line-clamp-3'
+                            : 'line-clamp-2',
+                        )}
+                      >
+                        {activeTask.title}
+                      </h3>
+                      {activeTask.dueDate && (
+                        <span className="text-sm text-muted-foreground">
+                          Due: {format(activeTask.dueDate, 'MMM d, yyyy')}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </SortableContext>
-            </DndContext>
-          </CustomTimeline>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         </div>
 
         {/* Create Task Dialog */}
@@ -547,6 +616,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
           initialValues={{
             title: newTask.title,
             description: newTask.description,
+            emoji: '',
             startTime,
             endTime,
             duration: {
@@ -565,6 +635,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
             const task = {
               title: values.title,
               description: values.description,
+              emoji: values.emoji,
               time: `${values.startTime}—${values.endTime}`,
               startTime: startDate,
               nextStartTime: endDate,
@@ -576,7 +647,13 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
             };
 
             addTask(task);
-            setNewTask({ title: '', description: '', priority: 'none', category: activeCategory });
+            setNewTask({
+              title: '',
+              description: '',
+              emoji: '',
+              priority: 'none',
+              category: activeCategory,
+            });
             setStartTime('');
             setEndTime('');
             setDuration(ONE_HOUR_IN_MS);
@@ -595,6 +672,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
             initialValues={{
               title: newTask.title,
               description: newTask.description,
+              emoji: newTask.emoji,
               startTime: startTime || '',
               endTime: endTime || '',
               duration: {
@@ -613,6 +691,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
               updateTask(editingTaskId, {
                 title: values.title,
                 description: values.description,
+                emoji: values.emoji,
                 time: `${values.startTime}—${values.endTime}`,
                 startTime: startDate,
                 nextStartTime: endDate,
@@ -625,6 +704,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
               setNewTask({
                 title: '',
                 description: '',
+                emoji: '',
                 priority: 'none',
                 category: activeCategory,
               });

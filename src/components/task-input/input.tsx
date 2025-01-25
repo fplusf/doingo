@@ -1,6 +1,6 @@
 'use client';
 
-import { Calendar, Hash, ClipboardList } from 'lucide-react';
+import { Calendar, Hash, ClipboardList, Smile } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { TimeSelect } from '@/components/focus-calendar/time-select';
@@ -18,11 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
+import { useTheme } from 'next-themes';
 interface TaskInputProps {
   initialValues?: {
     title: string;
     description?: string;
+    emoji?: string;
     startTime?: string;
     endTime?: string;
     duration?: DurationOption;
@@ -33,6 +36,7 @@ interface TaskInputProps {
   onSubmit: (values: {
     title: string;
     description?: string;
+    emoji?: string;
     startTime: string;
     endTime: string;
     duration: DurationOption;
@@ -45,6 +49,71 @@ interface TaskInputProps {
   className?: string;
 }
 
+//TODO: Use the local AI to suggest an emoji based on the title and category
+const emojiMappings = {
+  work: {
+    keywords: {
+      meeting: '👥',
+      email: '📧',
+      call: '📞',
+      report: '📊',
+      presentation: '🎯',
+      project: '📋',
+      deadline: '⏰',
+      review: '👀',
+      write: '✍️',
+      code: '💻',
+      debug: '🐛',
+      test: '🧪',
+      deploy: '🚀',
+    },
+    default: '💼',
+  },
+  passion: {
+    keywords: {
+      learn: '📚',
+      study: '🎓',
+      practice: '🎯',
+      create: '🎨',
+      design: '✨',
+      build: '🛠️',
+      research: '🔍',
+      write: '✍️',
+      blog: '📝',
+      video: '🎥',
+    },
+    default: '🌟',
+  },
+  play: {
+    keywords: {
+      exercise: '🏃',
+      gym: '💪',
+      yoga: '🧘',
+      game: '🎮',
+      read: '📚',
+      movie: '🎬',
+      music: '🎵',
+      cook: '👨‍🍳',
+      travel: '✈️',
+      relax: '😌',
+    },
+    default: '🎯',
+  },
+};
+
+const getSuggestedEmoji = (title: string, category: TaskCategory): string => {
+  const lowercaseTitle = title.toLowerCase();
+  const categoryMappings = emojiMappings[category];
+
+  for (const [keyword, emoji] of Object.entries(categoryMappings.keywords)) {
+    if (lowercaseTitle.includes(keyword)) {
+      return emoji;
+    }
+  }
+
+  return categoryMappings.default;
+};
+
 export default function TaskInput({
   initialValues,
   onSubmit,
@@ -54,8 +123,19 @@ export default function TaskInput({
 }: TaskInputProps) {
   const [title, setTitle] = useState(initialValues?.title || '');
   const [description, setDescription] = useState(initialValues?.description || '');
+  const [emoji, setEmoji] = useState(initialValues?.emoji || '');
   const [startTime, setStartTime] = useState(initialValues?.startTime || '');
   const [endTime, setEndTime] = useState(initialValues?.endTime || '');
+  const [category, setCategory] = useState<TaskCategory>(initialValues?.category || 'work');
+
+  // Auto-suggest emoji when title or category changes
+  useEffect(() => {
+    if (title && !emoji) {
+      const suggestedEmoji = getSuggestedEmoji(title, category);
+      setEmoji(suggestedEmoji);
+    }
+  }, [title, category]);
+
   const [duration, setDuration] = useState<DurationOption>(
     initialValues?.duration || {
       label: '1 hr',
@@ -64,7 +144,7 @@ export default function TaskInput({
   );
   const [dueDate, setDueDate] = useState<Date | undefined>(initialValues?.dueDate);
   const [priority, setPriority] = useState<TaskPriority>(initialValues?.priority || 'none');
-  const [category, setCategory] = useState<TaskCategory>(initialValues?.category || 'work');
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const adjustTextareaHeight = () => {
@@ -107,6 +187,7 @@ export default function TaskInput({
     onSubmit({
       title,
       description,
+      emoji,
       startTime,
       endTime,
       duration,
@@ -124,6 +205,7 @@ export default function TaskInput({
       onSubmit({
         title,
         description,
+        emoji,
         startTime,
         endTime,
         duration,
@@ -145,18 +227,54 @@ export default function TaskInput({
       )}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Title Input */}
-        <Textarea
-          ref={textareaRef}
-          value={title}
-          onChange={(e) => {
-            setTitle(e.target.value);
-          }}
-          onKeyDown={handleKeyDown}
-          rows={3}
-          placeholder="Task description"
-          className="resize-none border-none bg-transparent px-3 text-xl font-semibold outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
-        />
+        <div className="flex items-start gap-2">
+          <Popover modal={true} open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 rounded-full p-0 hover:bg-accent/25"
+              >
+                {emoji ? (
+                  <span className="text-lg">{emoji}</span>
+                ) : (
+                  <Smile className="h-4 w-4 text-muted-foreground" />
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-auto border-none p-0"
+              align="start"
+              side="bottom"
+              style={{ height: '350px', overflow: 'auto' }}
+            >
+              <div onClick={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
+                <Picker
+                  data={data}
+                  onEmojiSelect={(emoji: any) => {
+                    setEmoji(emoji.native);
+                    setIsEmojiPickerOpen(false);
+                  }}
+                  theme={useTheme().theme === 'dark' ? 'dark' : 'light'}
+                  previewPosition="none"
+                  skinTonePosition="none"
+                  scrollable={true}
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Textarea
+            ref={textareaRef}
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+            }}
+            onKeyDown={handleKeyDown}
+            rows={3}
+            placeholder="Task description"
+            className="resize-none border-none bg-transparent px-3 text-xl font-semibold outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+          />
+        </div>
 
         {/* Action Bar */}
         <div className="flex items-center gap-1.5 border-t border-border pt-4">

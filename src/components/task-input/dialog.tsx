@@ -9,12 +9,14 @@ import { cn } from '@/lib/utils';
 import TaskInput from './input';
 import { TaskPriority, TaskCategory } from '@/store/tasks.store';
 import { DurationOption } from '@/components/focus-calendar/duration-picker';
+
 interface TaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialValues?: {
     title: string;
     description?: string;
+    emoji?: string;
     startTime?: string;
     endTime?: string;
     duration?: DurationOption;
@@ -25,6 +27,7 @@ interface TaskDialogProps {
   onSubmit: (values: {
     title: string;
     description?: string;
+    emoji?: string;
     startTime: string;
     endTime: string;
     duration: DurationOption;
