@@ -73,17 +73,17 @@ export const TimelineItem = ({
   return (
     <div
       className={cn(
-        'relative flex',
-        lineHeight ? 'h-[100px] lg:h-[170px]' : 'h-[80px] lg:h-[130px]',
+        'relative flex w-full',
+        lineHeight ? 'h-[180px] lg:h-[220px]' : 'h-[120px] lg:h-[160px]',
       )}
     >
       {/* Timeline connector line */}
-      <div className="absolute left-5 top-10 h-[calc(100%-16px)]">
+      <div className="absolute left-5 top-6 h-[calc(100%-24px)]">
         <Connector progress={progress} />
       </div>
 
       {/* Checkbox */}
-      <div className="absolute left-2 top-4 z-10 lg:top-5">
+      <div className="absolute left-2 z-10">
         <button
           type="button"
           onClick={(e) => {

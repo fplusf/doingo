@@ -114,11 +114,11 @@ const TaskCard = ({ task, onEdit }: { task: any; onEdit: (task: any) => void }) 
             role="button"
             tabIndex={0}
           >
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-accent/10 p-2">
+            <div className="flex h-full w-12 shrink-0 items-center justify-center rounded-lg bg-accent/10 p-1.5">
               {task.emoji ? (
-                <span className="text-3xl">{task.emoji}</span>
+                <span className="text-2xl">{task.emoji}</span>
               ) : (
-                <Smile className="h-8 w-8 text-muted-foreground" />
+                <Smile className="h-6 w-6 text-muted-foreground" />
               )}
             </div>
             <div className="flex w-full flex-col gap-1">
@@ -180,11 +180,11 @@ const CategorySection = ({
       />
       <div className="relative mt-4">
         {/* Task Cards with Timeline Items */}
-        <div className="space-y-4">
+        <div className="space-y-0">
           {tasks.map((task) => (
-            <div key={task.id} className="relative">
+            <div key={task.id} className="relative mb-0">
               {/* Timeline Item */}
-              <div className="absolute left-0 right-10 top-1/2 -translate-y-1/2">
+              <div className="absolute left-2 top-4 -ml-4 w-full">
                 <TimelineItem
                   dotColor={task.priority}
                   startTime={task.startTime}
@@ -198,7 +198,16 @@ const CategorySection = ({
 
               {/* Task Card */}
               <SortableTaskItem task={task}>
-                <TaskCard task={task} onEdit={onEditTask} />
+                <div
+                  className={cn(
+                    'h-full',
+                    (task.nextStartTime.getTime() - task.startTime.getTime()) / (1000 * 60 * 60) > 2
+                      ? 'h-[180px] lg:h-[220px]'
+                      : 'h-[120px] lg:h-[160px]',
+                  )}
+                >
+                  <TaskCard task={task} onEdit={onEditTask} />
+                </div>
               </SortableTaskItem>
             </div>
           ))}
