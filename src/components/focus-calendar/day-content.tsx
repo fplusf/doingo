@@ -2,7 +2,7 @@ import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { useSearch } from '@tanstack/react-router';
 import React, { TouchEvent, useRef, useState, useEffect } from 'react';
 import { FocusRoute } from '../../routes/routes';
-import { TimelineItem, TIMELINE_CATEGORIES } from '../timeline/timeline';
+import { TIMELINE_CATEGORIES, TimelineItem } from '../timeline/timeline';
 import {
   TaskPriority,
   TaskCategory,
@@ -52,13 +52,14 @@ interface DayContentProps {
 }
 
 const ONE_HOUR_IN_MS = 3600000; // 1 hour in milliseconds
+export const CARD_MARGIN_BOTTOM = 30; // margin between cards
 
 const DragHandle = () => {
   return (
     <Button
       variant="ghost"
       size="icon"
-      className="-ml-10 mb-7 h-8 w-8 cursor-grab opacity-0 transition-opacity hover:bg-accent/25 active:cursor-grabbing group-hover:opacity-40"
+      className="-ml-10 mb-2 h-8 w-8 cursor-grab self-start opacity-0 transition-opacity hover:bg-accent/25 active:cursor-grabbing group-hover:opacity-40"
     >
       <GripVertical className="h-4 w-4" />
     </Button>
@@ -85,7 +86,7 @@ const SortableTaskItem = ({ task, children }: { task: any; children: React.React
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} className="group ml-16 w-full">
-      <div className="flex w-full items-center">
+      <div className="flex w-full items-center justify-items-center">
         <div className="w-full">{children}</div>
         <div {...listeners} className="flex items-center justify-items-center">
           <DragHandle />
@@ -97,14 +98,14 @@ const SortableTaskItem = ({ task, children }: { task: any; children: React.React
 
 const TaskCard = ({ task, onEdit }: { task: any; onEdit: (task: any) => void }) => {
   return (
-    <div
-      className={cn(
-        'relative rounded-lg p-4 shadow-sm transition-all hover:bg-card hover:shadow-md',
-        task.completed && 'opacity-50',
-      )}
-    >
-      <ContextMenu>
-        <ContextMenuTrigger>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div
+          className={cn(
+            'relative flex h-full flex-col rounded-lg p-2 py-4 hover:bg-card hover:shadow-md',
+            task.completed && 'opacity-50',
+          )}
+        >
           <div
             className="flex flex-grow cursor-pointer items-start gap-4"
             onClick={() => onEdit(task)}
@@ -114,17 +115,14 @@ const TaskCard = ({ task, onEdit }: { task: any; onEdit: (task: any) => void }) 
             role="button"
             tabIndex={0}
           >
-            <div className="flex h-full w-12 shrink-0 items-center justify-center rounded-lg bg-accent/10 p-1.5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-accent/10 p-1.5">
               {task.emoji ? (
                 <span className="text-2xl">{task.emoji}</span>
               ) : (
                 <Smile className="h-6 w-6 text-muted-foreground" />
               )}
             </div>
-            <div className="flex w-full flex-col gap-1">
-              <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
-                {task.time}
-              </span>
+            <div className="flex flex-col">
               <h3
                 className={cn(
                   'font-medium',
@@ -133,29 +131,28 @@ const TaskCard = ({ task, onEdit }: { task: any; onEdit: (task: any) => void }) 
               >
                 {task.title}
               </h3>
-              {task.dueDate && (
-                <span className="text-sm text-muted-foreground">
-                  Due: {format(task.dueDate, 'MMM d, yyyy')}
-                </span>
-              )}
+
+              <small className="shrink-0 whitespace-nowrap text-xs text-muted-foreground lg:text-sm">
+                {task.time}
+              </small>
             </div>
           </div>
-        </ContextMenuTrigger>
-        <ContextMenuContent className="w-64">
-          <ContextMenuItem
-            className="text-destructive focus:text-destructive"
-            onClick={() => deleteTask(task.id)}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete Task
-          </ContextMenuItem>
-          <ContextMenuItem className="flex items-center gap-2">
-            <Focus className="mr-2 h-4 w-4" />
-            Focus
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
-    </div>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-64">
+        <ContextMenuItem
+          className="text-destructive focus:text-destructive"
+          onClick={() => deleteTask(task.id)}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete Task
+        </ContextMenuItem>
+        <ContextMenuItem className="flex items-center gap-2">
+          <Focus className="mr-2 h-4 w-4" />
+          Focus
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 };
 
@@ -184,7 +181,7 @@ const CategorySection = ({
           {tasks.map((task) => (
             <div key={task.id} className="relative mb-0">
               {/* Timeline Item */}
-              <div className="absolute left-2 top-4 -ml-4 w-full">
+              <div className="absolute left-2 top-0 -ml-4 w-full">
                 <TimelineItem
                   dotColor={task.priority}
                   startTime={task.startTime}
@@ -202,8 +199,8 @@ const CategorySection = ({
                   className={cn(
                     'h-full',
                     (task.nextStartTime.getTime() - task.startTime.getTime()) / (1000 * 60 * 60) > 2
-                      ? 'h-[180px] lg:h-[220px]'
-                      : 'h-[120px] lg:h-[160px]',
+                      ? 'h-[120px] lg:h-[160px]'
+                      : 'h-[80px] lg:h-[100px]',
                   )}
                 >
                   <TaskCard task={task} onEdit={onEditTask} />

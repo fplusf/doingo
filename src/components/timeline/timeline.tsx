@@ -34,10 +34,6 @@ interface TimelineItemProps {
   onPriorityChange?: (priority: TaskPriority) => void;
 }
 
-interface TimelineProps {
-  children: React.ReactNode;
-}
-
 export const TimelineItem = ({
   startTime,
   nextStartTime,
@@ -53,7 +49,7 @@ export const TimelineItem = ({
     return (nextStartTime.getTime() - startTime.getTime()) / (1000 * 60);
   }, [startTime, nextStartTime]);
 
-  const lineHeight = React.useMemo(() => {
+  const isLargeTask = React.useMemo(() => {
     const timeDiffHours = timeDiffMinutes / 60;
     return timeDiffHours > 2;
   }, [timeDiffMinutes]);
@@ -74,16 +70,21 @@ export const TimelineItem = ({
     <div
       className={cn(
         'relative flex w-full',
-        lineHeight ? 'h-[180px] lg:h-[220px]' : 'h-[120px] lg:h-[160px]',
+        isLargeTask ? 'h-[190px] lg:h-[220px]' : 'h-[102px] lg:h-[136px]',
       )}
     >
       {/* Timeline connector line */}
-      <div className="absolute left-5 top-6 h-[calc(100%-24px)]">
+      <div
+        className={cn(
+          'absolute left-5',
+          isLargeTask ? 'top-[40px] h-[calc(100%-44px)]' : 'top-[32px] h-[calc(100%-32px)]',
+        )}
+      >
         <Connector progress={progress} />
       </div>
 
       {/* Checkbox */}
-      <div className="absolute left-2 z-10">
+      <div className={cn('absolute left-2 z-10', isLargeTask ? 'top-[30px]' : 'top-[30px]')}>
         <button
           type="button"
           onClick={(e) => {
@@ -117,7 +118,3 @@ export const TimelineItem = ({
     </div>
   );
 };
-
-// export const Timeline: React.FC<TimelineProps> = ({ children }) => {
-//   return <div className="relative">{children}</div>;
-// };
