@@ -59,7 +59,7 @@ const DragHandle = () => {
     <Button
       variant="ghost"
       size="icon"
-      className="-ml-10 mb-2 h-8 w-8 cursor-grab self-start opacity-0 transition-opacity hover:bg-accent/25 active:cursor-grabbing group-hover:opacity-40"
+      className="absolute right-16 top-1/3 mb-2 h-8 w-8 cursor-grab self-start opacity-0 transition-opacity hover:bg-accent/25 active:cursor-grabbing group-hover:opacity-40"
     >
       <GripVertical className="h-4 w-4" />
     </Button>
@@ -102,7 +102,7 @@ const TaskCard = ({ task, onEdit }: { task: any; onEdit: (task: any) => void }) 
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'relative flex h-full flex-col rounded-lg p-2 py-4 hover:bg-card hover:shadow-md',
+            'relative flex h-full w-full flex-col rounded-lg p-2 py-4 pr-6 hover:bg-card hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
             task.completed && 'opacity-50',
           )}
         >
@@ -115,9 +115,9 @@ const TaskCard = ({ task, onEdit }: { task: any; onEdit: (task: any) => void }) 
             role="button"
             tabIndex={0}
           >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-accent/10 p-1.5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 p-1.5 sm:h-12 sm:w-12">
               {task.emoji ? (
-                <span className="text-2xl">{task.emoji}</span>
+                <span className="text-xl sm:text-2xl">{task.emoji}</span>
               ) : (
                 <Smile className="h-6 w-6 text-muted-foreground" />
               )}
@@ -126,13 +126,15 @@ const TaskCard = ({ task, onEdit }: { task: any; onEdit: (task: any) => void }) 
               <h3
                 className={cn(
                   'font-medium',
-                  task.duration > 2 * 60 * 60 * 1000 ? 'line-clamp-3' : 'line-clamp-2',
+                  task.duration > 2 * 60 * 60 * 1000
+                    ? 'line-clamp-2 sm:line-clamp-3'
+                    : 'line-clamp-1 sm:line-clamp-2',
                 )}
               >
                 {task.title}
               </h3>
 
-              <small className="shrink-0 whitespace-nowrap text-xs text-muted-foreground lg:text-sm">
+              <small className="shrink-0 whitespace-nowrap text-[10px] text-muted-foreground sm:text-xs lg:text-sm">
                 {task.time}
               </small>
             </div>
@@ -197,7 +199,7 @@ const CategorySection = ({
               <SortableTaskItem task={task}>
                 <div
                   className={cn(
-                    'h-full',
+                    'relative h-full',
                     (task.nextStartTime.getTime() - task.startTime.getTime()) / (1000 * 60 * 60) > 2
                       ? 'h-[120px] lg:h-[160px]'
                       : 'h-[80px] lg:h-[100px]',
