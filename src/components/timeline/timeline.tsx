@@ -70,14 +70,14 @@ export const TimelineItem = ({
     <div
       className={cn(
         'relative flex w-full',
-        isLargeTask ? 'h-[190px] lg:h-[220px]' : 'h-[102px] lg:h-[136px]',
+        isLargeTask ? 'h-[210px] lg:h-[240px]' : 'h-[122px] lg:h-[156px]',
       )}
     >
       {/* Timeline connector line */}
       <div
         className={cn(
           'absolute left-5',
-          isLargeTask ? 'top-[40px] h-[calc(100%-44px)]' : 'top-[32px] h-[calc(100%-32px)]',
+          isLargeTask ? 'top-[40px] h-[calc(100%-32px)]' : 'top-[32px] h-[calc(100%-20px)]',
         )}
       >
         <Connector progress={progress} />

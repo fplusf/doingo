@@ -1,12 +1,11 @@
 'use client';
 
-import { Calendar, Hash, ClipboardList, Smile } from 'lucide-react';
+import { Hash, ClipboardList, Smile } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { TimeSelect } from '@/components/focus-calendar/time-select';
-import { DurationOption, DurationPicker } from '@/components/focus-calendar/duration-picker';
+import { TaskScheduler } from '@/components/focus-calendar/task-scheduler';
+import { DurationOption } from '@/components/focus-calendar/duration-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { parse, addMinutes, format } from 'date-fns';
 import { TaskPriority, TaskCategory } from '@/store/tasks.store';
 import { useState, useEffect, useRef } from 'react';
@@ -278,29 +277,15 @@ export default function TaskInput({
 
         {/* Action Bar */}
         <div className="flex items-center gap-1.5 border-t border-border pt-4">
-          <TimeSelect
-            value={startTime}
-            endTime={duration ? endTime : undefined}
-            onChange={handleStartTimeChange}
+          <TaskScheduler
+            startTime={startTime}
+            duration={duration}
+            startDate={dueDate ? new Date(dueDate) : undefined}
+            onStartTimeChange={handleStartTimeChange}
+            onDurationChange={handleDurationChange}
+            onStartDateChange={setDueDate}
             className="text-muted-foreground"
           />
-          <DurationPicker value={duration} onValueChange={handleDurationChange} />
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2 text-sm">
-                <Calendar className="h-3.5 w-3.5" />
-                {dueDate ? format(dueDate, 'MMM d') : 'Due'}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <CalendarComponent
-                mode="single"
-                selected={dueDate}
-                onSelect={setDueDate}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
 
           <div className="flex items-center gap-1">
             <Select value={category} onValueChange={(value: TaskCategory) => setCategory(value)}>
@@ -337,7 +322,8 @@ export default function TaskInput({
               </SelectContent>
             </Select>
 
-            <Select value={priority} onValueChange={(value: TaskPriority) => setPriority(value)}>
+            {/* TODO: Show priority only within the details page */}
+            {/* <Select value={priority} onValueChange={(value: TaskPriority) => setPriority(value)}>
               <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
                 <div className="flex items-center">
                   <div
@@ -390,7 +376,7 @@ export default function TaskInput({
                   </div>
                 </SelectItem>
               </SelectContent>
-            </Select>
+            </Select> */}
           </div>
         </div>
       </form>

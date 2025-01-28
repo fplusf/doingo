@@ -97,6 +97,15 @@ const SortableTaskItem = ({ task, children }: { task: any; children: React.React
 };
 
 const TaskCard = ({ task, onEdit }: { task: any; onEdit: (task: any) => void }) => {
+  function formatDurationForDisplay(duration: number): string {
+    const minutes = duration / 60_000;
+    if (minutes >= 60) {
+      const hours = minutes / 60;
+      return `${hours} hr${hours > 1 ? 's' : ''}`;
+    }
+    return `${minutes} min`;
+  }
+
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
@@ -122,7 +131,7 @@ const TaskCard = ({ task, onEdit }: { task: any; onEdit: (task: any) => void }) 
                 <Smile className="h-6 w-6 text-muted-foreground" />
               )}
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-2">
               <h3
                 className={cn(
                   'font-medium',
@@ -134,9 +143,16 @@ const TaskCard = ({ task, onEdit }: { task: any; onEdit: (task: any) => void }) 
                 {task.title}
               </h3>
 
-              <small className="shrink-0 whitespace-nowrap text-[10px] text-muted-foreground sm:text-xs lg:text-sm">
-                {task.time}
-              </small>
+              {/* TODO: Keep the cards clean and less overwhelming, give user quick edit for changing task schedules */}
+              {/* <TaskScheduler
+                startTime={format(task.startTime, 'HH:mm')}
+                duration={{
+                  label: formatDurationForDisplay(task.duration),
+                  millis: task.duration,
+                }}
+                startDate={task.dueDate}
+                className="text-xs text-muted-foreground"
+              /> */}
             </div>
           </div>
         </div>
@@ -179,9 +195,9 @@ const CategorySection = ({
       />
       <div className="relative mt-4">
         {/* Task Cards with Timeline Items */}
-        <div className="space-y-0">
+        <div className="flex flex-col gap-y-3 space-y-0">
           {tasks.map((task) => (
-            <div key={task.id} className="relative mb-0">
+            <div key={task.id} className="relative">
               {/* Timeline Item */}
               <div className="absolute left-2 top-0 -ml-4 w-full">
                 <TimelineItem
@@ -201,8 +217,8 @@ const CategorySection = ({
                   className={cn(
                     'relative h-full',
                     (task.nextStartTime.getTime() - task.startTime.getTime()) / (1000 * 60 * 60) > 2
-                      ? 'h-[120px] lg:h-[160px]'
-                      : 'h-[80px] lg:h-[100px]',
+                      ? 'h-[140px] lg:h-[180px]'
+                      : 'h-[100px] lg:h-[120px]',
                   )}
                 >
                   <TaskCard task={task} onEdit={onEditTask} />
