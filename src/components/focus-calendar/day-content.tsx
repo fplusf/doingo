@@ -96,7 +96,7 @@ const SortableTaskItem = ({ task, children }: { task: any; children: React.React
   );
 };
 
-const TaskCard = ({ task, onEdit }: { task: any; onEdit: (task: any) => void }) => {
+const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void }) => {
   function formatDurationForDisplay(duration: number): string {
     const minutes = duration / 60_000;
     if (minutes >= 60) {
@@ -134,7 +134,7 @@ const TaskCard = ({ task, onEdit }: { task: any; onEdit: (task: any) => void }) 
             <div className="flex flex-col gap-2">
               <h3
                 className={cn(
-                  'font-medium',
+                  'mb-4 font-medium',
                   task.duration > 2 * 60 * 60 * 1000
                     ? 'line-clamp-2 sm:line-clamp-3'
                     : 'line-clamp-1 sm:line-clamp-2',
@@ -142,6 +142,11 @@ const TaskCard = ({ task, onEdit }: { task: any; onEdit: (task: any) => void }) 
               >
                 {task.title}
               </h3>
+
+              <span>
+                {format(task.startTime, 'HH:mm')} - {format(task.nextStartTime, 'HH:mm')} (
+                {formatDurationForDisplay(task.duration)})
+              </span>
 
               {/* TODO: Keep the cards clean and less overwhelming, give user quick edit for changing task schedules */}
               {/* <TaskScheduler
@@ -600,11 +605,13 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
               {activeTask ? (
                 <div className="animate-pop ml-80 w-full max-w-[calc(100vw-200px)] rounded-lg border bg-card p-4 shadow-xl">
                   <div className="flex flex-grow cursor-grabbing items-start gap-2">
-                    {activeTask.emoji ? (
-                      <span className="text-lg">{activeTask.emoji}</span>
-                    ) : (
-                      <Smile className="h-4 w-4 text-muted-foreground" />
-                    )}
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 p-1.5 sm:h-12 sm:w-12">
+                      {activeTask.emoji ? (
+                        <span className="text-xl sm:text-2xl">{activeTask.emoji}</span>
+                      ) : (
+                        <Smile className="h-6 w-6 text-muted-foreground" />
+                      )}
+                    </div>
                     <div className="flex w-full flex-col gap-1">
                       <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
                         {activeTask.time}
