@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { TaskCategory, TaskPriority } from '@/store/tasks.store';
 import { Check } from 'lucide-react';
 import { Connector } from './connector';
+import completeTaskSound from '@/assets/sounds/complete-task.mp3';
 
 export const TIMELINE_CATEGORIES = {
   work: {
@@ -63,6 +64,10 @@ export const TimelineItem = ({
   const handleCompletedChange = (checked: boolean) => {
     if (onCompletedChange) {
       onCompletedChange(checked);
+      if (checked) {
+        const audio = new Audio(completeTaskSound);
+        audio.play().catch(console.error);
+      }
     }
   };
 

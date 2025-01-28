@@ -112,7 +112,7 @@ const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void })
         <div
           className={cn(
             'relative flex h-full w-full flex-col rounded-lg p-2 py-4 pr-6 hover:bg-card hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
-            task.completed && 'opacity-50',
+            task.completed && 'opacity-45',
           )}
         >
           <div
@@ -135,6 +135,7 @@ const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void })
               <h3
                 className={cn(
                   'mb-4 font-medium',
+                  task.completed && 'line-through',
                   task.duration > 2 * 60 * 60 * 1000
                     ? 'line-clamp-2 sm:line-clamp-3'
                     : 'line-clamp-1 sm:line-clamp-2',
@@ -143,7 +144,8 @@ const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void })
                 {task.title}
               </h3>
 
-              <span>
+              <span className="opacity-50">
+                <span className="mr-2">{format(task.startTime, 'MMM dd yyyy')}</span>
                 {format(task.startTime, 'HH:mm')} - {format(task.nextStartTime, 'HH:mm')} (
                 {formatDurationForDisplay(task.duration)})
               </span>
@@ -442,7 +444,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
       }
     };
 
-    const handleStartEdit = (task: any) => {
+    const handleStartEdit = (task: Task) => {
       setEditingTaskId(task.id);
       setNewTask({
         title: task.title,
@@ -452,13 +454,14 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
         category: task.category,
       });
       if (task.time) {
+        console.log('Task time: ', task);
         const [start, end] = task.time.split('—');
         setStartTime(start);
         setEndTime(end);
         // Calculate duration from start and end time
         const startDate = parse(start, 'HH:mm', new Date());
         const endDate = parse(end, 'HH:mm', new Date());
-        const durationMs = endDate.getTime() - startDate.getTime();
+        const durationMs = task.duration || endDate.getTime() - startDate.getTime();
         setDuration(durationMs);
       } else {
         setDuration(ONE_HOUR_IN_MS);
