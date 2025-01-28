@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, GripVertical, Trash2, Focus, Smile } from 'lucide-react';
 import { useStore } from '@tanstack/react-store';
 import { parse, format, intervalToDuration } from 'date-fns';
-import { CategoryLine } from '../timeline/category-line';
+import { CategoryBadge } from '../timeline/category-line';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   DndContext,
@@ -187,7 +187,7 @@ const CategorySection = ({
 }) => {
   return (
     <div className="relative mb-16 min-h-8" id={`category-${category}`}>
-      <CategoryLine
+      <CategoryBadge
         id={`category-${category}`}
         label={TIMELINE_CATEGORIES[category].label}
         color={TIMELINE_CATEGORIES[category].color}
