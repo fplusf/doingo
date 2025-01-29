@@ -129,7 +129,7 @@ export function TaskScheduler({
         value={startTime}
         endTime={duration ? endTime : undefined}
         onChange={handleStartTimeChange}
-        className="text-muted-foreground"
+        className="h-8 text-muted-foreground"
       />
 
       <DurationPicker value={duration} onValueChange={handleDurationChange} />

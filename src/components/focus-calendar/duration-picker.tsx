@@ -284,8 +284,9 @@ export function DurationPicker({ value, onValueChange, className }: DurationPick
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
+          size={'sm'}
           variant="outline"
-          className={cn('w-[120px]', className)}
+          className={cn('h-8 w-[120px]', className)}
           aria-label="Select duration"
         >
           {value?.label || 'Duration'}

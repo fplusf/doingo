@@ -85,10 +85,10 @@ export const TimeSelect = ({ value, endTime, onChange, className }: TimeSelectPr
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="ghost"
+          variant={'outline'}
           size="sm"
           className={cn(
-            'h-8 justify-start bg-transparent px-2 font-normal hover:bg-accent/50',
+            'h-8 justify-start px-2 font-normal hover:bg-accent/50',
             endTime ? 'w-[9.5rem]' : 'w-[4.5rem]',
             className,
           )}
