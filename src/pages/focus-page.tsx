@@ -31,17 +31,17 @@ export default function FocusPage() {
   return (
     <div
       className={cn(
-        'flex h-full bg-sidebar transition-all duration-100',
+        'b flex h-full bg-sidebar transition-all duration-100',
         sidebar.open ? 'w-[calc(100vw-88px)]' : 'w-[calc(100vw-16px)]',
         'flex-col text-white',
       )}
     >
       {/* Week Navigator */}
-      <div className="bg-sidebar">
-        <WeekNavigator className="mb-4 rounded-t-2xl bg-sidebar" />
+      <div className="borderbg-background rounded-t-2xl">
+        <WeekNavigator className="mb-1 rounded-t-2xl" />
       </div>
       {/* Day Content */}
-      <div className="rounded-t-2xl bg-background shadow-[0_4px_10px_-4px_rgba(0,0,0,0.1)]">
+      <div className="bg-background shadow-[0_4px_10px_-4px_rgba(0,0,0,0.1)]">
         <DayContent ref={dayContentRef} />
       </div>
     </div>

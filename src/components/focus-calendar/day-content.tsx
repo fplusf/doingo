@@ -144,11 +144,11 @@ const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void })
                 {task.title}
               </h3>
 
-              <span className="opacity-50">
+              <div className="text-xs opacity-50 xl:text-sm">
                 <span className="mr-2">{format(task.startTime, 'MMM dd yyyy')}</span>
                 {format(task.startTime, 'HH:mm')} - {format(task.nextStartTime, 'HH:mm')} (
                 {formatDurationForDisplay(task.duration)})
-              </span>
+              </div>
 
               {/* TODO: Keep the cards clean and less overwhelming, give user quick edit for changing task schedules */}
               {/* <TaskScheduler

@@ -37,14 +37,14 @@ function WeekNavigator({ className }: { className?: string }) {
     <div
       ref={containerRef}
       className={cn(
-        'bg-sidebar-background relative mx-auto h-[90px] w-full overflow-hidden pt-2 text-white xl:h-[104px]',
+        'relative mx-auto h-[90px] w-full overflow-hidden bg-background pt-2 text-white xl:h-[104px]',
         className,
       )}
     >
       <div className="flex h-full w-full">
         {weeks.map((weekData) => (
-          <div key={weekData.id} className="week w-full flex-shrink-0 bg-sidebar">
-            <div className="grid w-full grid-cols-7 bg-sidebar">
+          <div key={weekData.id} className="week w-full flex-shrink-0 bg-background">
+            <div className="grid w-full grid-cols-7">
               {weekData.dates.map((date, i) => (
                 <div key={i} onClick={() => handleDateSelect(date)}>
                   <DayChart

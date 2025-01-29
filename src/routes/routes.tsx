@@ -1,7 +1,7 @@
 import { TagDetails } from '@/components/tags';
-import AboutPage from '@/pages/AboutPage';
-import FocusPage from '@/pages/FocusPage';
-import Tags from '@/pages/Tags';
+import AboutPage from '@/pages/about-page';
+import FocusPage from '@/pages/focus-page';
+import Tags from '@/pages/tags-page';
 import { createRoute } from '@tanstack/react-router';
 import { RootRoute } from './__root';
 import BaseLayout from '@/layouts/BaseLayout';
