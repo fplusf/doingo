@@ -82,14 +82,14 @@ export const TimelineItem = ({
       <div
         className={cn(
           'absolute left-5',
-          isLargeTask ? 'top-[40px] h-[calc(100%-32px)]' : 'top-[32px] h-[calc(100%-20px)]',
+          isLargeTask ? 'top-[40px] h-[calc(100%-36px)]' : 'top-[32px] h-[calc(100%-20px)]',
         )}
       >
         <Connector progress={progress} />
       </div>
 
       {/* Checkbox */}
-      <div className={cn('absolute left-2 z-10', isLargeTask ? 'top-[30px]' : 'top-[30px]')}>
+      <div className={cn('absolute left-2 z-10', isLargeTask ? 'top-[33px]' : 'top-[30px]')}>
         <button
           type="button"
           onClick={(e) => {

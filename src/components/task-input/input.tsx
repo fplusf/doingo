@@ -232,7 +232,16 @@ export default function TaskInput({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 shrink-0 rounded-full p-0 hover:bg-accent/25"
+                className={cn(
+                  'h-10 w-10 shrink-0 rounded-full p-0',
+                  emoji ? 'bg-accent/15 hover:bg-accent/25' : 'hover:bg-accent/25',
+                )}
+                style={{
+                  aspectRatio: '1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
                 {emoji ? (
                   <span className="text-lg">{emoji}</span>

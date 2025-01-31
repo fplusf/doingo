@@ -38,7 +38,7 @@ export default function FocusPage() {
     >
       {/* Week Navigator */}
       <div className="borderbg-background rounded-t-2xl">
-        <WeekNavigator className="rounded-t-2xl" />
+        <WeekNavigator className="border-secondary-500 rounded-t-2xl border-b" />
       </div>
       {/* Day Content */}
       <div className="bg-background shadow-[0_4px_10px_-4px_rgba(0,0,0,0.1)]">

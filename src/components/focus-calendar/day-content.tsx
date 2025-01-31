@@ -96,6 +96,8 @@ const SortableTaskItem = ({ task, children }: { task: any; children: React.React
   );
 };
 
+import { getEmojiBackground } from '@/lib/emoji-utils';
+
 const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void }) => {
   function formatDurationForDisplay(duration: number): string {
     const minutes = duration / 60_000;
@@ -124,11 +126,22 @@ const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void })
             role="button"
             tabIndex={0}
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 p-1.5 sm:h-12 sm:w-12">
+            <div
+              className={cn(
+                'flex h-12 w-12 shrink-0 items-center justify-center rounded-full p-0',
+                task.emoji ? getEmojiBackground(task.emoji, task.category) : 'hover:bg-accent/25',
+              )}
+              style={{
+                aspectRatio: '1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
               {task.emoji ? (
-                <span className="text-xl sm:text-2xl">{task.emoji}</span>
+                <span className="text-lg sm:text-xl">{task.emoji}</span>
               ) : (
-                <Smile className="h-6 w-6 text-muted-foreground" />
+                <Smile className="h-4 w-4 text-muted-foreground" />
               )}
             </div>
             <div className="flex flex-col gap-2">
@@ -206,7 +219,7 @@ const CategorySection = ({
           {tasks.map((task) => (
             <div key={task.id} className="relative">
               {/* Timeline Item */}
-              <div className="absolute left-2 top-0 -ml-4 w-full">
+              <div className="absolute -top-1 left-2 -ml-4 w-full">
                 <TimelineItem
                   dotColor={task.priority}
                   startTime={task.startTime}
@@ -595,48 +608,15 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
 
             <DragOverlay
               modifiers={[restrictToWindowEdges]}
-              className="left-12 right-0"
-              style={{
-                left: 100,
-                right: 0,
-              }}
               dropAnimation={{
                 duration: 500,
                 easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
               }}
             >
-              {activeTask ? (
-                <div className="animate-pop ml-80 w-full max-w-[calc(100vw-200px)] rounded-lg border bg-card p-4 shadow-xl">
-                  <div className="flex flex-grow cursor-grabbing items-start gap-2">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 p-1.5 sm:h-12 sm:w-12">
-                      {activeTask.emoji ? (
-                        <span className="text-xl sm:text-2xl">{activeTask.emoji}</span>
-                      ) : (
-                        <Smile className="h-6 w-6 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex w-full flex-col gap-1">
-                      <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
-                        {activeTask.time}
-                      </span>
-                      <h3
-                        className={cn(
-                          'font-medium',
-                          activeTask.duration > 2 * 60 * 60 * 1000
-                            ? 'line-clamp-3'
-                            : 'line-clamp-2',
-                        )}
-                      >
-                        {activeTask.title}
-                      </h3>
-                      {activeTask.dueDate && (
-                        <span className="text-sm text-muted-foreground">
-                          Due: {format(activeTask.dueDate, 'MMM d, yyyy')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+              {activeId ? (
+                <SortableTaskItem task={tasks.find((t) => t.id === activeId)}>
+                  <TaskCard task={tasks.find((t) => t.id === activeId)!} onEdit={handleStartEdit} />
+                </SortableTaskItem>
               ) : null}
             </DragOverlay>
           </DndContext>
