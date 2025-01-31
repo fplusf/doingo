@@ -1,4 +1,4 @@
-import { Component, Focus } from 'lucide-react';
+import { Focus, Inbox, Bell, Calendar, BarChart } from 'lucide-react';
 import * as React from 'react';
 
 import { NavUser } from '@/components/sidebar/nav-user';
@@ -39,7 +39,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
               </Link>
             </SidebarMenuButton>
-            <span className="mt-0.5 truncate text-xs">Focus</span>
+            <span className="mt-0.5 truncate text-xs">Today</span>
           </SidebarMenuItem>
         </SidebarMenu>
         <SidebarMenu>
@@ -51,11 +51,59 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 inactiveProps={{ className: 'inactive' }}
               >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
-                  <Component className="size-4" />
+                  <Inbox className="size-4" />
                 </div>
               </Link>
             </SidebarMenuButton>
-            <span className="mt-0.5 truncate text-xs">Groups</span>
+            <span className="mt-0.5 truncate text-xs">Inbox</span>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <SidebarMenu>
+          <SidebarMenuItem className="flex flex-col items-center">
+            <SidebarMenuButton size="lg" asChild>
+              <Link
+                to="/tags"
+                activeProps={{ className: 'active' }}
+                inactiveProps={{ className: 'inactive' }}
+              >
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
+                  <Bell className="size-4" />
+                </div>
+              </Link>
+            </SidebarMenuButton>
+            <span className="mt-0.5 truncate text-xs">Reminders</span>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <SidebarMenu>
+          <SidebarMenuItem className="flex flex-col items-center">
+            <SidebarMenuButton size="lg" asChild>
+              <Link
+                to="/tags"
+                activeProps={{ className: 'active' }}
+                inactiveProps={{ className: 'inactive' }}
+              >
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
+                  <Calendar className="size-4" />
+                </div>
+              </Link>
+            </SidebarMenuButton>
+            <span className="mt-0.5 truncate text-xs">Calendar</span>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <SidebarMenu>
+          <SidebarMenuItem className="flex flex-col items-center">
+            <SidebarMenuButton size="lg" asChild>
+              <Link
+                to="/tags"
+                activeProps={{ className: 'active' }}
+                inactiveProps={{ className: 'inactive' }}
+              >
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
+                  <BarChart className="size-4" />
+                </div>
+              </Link>
+            </SidebarMenuButton>
+            <span className="mt-0.5 truncate text-xs">Stats</span>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
