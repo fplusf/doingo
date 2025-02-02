@@ -22,7 +22,7 @@ function createWindow() {
       nodeIntegrationInSubFrames: false,
       preload: preload,
     },
-    titleBarStyle: 'hidden',
+    titleBarStyle: 'hiddenInset',
     trafficLightPosition: {
       x: 16,
       y: 16,

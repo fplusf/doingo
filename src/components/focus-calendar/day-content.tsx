@@ -100,6 +100,19 @@ import { getEmojiBackground } from '@/lib/emoji-utils';
 
 const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void }) => {
   const navigate = useNavigate({ from: TaskDetailsRoute.fullPath });
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isHovered && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        navigate({ to: '/$taskId', params: { taskId: task.id } });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isHovered, navigate, task.id]);
 
   function formatDurationForDisplay(duration: number): string {
     const minutes = duration / 60_000;
@@ -118,6 +131,8 @@ const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void })
             'relative flex h-full w-full flex-col rounded-lg p-2 py-4 pr-6 text-current hover:bg-sidebar hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
             task.completed && 'opacity-45',
           )}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
         >
           <div
             className="flex flex-grow cursor-pointer items-start gap-4"
@@ -169,7 +184,7 @@ const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void })
                 <Link
                   to={'/$taskId'}
                   params={{ taskId: task.id }}
-                  className="flex h-6 w-32 items-center justify-start text-xs text-muted-foreground hover:text-foreground"
+                  className="flex h-6 w-32 items-center justify-start rounded-md p-3 text-xs text-muted-foreground hover:bg-gray-700 hover:text-foreground"
                 >
                   Open Details
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -282,6 +297,18 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
       category: 'work' as TaskCategory,
     });
     const [activeId, setActiveId] = useState<string | null>(null);
+    const navigate = useNavigate();
+
+    React.useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'F') {
+          navigate({ to: '..' });
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [navigate]);
 
     // Expose setIsCreating through ref
     React.useImperativeHandle(ref, () => ({

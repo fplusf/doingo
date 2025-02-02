@@ -21,26 +21,35 @@ export function TaskDetails({ task, onEdit }: TaskDetailsProps) {
 
   const schedulerProps = convertTaskToSchedulerProps(task);
 
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        navigate({ to: '..' });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
+
   return (
     <div className="container mx-auto max-w-4xl p-6">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="absolute left-4 top-10 gap-2 text-muted-foreground hover:bg-gray-700 hover:text-foreground"
+        onClick={() => navigate({ to: '..' })}
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back
+      </Button>
       <div className="space-y-8 rounded-xl shadow-sm backdrop-blur-sm">
         <Tabs defaultValue="document" className="w-full">
-          <div className="relative mb-10 mt-3 flex">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute left-0 gap-2 text-muted-foreground hover:text-foreground"
-              onClick={() => navigate({ to: '..' })}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-            <TabsList className="mx-auto grid w-72 grid-cols-3">
-              <TabsTrigger value="document">Document</TabsTrigger>
-              <TabsTrigger value="both">Both</TabsTrigger>
-              <TabsTrigger value="canvas">Canvas</TabsTrigger>
-            </TabsList>
-          </div>
+          <TabsList className="mx-auto mb-10 mt-3 grid w-72 grid-cols-3">
+            <TabsTrigger value="document">Document</TabsTrigger>
+            <TabsTrigger value="both">Both</TabsTrigger>
+            <TabsTrigger value="canvas">Canvas</TabsTrigger>
+          </TabsList>
 
           <TabsContent value="document">
             {/* Schedule Information */}
