@@ -6,19 +6,16 @@ import TaskDetailsPage from '@/pages/task-details-page';
 import { createRoute } from '@tanstack/react-router';
 import { RootRoute } from './__root';
 import BaseLayout from '@/layouts/BaseLayout';
-import { ThemeProvider } from '../components/theme-provider';
 
 const withBaseLayout = (Component: React.ComponentType<any>) => {
   return function WrappedComponent(props: any) {
     return (
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-        <BaseLayout>
-          {/* TODO: In order to render routed components within the main Layout
+      <BaseLayout>
+        {/* TODO: In order to render routed components within the main Layout
         make sure the useWeekNavigation search params used exist within the component below?
         or maybe has access so it doesn't throw a shitty error! Same error caused for other routes as well */}
-          <Component {...props} />
-        </BaseLayout>
-      </ThemeProvider>
+        <Component {...props} />
+      </BaseLayout>
     );
   };
 };

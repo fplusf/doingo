@@ -9,7 +9,6 @@ interface ConnectorProps {
 }
 
 export function Connector({ progress, className }: ConnectorProps) {
-  console.log('progress', progress);
   return (
     <div className={cn('relative h-full w-[2.5px]', className)}>
       <div

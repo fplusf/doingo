@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 import { weeklyCalendarSchema } from './searchParams';
+import { ThemeProvider } from '../components/theme-provider';
 
 export const RootRoute = createRootRoute({
   component: Root,
@@ -18,9 +19,9 @@ export const RootRoute = createRootRoute({
 
 function Root() {
   return (
-    <>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <Outlet />
       <TanStackRouterDevtools />
-    </>
+    </ThemeProvider>
   );
 }

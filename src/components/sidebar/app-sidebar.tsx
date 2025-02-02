@@ -12,6 +12,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { Link } from '@tanstack/react-router';
+import ToggleTheme from '../ToggleTheme';
 
 const data = {
   user: {
@@ -103,17 +104,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
               </Link>
             </SidebarMenuButton>
-            <span className="mt-0.5 truncate text-xs">Stats</span>
+            <span className="mt-0.5 truncate text-xs">Analytics</span>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
-        {/* <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
-      </SidebarContent>
+      <SidebarContent />
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <div className="flex flex-col items-center gap-4">
+          <ToggleTheme />
+          <NavUser user={data.user} />
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
