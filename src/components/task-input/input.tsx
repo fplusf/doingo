@@ -23,7 +23,7 @@ import { useTheme } from 'next-themes';
 interface TaskInputProps {
   initialValues?: {
     title: string;
-    description?: string;
+    notes?: string;
     emoji?: string;
     startTime?: string;
     endTime?: string;
@@ -34,7 +34,7 @@ interface TaskInputProps {
   };
   onSubmit: (values: {
     title: string;
-    description?: string;
+    notes?: string;
     emoji?: string;
     startTime: string;
     endTime: string;
@@ -121,7 +121,7 @@ export default function TaskInput({
   className,
 }: TaskInputProps) {
   const [title, setTitle] = useState(initialValues?.title || '');
-  const [description, setDescription] = useState(initialValues?.description || '');
+  const [notes, setNotes] = useState(initialValues?.notes || '');
   const [emoji, setEmoji] = useState(initialValues?.emoji || '');
   const [startTime, setStartTime] = useState(initialValues?.startTime || '');
   const [endTime, setEndTime] = useState(initialValues?.endTime || '');
@@ -185,7 +185,7 @@ export default function TaskInput({
 
     onSubmit({
       title,
-      description,
+      notes,
       emoji,
       startTime,
       endTime,
@@ -203,7 +203,7 @@ export default function TaskInput({
 
       onSubmit({
         title,
-        description,
+        notes,
         emoji,
         startTime,
         endTime,

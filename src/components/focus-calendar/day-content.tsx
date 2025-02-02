@@ -1,7 +1,7 @@
 import { restrictToWindowEdges } from '@dnd-kit/modifiers';
-import { useSearch } from '@tanstack/react-router';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import React, { TouchEvent, useRef, useState, useEffect } from 'react';
-import { FocusRoute } from '../../routes/routes';
+import { TaskDetailsRoute, TodayRoute } from '../../routes/routes';
 import { TIMELINE_CATEGORIES, TimelineItem } from '../timeline/timeline';
 import {
   TaskPriority,
@@ -14,7 +14,7 @@ import {
   deleteTask,
 } from '@/store/tasks.store';
 import { Button } from '@/components/ui/button';
-import { Plus, GripVertical, Trash2, Focus, Smile } from 'lucide-react';
+import { Plus, GripVertical, Trash2, Focus, Smile, ArrowRight } from 'lucide-react';
 import { useStore } from '@tanstack/react-store';
 import { parse, format, intervalToDuration } from 'date-fns';
 import { CategoryBadge } from '../timeline/category-line';
@@ -99,6 +99,8 @@ const SortableTaskItem = ({ task, children }: { task: any; children: React.React
 import { getEmojiBackground } from '@/lib/emoji-utils';
 
 const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void }) => {
+  const navigate = useNavigate({ from: TaskDetailsRoute.fullPath });
+
   function formatDurationForDisplay(duration: number): string {
     const minutes = duration / 60_000;
     if (minutes >= 60) {
@@ -113,7 +115,7 @@ const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void })
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'relative flex h-full w-full flex-col rounded-lg p-2 py-4 pr-6 hover:bg-card hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
+            'relative flex h-full w-full flex-col rounded-lg p-2 py-4 pr-6 text-current hover:bg-card hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
             task.completed && 'opacity-45',
           )}
         >
@@ -157,22 +159,22 @@ const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void })
                 {task.title}
               </h3>
 
-              <div className="text-xs opacity-50 xl:text-sm">
-                <span className="mr-2">{format(task.startTime, 'MMM dd yyyy')}</span>
-                {format(task.startTime, 'HH:mm')} - {format(task.nextStartTime, 'HH:mm')} (
-                {formatDurationForDisplay(task.duration)})
-              </div>
+              <section className="flex items-center">
+                <div className="mr-3 text-xs opacity-50 xl:text-sm">
+                  <span className="mr-2">{format(task.startTime, 'MMM dd yyyy')}</span>
+                  {format(task.startTime, 'HH:mm')} - {format(task.nextStartTime, 'HH:mm')} (
+                  {formatDurationForDisplay(task.duration)})
+                </div>
 
-              {/* TODO: Keep the cards clean and less overwhelming, give user quick edit for changing task schedules */}
-              {/* <TaskScheduler
-                startTime={format(task.startTime, 'HH:mm')}
-                duration={{
-                  label: formatDurationForDisplay(task.duration),
-                  millis: task.duration,
-                }}
-                startDate={task.dueDate}
-                className="text-xs text-muted-foreground"
-              /> */}
+                <Link
+                  to={'/$taskId'}
+                  params={{ taskId: task.id }}
+                  className="flex h-6 w-32 items-center justify-start text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Open Details
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </section>
             </div>
           </div>
         </div>
@@ -262,7 +264,7 @@ const CategorySection = ({
 
 const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void }, DayContentProps>(
   (props, ref) => {
-    const search = useSearch({ from: FocusRoute.fullPath });
+    const search = useSearch({ from: TodayRoute.fullPath });
     const touchStartX = useRef<number | null>(null);
     const tasks = useStore(tasksStore, (state) => state.tasks);
     const [isCreating, setIsCreating] = useState(false);
@@ -274,7 +276,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
     const [dueDate, setDueDate] = useState<Date>();
     const [newTask, setNewTask] = useState({
       title: '',
-      description: '',
+      notes: '',
       emoji: '',
       priority: 'none' as TaskPriority,
       category: 'work' as TaskCategory,
@@ -288,7 +290,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
         if (value) {
           setNewTask({
             title: '',
-            description: '',
+            notes: '',
             emoji: '',
             priority: 'none',
             category: 'work',
@@ -415,7 +417,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
 
       const task = {
         title: newTask.title,
-        description: newTask.description,
+        notes: newTask.notes,
         time: startTime && endTime ? `${startTime}—${endTime}` : '',
         startTime: startDate,
         nextStartTime: endDate,
@@ -427,7 +429,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
       };
 
       addTask(task);
-      setNewTask({ title: '', description: '', emoji: '', priority: 'none', category: 'work' });
+      setNewTask({ title: '', notes: '', emoji: '', priority: 'none', category: 'work' });
       setStartTime('');
       setEndTime('');
       setDuration(ONE_HOUR_IN_MS);
@@ -448,7 +450,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
           handleCancelEdit();
         } else {
           setIsCreating(false);
-          setNewTask({ title: '', description: '', emoji: '', priority: 'none', category: 'work' });
+          setNewTask({ title: '', notes: '', emoji: '', priority: 'none', category: 'work' });
           setStartTime('');
           setEndTime('');
           setDuration(ONE_HOUR_IN_MS);
@@ -461,7 +463,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
       setEditingTaskId(task.id);
       setNewTask({
         title: task.title,
-        description: task.description || '',
+        notes: task.notes || '',
         emoji: task.emoji || '',
         priority: task.priority,
         category: task.category,
@@ -498,7 +500,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
 
       const updatedTask = {
         title: newTask.title,
-        description: newTask.description,
+        notes: newTask.notes,
         time: startTime && endTime ? `${startTime}—${endTime}` : '',
         startTime: startDate,
         nextStartTime: endDate,
@@ -514,7 +516,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
 
     const handleCancelEdit = () => {
       setEditingTaskId(null);
-      setNewTask({ title: '', description: '', emoji: '', priority: 'none', category: 'work' });
+      setNewTask({ title: '', notes: '', emoji: '', priority: 'none', category: 'work' });
       setStartTime('');
       setEndTime('');
       setDuration(ONE_HOUR_IN_MS);
@@ -547,7 +549,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
                 onAddTask={() => {
                   setNewTask({
                     title: '',
-                    description: '',
+                    notes: '',
                     emoji: '',
                     priority: 'none',
                     category: 'work',
@@ -569,7 +571,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
                 onAddTask={() => {
                   setNewTask({
                     title: '',
-                    description: '',
+                    notes: '',
                     emoji: '',
                     priority: 'none',
                     category: 'passion',
@@ -591,7 +593,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
                 onAddTask={() => {
                   setNewTask({
                     title: '',
-                    description: '',
+                    notes: '',
                     emoji: '',
                     priority: 'none',
                     category: 'play',
@@ -629,7 +631,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
           mode="create"
           initialValues={{
             title: newTask.title,
-            description: newTask.description,
+            notes: newTask.notes,
             emoji: '',
             startTime,
             endTime,
@@ -648,7 +650,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
 
             const task = {
               title: values.title,
-              description: values.description,
+              notes: values.notes,
               emoji: values.emoji,
               time: `${values.startTime}—${values.endTime}`,
               startTime: startDate,
@@ -663,7 +665,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
             addTask(task);
             setNewTask({
               title: '',
-              description: '',
+              notes: '',
               emoji: '',
               priority: 'none',
               category: activeCategory,
@@ -685,7 +687,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
             mode="edit"
             initialValues={{
               title: newTask.title,
-              description: newTask.description,
+              notes: newTask.notes,
               emoji: newTask.emoji,
               startTime: startTime || '',
               endTime: endTime || '',
@@ -704,7 +706,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
 
               updateTask(editingTaskId, {
                 title: values.title,
-                description: values.description,
+                notes: values.notes,
                 emoji: values.emoji,
                 time: `${values.startTime}—${values.endTime}`,
                 startTime: startDate,
@@ -717,7 +719,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
               setEditingTaskId(null);
               setNewTask({
                 title: '',
-                description: '',
+                notes: '',
                 emoji: '',
                 priority: 'none',
                 category: activeCategory,

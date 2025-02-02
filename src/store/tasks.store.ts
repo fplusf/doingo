@@ -9,7 +9,7 @@ export type TaskCategory = 'work' | 'passion' | 'play';
 export interface Task {
   id: string;
   title: string;
-  description?: string;
+  notes?: string;
   emoji?: string;
   time: string; // Human readable format for display
   startTime: Date;

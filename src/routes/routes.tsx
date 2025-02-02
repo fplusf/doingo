@@ -2,6 +2,7 @@ import { TagDetails } from '@/components/tags';
 import AboutPage from '@/pages/about-page';
 import FocusPage from '@/pages/focus-page';
 import Tags from '@/pages/tags-page';
+import TaskDetailsPage from '@/pages/task-details-page';
 import { createRoute } from '@tanstack/react-router';
 import { RootRoute } from './__root';
 import BaseLayout from '@/layouts/BaseLayout';
@@ -12,6 +13,9 @@ const withBaseLayout = (Component: React.ComponentType<any>) => {
     return (
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         <BaseLayout>
+          {/* TODO: In order to render routed components within the main Layout
+        make sure the useWeekNavigation search params used exist within the component below?
+        or maybe has access so it doesn't throw a shitty error! Same error caused for other routes as well */}
           <Component {...props} />
         </BaseLayout>
       </ThemeProvider>
@@ -38,10 +42,16 @@ const withBaseLayout = (Component: React.ComponentType<any>) => {
 // 4. Add to routeTree: RootRoute.addChildren([HomeRoute, NewRoute, ...])
 // 5. Add Link: <Link to="/new">New Page</Link>
 
-export const FocusRoute = createRoute({
+export const TodayRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: '/',
   component: withBaseLayout(FocusPage),
+});
+
+export const TaskDetailsRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: '$taskId',
+  component: TaskDetailsPage,
 });
 
 // Parent route for /tags
@@ -64,4 +74,10 @@ export const AboutRoute = createRoute({
   component: withBaseLayout(AboutPage),
 });
 
-export const rootTree = RootRoute.addChildren([FocusRoute, TagsRoute, AboutRoute, TagDetailsRoute]);
+export const rootTree = RootRoute.addChildren([
+  TodayRoute,
+  TaskDetailsRoute,
+  TagsRoute,
+  AboutRoute,
+  TagDetailsRoute,
+]);

@@ -1,17 +1,9 @@
 import { gsap } from '@/lib/gsap';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import {
-  addDays,
-  addWeeks,
-  differenceInWeeks,
-  format,
-  isSameWeek,
-  parse,
-  startOfWeek,
-} from 'date-fns';
+import { addDays, addWeeks, format, isSameWeek, parse, startOfWeek } from 'date-fns';
 import { useCallback, useEffect, useState } from 'react';
 import { DATE_FORMAT } from '../shared/constants/date';
-import { FocusRoute } from '../routes/routes';
+import { TodayRoute } from '../routes/routes';
 
 interface WeekData {
   id: string;
@@ -26,8 +18,8 @@ function createWeekData(startDate: Date): WeekData {
 }
 
 export function useWeekNavigation() {
-  const navigate = useNavigate({ from: FocusRoute.fullPath });
-  const search = useSearch({ from: FocusRoute.fullPath });
+  const navigate = useNavigate({ from: TodayRoute.fullPath });
+  const search = useSearch({ from: TodayRoute.fullPath });
   const today = new Date();
 
   const [selectedDate, setSelectedDate] = useState(() =>

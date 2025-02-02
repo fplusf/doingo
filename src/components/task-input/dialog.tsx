@@ -15,7 +15,7 @@ interface TaskDialogProps {
   onOpenChange: (open: boolean) => void;
   initialValues?: {
     title: string;
-    description?: string;
+    notes?: string;
     emoji?: string;
     startTime?: string;
     endTime?: string;
@@ -26,7 +26,7 @@ interface TaskDialogProps {
   };
   onSubmit: (values: {
     title: string;
-    description?: string;
+    notes?: string;
     emoji?: string;
     startTime: string;
     endTime: string;

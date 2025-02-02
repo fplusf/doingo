@@ -5,7 +5,6 @@ import {
   stripSearchParams,
 } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
-import React from 'react';
 import { weeklyCalendarSchema } from './searchParams';
 
 export const RootRoute = createRootRoute({
