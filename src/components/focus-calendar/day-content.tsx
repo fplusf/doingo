@@ -115,7 +115,7 @@ const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void })
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'relative flex h-full w-full flex-col rounded-lg p-2 py-4 pr-6 text-current hover:bg-card hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
+            'relative flex h-full w-full flex-col rounded-lg p-2 py-4 pr-6 text-current hover:bg-sidebar hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
             task.completed && 'opacity-45',
           )}
         >

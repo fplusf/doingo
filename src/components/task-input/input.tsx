@@ -1,11 +1,7 @@
-'use client';
-
-import { Hash, ClipboardList, Smile } from 'lucide-react';
+import { Hash, ClipboardList } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
 import { TaskScheduler } from '@/components/focus-calendar/task-scheduler';
 import { DurationOption } from '@/components/focus-calendar/duration-picker';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { parse, addMinutes, format } from 'date-fns';
 import { TaskPriority, TaskCategory } from '@/store/tasks.store';
 import { useState, useEffect, useRef } from 'react';
@@ -17,9 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import data from '@emoji-mart/data';
-import Picker from '@emoji-mart/react';
-import { useTheme } from 'next-themes';
+import { EmojiPicker } from '@/components/emoji/emoji-picker';
 interface TaskInputProps {
   initialValues?: {
     title: string;
@@ -227,50 +221,7 @@ export default function TaskInput({
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex items-start gap-2">
-          <Popover modal={true} open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  'h-10 w-10 shrink-0 rounded-full p-0',
-                  emoji ? 'bg-accent/15 hover:bg-accent/25' : 'hover:bg-accent/25',
-                )}
-                style={{
-                  aspectRatio: '1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {emoji ? (
-                  <span className="text-lg">{emoji}</span>
-                ) : (
-                  <Smile className="h-4 w-4 text-muted-foreground" />
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              className="w-auto border-none p-0"
-              align="start"
-              side="bottom"
-              style={{ height: '350px', overflow: 'auto' }}
-            >
-              <div onClick={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
-                <Picker
-                  data={data}
-                  onEmojiSelect={(emoji: any) => {
-                    setEmoji(emoji.native);
-                    setIsEmojiPickerOpen(false);
-                  }}
-                  theme={useTheme().theme === 'dark' ? 'dark' : 'light'}
-                  previewPosition="none"
-                  skinTonePosition="none"
-                  scrollable={true}
-                />
-              </div>
-            </PopoverContent>
-          </Popover>
+          <EmojiPicker emoji={emoji} onEmojiSelect={(newEmoji) => setEmoji(newEmoji)} />
           <Textarea
             ref={textareaRef}
             value={title}
