@@ -2,33 +2,68 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Code as CodeExtension } from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';
+import BulletList from '@tiptap/extension-bullet-list';
 import Link from '@tiptap/extension-link';
-import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
+import TaskList from '@tiptap/extension-task-list';
 import Placeholder from '@tiptap/extension-placeholder';
 import { BubbleMenu } from '@tiptap/react';
 import { Bold, Italic, Link as LinkIcon, Strikethrough, Code, Heading2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Button } from '../ui/button';
+import React, { memo } from 'react';
+import { debounce } from 'radash';
 
 interface TaskNotesProps {
   notes: string;
   onNotesChange: (notes: string) => void;
 }
 
-export function TaskNotes({ notes, onNotesChange }: TaskNotesProps) {
+function TaskNotes({ notes, onNotesChange }: TaskNotesProps) {
+  const debouncedNotesChange = React.useCallback(
+    debounce({ delay: 1000 }, (content: string) => {
+      onNotesChange(content);
+    }),
+    [onNotesChange],
+  );
+
   const editor = useEditor({
     editorProps: {
       attributes: {
         class:
-          'prose prose-sm dark:prose-invert h-full max-w-none p-4 [&_*:focus]:outline-none [&_.is-editor-empty]:relative [&_.is-editor-empty]:before:pointer-events-none [&_.is-editor-empty]:before:absolute [&_.is-editor-empty]:before:left-0 [&_.is-editor-empty]:before:float-left [&_.is-editor-empty]:before:text-muted-foreground [&_.is-editor-empty]:before:content-[attr(data-placeholder)] [&_.task-list-item]:flex [&_.task-list-item]:items-center [&_.task-list-item]:gap-2 [&_a:hover]:text-blue-600 dark:[&_a:hover]:text-blue-300 [&_a]:cursor-pointer [&_a]:text-blue-500 [&_a]:transition-colors dark:[&_a]:text-blue-400 [&_p:empty]:min-h-[1em] [&_pre]:bg-zinc-900 [&_pre]:p-4 [&_pre]:rounded-lg [&_code]:text-sm [&_code]:font-mono',
+          'prose prose-sm dark:prose-invert h-full max-w-none p-4 [&_*:focus]:outline-none [&_.is-editor-empty]:relative [&_.is-editor-empty]:before:pointer-events-none [&_.is-editor-empty]:before:absolute [&_.is-editor-empty]:before:left-0 [&_.is-editor-empty]:before:float-left [&_.is-editor-empty]:before:text-muted-foreground [&_.is-editor-empty]:before:content-[attr(data-placeholder)] [&_p:empty]:min-h-[1em] [&_pre]:bg-zinc-900 [&_pre]:p-4 [&_pre]:rounded-lg [&_code]:text-sm [&_code]:font-mono',
       },
     },
     extensions: [
-      StarterKit,
+      BulletList.configure({
+        HTMLAttributes: {
+          class: 'list-disc ml-4',
+        },
+        keepMarks: true,
+        keepAttributes: false,
+      }),
+      StarterKit.configure({
+        bulletList: false,
+      }),
       Link,
-      TaskList,
-      TaskItem,
+      TaskList.configure({
+        HTMLAttributes: {
+          class:
+            'gap-2 [&_.task-list-item]:flex [&_.task-list-item]:items-center [&_.task-list-item]:gap-2',
+        },
+      }),
+      TaskItem.configure({
+        nested: true,
+        HTMLAttributes: {
+          class: 'flex gap-2',
+        },
+      }),
+      Link.configure({
+        HTMLAttributes: {
+          class:
+            '[&_a:hover]:text-blue-600 dark:[&_a:hover]:text-blue-300 [&_a]:cursor-pointer [&_a]:text-blue-500 [&_a]:transition-colors dark:[&_a]:text-blue-400',
+        },
+      }),
       CodeExtension.configure({
         HTMLAttributes: {
           class:
@@ -49,7 +84,7 @@ export function TaskNotes({ notes, onNotesChange }: TaskNotesProps) {
     content: notes,
     onUpdate: ({ editor }) => {
       const content = editor.getHTML();
-      onNotesChange(content);
+      debouncedNotesChange(content);
     },
   });
 
@@ -79,8 +114,8 @@ export function TaskNotes({ notes, onNotesChange }: TaskNotesProps) {
             <Strikethrough className="h-4 w-4" />
           </button>
           <button
-            onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-            className={`p-2 hover:bg-accent/50 ${editor.isActive('codeBlock') ? 'bg-accent/25' : ''}`}
+            onClick={() => editor.chain().focus().toggleCode().run()}
+            className={`p-2 hover:bg-accent/50 ${editor.isActive('code') ? 'bg-accent/25' : ''}`}
           >
             <Code className="h-4 w-4" />
           </button>
@@ -127,8 +162,10 @@ export function TaskNotes({ notes, onNotesChange }: TaskNotesProps) {
       )}
       <EditorContent
         editor={editor}
-        className="prose prose-sm dark:prose-invert -mx-4 h-full max-w-none [&_*:focus]:outline-none [&_.is-editor-empty]:relative [&_.is-editor-empty]:before:pointer-events-none [&_.is-editor-empty]:before:absolute [&_.is-editor-empty]:before:left-0 [&_.is-editor-empty]:before:float-left [&_.is-editor-empty]:before:text-muted-foreground [&_.is-editor-empty]:before:content-[attr(data-placeholder)] [&_.task-list-item]:flex [&_.task-list-item]:items-center [&_.task-list-item]:gap-2 [&_a:hover]:text-blue-600 dark:[&_a:hover]:text-blue-300 [&_a]:cursor-pointer [&_a]:text-blue-500 [&_a]:transition-colors dark:[&_a]:text-blue-400 [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-xl [&_h2]:font-semibold"
+        className="prose prose-sm dark:prose-invert h-full max-w-none [&_*:focus]:outline-none [&_.is-editor-empty]:relative [&_.is-editor-empty]:before:pointer-events-none [&_.is-editor-empty]:before:absolute [&_.is-editor-empty]:before:left-0 [&_.is-editor-empty]:before:float-left [&_.is-editor-empty]:before:text-muted-foreground [&_.is-editor-empty]:before:content-[attr(data-placeholder)] [&_a:hover]:text-blue-600 dark:[&_a:hover]:text-blue-300 [&_a]:cursor-pointer [&_a]:text-blue-500 [&_a]:transition-colors dark:[&_a]:text-blue-400 [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-xl [&_h2]:font-semibold"
       />
     </div>
   );
 }
+
+export default memo(TaskNotes);

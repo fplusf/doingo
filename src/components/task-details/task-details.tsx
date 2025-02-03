@@ -4,7 +4,7 @@ import { TaskScheduler } from '@/components/focus-calendar/task-scheduler';
 import { convertTaskToSchedulerProps } from '@/lib/task-utils';
 import { useNavigate } from '@tanstack/react-router';
 import React from 'react';
-import { TaskNotes } from './task-notes';
+import TaskNotes from './task-notes';
 import { EmojiPicker } from '@/components/emoji/emoji-picker';
 import { Task } from '@/store/tasks.store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
