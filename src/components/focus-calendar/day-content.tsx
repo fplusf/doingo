@@ -1,7 +1,6 @@
 import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import React, { TouchEvent, useRef, useState, useEffect } from 'react';
-import { TaskDetailsRoute, TodayRoute } from '../../routes/routes';
 import { TIMELINE_CATEGORIES, TimelineItem } from '../timeline/timeline';
 import {
   TaskPriority,
@@ -99,14 +98,14 @@ const SortableTaskItem = ({ task, children }: { task: any; children: React.React
 import { getEmojiBackground } from '@/lib/emoji-utils';
 
 const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void }) => {
-  const navigate = useNavigate({ from: TaskDetailsRoute.fullPath });
+  const navigate = useNavigate({ from: '/tasks' });
   const [isHovered, setIsHovered] = React.useState(false);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isHovered && e.key.toLowerCase() === 'f') {
         e.preventDefault();
-        navigate({ to: '/$taskId', params: { taskId: task.id } });
+        navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
       }
     };
 
@@ -182,7 +181,7 @@ const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void })
                 </div>
 
                 <Link
-                  to={'/$taskId'}
+                  to={'/tasks/$taskId'}
                   params={{ taskId: task.id }}
                   className="flex h-6 w-32 items-center justify-start rounded-md p-3 text-xs text-muted-foreground hover:bg-gray-700 hover:text-foreground"
                 >
@@ -279,7 +278,7 @@ const CategorySection = ({
 
 const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void }, DayContentProps>(
   (props, ref) => {
-    const search = useSearch({ from: TodayRoute.fullPath });
+    const search = useSearch({ from: '/tasks' });
     const touchStartX = useRef<number | null>(null);
     const tasks = useStore(tasksStore, (state) => state.tasks);
     const [isCreating, setIsCreating] = useState(false);

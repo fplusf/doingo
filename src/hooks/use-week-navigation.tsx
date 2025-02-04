@@ -3,7 +3,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import { addDays, addWeeks, format, isSameWeek, parse, startOfWeek } from 'date-fns';
 import { useCallback, useEffect, useState } from 'react';
 import { DATE_FORMAT } from '../shared/constants/date';
-import { TodayRoute } from '../routes/routes';
+import { TasksRoute } from '../routes/routes';
 
 interface WeekData {
   id: string;
@@ -18,8 +18,8 @@ function createWeekData(startDate: Date): WeekData {
 }
 
 export function useWeekNavigation() {
-  const navigate = useNavigate({ from: TodayRoute.fullPath });
-  const search = useSearch({ from: TodayRoute.fullPath });
+  const navigate = useNavigate({ from: TasksRoute.fullPath });
+  const search = useSearch({ from: TasksRoute.fullPath });
   const today = new Date();
 
   const [selectedDate, setSelectedDate] = useState(() =>
