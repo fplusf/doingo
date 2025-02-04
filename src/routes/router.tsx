@@ -1,9 +1,14 @@
 import { createRouter } from '@tanstack/react-router';
 import { rootTree } from './routes';
+import { DragWindowRegionChildren } from '../components/drag-window-region';
 
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router;
+  }
+
+  interface RouteContext {
+    headerConfig?: DragWindowRegionChildren;
   }
 }
 
@@ -17,4 +22,5 @@ export const router = createRouter({
   // This will ensure that the loader is always called when the route is preloaded or visited
   defaultPreloadStaleTime: 0,
   scrollRestoration: true,
+  basepath: '/tasks',
 });

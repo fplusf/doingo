@@ -12,9 +12,13 @@ import BaseLayout from '../layouts/BaseLayout';
 export const RootRoute = createRootRoute({
   component: Root,
   notFoundComponent: () => <div>Not Found 📄</div>,
+  errorComponent: (props) => {
+    console.error(props.error);
+    return <div>Error 🚨</div>;
+  },
   validateSearch: weeklyCalendarSchema,
   search: {
-    middlewares: [retainSearchParams(['week', 'date']), stripSearchParams({ date: 'week' })],
+    middlewares: [retainSearchParams(['week', 'date', 'tab']), stripSearchParams({ date: 'week' })],
   },
 });
 

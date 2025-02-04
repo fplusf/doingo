@@ -1,14 +1,12 @@
-import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { TaskScheduler } from '@/components/focus-calendar/task-scheduler';
 import { convertTaskToSchedulerProps } from '@/lib/task-utils';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import React from 'react';
 import TaskNotes from './task-notes';
 import { EmojiPicker } from '@/components/emoji/emoji-picker';
 import { Task } from '@/store/tasks.store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 
 interface TaskDetailsProps {
   task: Task;
@@ -16,10 +14,12 @@ interface TaskDetailsProps {
 }
 
 export function TaskDetails({ task, onEdit }: TaskDetailsProps) {
+  console.count('Details rendered');
   const navigate = useNavigate();
   const [notes, setNotes] = React.useState(task.notes || '');
-
+  const search = useSearch({ from: '/tasks/$taskId' });
   const schedulerProps = convertTaskToSchedulerProps(task);
+  const currentTab = search.tab || 'document';
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -34,23 +34,8 @@ export function TaskDetails({ task, onEdit }: TaskDetailsProps) {
 
   return (
     <div className="container mx-auto max-w-4xl p-6">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="absolute left-4 top-10 gap-2 text-muted-foreground hover:bg-gray-700 hover:text-foreground"
-        onClick={() => navigate({ to: '..' })}
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back
-      </Button>
       <div className="space-y-8 rounded-xl shadow-sm backdrop-blur-sm">
-        <Tabs defaultValue="document" className="w-full">
-          <TabsList className="mx-auto mb-10 mt-3 grid w-72 grid-cols-3">
-            <TabsTrigger value="document">Document</TabsTrigger>
-            <TabsTrigger value="both">Both</TabsTrigger>
-            <TabsTrigger value="canvas">Canvas</TabsTrigger>
-          </TabsList>
-
+        <Tabs value={currentTab} className="w-full">
           <TabsContent value="document">
             {/* Schedule Information */}
             <div className="mb-8 flex">

@@ -1,34 +1,42 @@
 import { closeWindow, maximizeWindow, minimizeWindow } from '@/helpers/window_helpers';
-import React, { type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 
+export interface DragWindowRegionChildren {
+  left: () => ReactNode;
+  center: () => ReactNode;
+  right: () => ReactNode;
+}
 interface DragWindowRegionProps {
   title?: ReactNode;
-  children?: {
-    left: ReactNode;
-    right: ReactNode;
-  };
+  children?: DragWindowRegionChildren;
 }
 
-export default function DragWindowRegion({ title, children }: DragWindowRegionProps) {
+export function DragWindowRegion({ children }: { children: DragWindowRegionChildren }) {
+  console.count('');
   return (
     <div className="relative flex h-12 w-screen flex-col items-stretch justify-between bg-sidebar">
-      {/* Drag layer - positioned absolutely underneath */}
+      {/* Draggable background layer */}
       <div className="draglayer absolute inset-0" />
 
-      {/* Content layer - sits on top */}
-      <div className="z-12 relative">
-        <div className="flex h-12 w-full bg-sidebar">
-          {title && (
-            <div className="flex flex-1 select-none whitespace-nowrap p-2 text-xs text-gray-400">
-              {title}
-            </div>
+      {/* Content layer with three sections */}
+      <div className="z-12 relative flex h-12 w-full items-center justify-between bg-sidebar">
+        {/* Left section - fixed width */}
+        <div className="no-drag flex min-w-[200px] items-center gap-2 px-4 pl-20">
+          {children.left()}
+        </div>
+
+        {/* Center section - draggable unless content exists */}
+        <div className="flex flex-1 items-center justify-center">
+          {children.center ? (
+            <div className="no-drag">{children.center()}</div>
+          ) : (
+            <div className="draglayer h-full w-full" />
           )}
-          {/* Interactive elements with explicit no-drag */}
-          <div className="no-drag items-centerd my-2.5 ml-20 flex">{children?.left}</div>
-          <div className="draglayer flex-1 bg-sidebar">
-            {/* it's just adding drag zone in between of the action area */}
-          </div>
-          <div className="no-drag">{children?.right}</div>
+        </div>
+
+        {/* Right section - fixed width */}
+        <div className="no-drag flex min-w-[200px] items-center justify-end gap-2 px-4">
+          {children.right()}
         </div>
       </div>
     </div>

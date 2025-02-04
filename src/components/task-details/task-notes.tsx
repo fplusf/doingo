@@ -45,7 +45,6 @@ function TaskNotes({ notes, onNotesChange }: TaskNotesProps) {
       StarterKit.configure({
         bulletList: false,
       }),
-      Link,
       TaskList.configure({
         HTMLAttributes: {
           class:

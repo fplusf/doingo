@@ -5,19 +5,7 @@ import Tags from '@/pages/tags-page';
 import { createRoute } from '@tanstack/react-router';
 import { RootRoute } from './__root';
 import TaskDetailsPage from '../pages/task-details-page';
-
-// const withBaseLayout = (Component: React.ComponentType<any>) => {
-//   return function WrappedComponent(props: any) {
-//     return (
-//       <BaseLayout>
-//         {/* TODO: In order to render routed components within the main Layout
-//         make sure the useWeekNavigation search params used exist within the component below?
-//         or maybe has access so it doesn't throw a shitty error! Same error caused for other routes as well */}
-//         <Component {...props} />
-//       </BaseLayout>
-//     );
-//   };
-// };
+import { taskDetailHeader } from '../layouts/headers/task-details-header';
 
 // TODO: Steps to add a new route:
 // 1. Create a new page component in the '../pages/' directory (e.g., NewPage.tsx)
@@ -56,6 +44,9 @@ export const TaskDetailsRoute = createRoute({
   errorComponent: () => <div>Task not found</div>,
   path: '$taskId',
   component: TaskDetailsPage,
+  context: () => ({
+    headerConfig: taskDetailHeader(),
+  }),
 });
 
 // Parent route for /tags
