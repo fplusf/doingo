@@ -79,11 +79,12 @@ function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      devTools: false,
+      devTools: true,
       contextIsolation: true,
       nodeIntegration: true,
       nodeIntegrationInSubFrames: false,
-      preload
+      preload,
+      webSecurity: true
     },
     titleBarStyle: "hiddenInset",
     trafficLightPosition: {
@@ -93,6 +94,21 @@ function createWindow() {
   });
   registerListeners(mainWindow);
   const appUrl = "http://localhost:5173";
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        "Content-Security-Policy": [
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:;",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:;",
+          "style-src 'self' 'unsafe-inline';",
+          "img-src 'self' data: blob:;",
+          "connect-src 'self' blob:;",
+          "font-src 'self' data:;"
+        ].join(" ")
+      }
+    });
+  });
   mainWindow.loadURL(appUrl);
   {
     mainWindow.webContents.openDevTools();

@@ -5,6 +5,7 @@
 html,
 body {
   overscroll-behavior-x: none;
+  height: 100%;
 }
 
 @layer base {
@@ -195,4 +196,15 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.optimal .excalidraw {
+  --color-primary: red;
+
+  canvas {
+    border-radius: 12px;
+  }
+}
+.optimal .excalidraw.theme--dark {
+  --color-primary: pink;
 }

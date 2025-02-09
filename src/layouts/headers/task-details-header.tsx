@@ -3,7 +3,7 @@ import { ChevronLeft } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMatch, useNavigate, useSearch } from '@tanstack/react-router';
 
-export function taskDetailHeader() {
+export function TaskDetailHeader() {
   return {
     left: () => {
       const navigate = useNavigate();
@@ -29,44 +29,44 @@ export function taskDetailHeader() {
       return (
         <Tabs value={currentTab} className="w-[400px]">
           <TabsList className="mx-auto mt-2.5 grid h-9 w-72 grid-cols-3 text-xs">
-            <TabsTrigger value="document" className="h-7">
-              <button
-                onClick={() =>
-                  navigate({
-                    to: '/tasks/$taskId',
-                    params: { taskId: match.params.taskId },
-                    search: { tab: 'document' },
-                  })
-                }
-              >
-                Document
-              </button>
+            <TabsTrigger
+              value="document"
+              className="h-7"
+              onClick={() =>
+                navigate({
+                  to: '/tasks/$taskId',
+                  params: { taskId: match.params.taskId },
+                  search: { tab: 'document' },
+                })
+              }
+            >
+              Document
             </TabsTrigger>
-            <TabsTrigger value="both" className="h-7">
-              <button
-                onClick={() =>
-                  navigate({
-                    to: '/tasks/$taskId',
-                    params: { taskId: match.params.taskId },
-                    search: { tab: 'both' },
-                  })
-                }
-              >
-                Both
-              </button>
+            <TabsTrigger
+              value="both"
+              className="h-7"
+              onClick={() =>
+                navigate({
+                  to: '/tasks/$taskId',
+                  params: { taskId: match.params.taskId },
+                  search: { tab: 'both' },
+                })
+              }
+            >
+              Both
             </TabsTrigger>
-            <TabsTrigger value="canvas" className="h-7">
-              <button
-                onClick={() =>
-                  navigate({
-                    to: '/tasks/$taskId',
-                    params: { taskId: match.params.taskId },
-                    search: { tab: 'canvas' },
-                  })
-                }
-              >
-                Canvas
-              </button>
+            <TabsTrigger
+              value="canvas"
+              className="h-7"
+              onClick={() =>
+                navigate({
+                  to: '/tasks/$taskId',
+                  params: { taskId: match.params.taskId },
+                  search: { tab: 'canvas' },
+                })
+              }
+            >
+              Canvas
             </TabsTrigger>
           </TabsList>
         </Tabs>

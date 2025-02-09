@@ -16,11 +16,12 @@ function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      devTools: false,
+      devTools: true,
       contextIsolation: true,
       nodeIntegration: true,
       nodeIntegrationInSubFrames: false,
       preload: preload,
+      webSecurity: true,
     },
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: {
@@ -33,6 +34,23 @@ function createWindow() {
   const appUrl =
     MAIN_WINDOW_VITE_DEV_SERVER_URL ||
     path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`);
+  // Set CSP headers for Excalidraw
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:;",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:;",
+          "style-src 'self' 'unsafe-inline';",
+          "img-src 'self' data: blob:;",
+          "connect-src 'self' blob:;",
+          "font-src 'self' data:;",
+        ].join(' '),
+      },
+    });
+  });
+
   mainWindow.loadURL(appUrl);
 
   // Only open DevTools if loading from dev server URL (browser)

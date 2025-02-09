@@ -29,7 +29,7 @@ const TaskDetailsPage: React.FC<TaskDetailsPageProps> = () => {
   };
 
   return (
-    <div className="task-details-container">
+    <div className="h-[calc(100vh-4rem)] overflow-auto">
       <TaskDetails task={task} onEdit={handleTaskUpdate} />
     </div>
   );

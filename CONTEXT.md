@@ -1,3 +1,14 @@
+# Important features to focus on:
+
+Adding a Task: Wireframe the process of adding a new task, including the input fields for task name, description, due date, and potentially tags. This should incorporate the "Task Translator" concept from CONTEXT.md, where users can input vague goals and the AI suggests actionable steps.
+Task Breakdown: Wireframe how a task is broken down into smaller subtasks, both manually by the user and automatically by the AI. This should visualize the "Focus Mode" with expanding task view and the AI-driven auto-chunking.
+Focus Mode (Pomodoro Timer): Wireframe the "Focus Mode" screen, including the adaptable Pomodoro timer, visual time awareness elements (sand timer, growing tree, etc.), and integration with distraction blockers.
+Task Details Page: Wireframe the task details page, including the "Document," "Both," and "Canvas" views. This should show how users can view and edit task details, notes, and the visual representation (Excalidraw integration).
+Reminders Page: Wireframe the dedicated page for reminders, showing how users can create, view, edit, and delete reminders. This should include the integration with Apple Reminders and the ability to convert reminders to tasks.
+Calendar Integration: Wireframe how calendar events are displayed and how users can convert them to tasks.
+
+---
+
 # **Optimal ADHD Productivity App Development Plan**
 
 ## **1. AI-Powered Task Breakdown & Prioritization**
@@ -54,6 +65,12 @@
 
 - Points, badges, and challenges to motivate task completion.
 - Dopamine-driven reward system for habit formation.
+- Focus on todays tasks with a week calendar on top
+- Go to details of any tasks for better thinking tools, notes, visuals
+- WPP framework for better organization for ADHD
+- Easily add and navigate through task, on any date
+- Any task/subtask from the details can be converted to a reminder or calendar event.
+- Task Reward/Consequence attachment for ADHD people.
 
 ### **Implementation Plan:**
 
@@ -67,36 +84,14 @@
 
 ---
 
-## **4. Thought & Emotion Tracking with AI Insights**
+## **5. Task Visualization**
 
 ### **Core Features:**
 
-- Voice/text logging for real-time thought tracking.
-- AI-driven analysis to identify emotional roadblocks.
-
-### **Implementation Plan:**
-
-- **Real-Time Sentiment Analysis:**
-  - AI detects frustration or stress patterns.
-  - Provides coping strategies and motivational nudges.
-- **Adaptive User Support:**
-  - Prompts users to log thoughts when task avoidance is detected.
-  - Suggests mindfulness techniques or short breaks.
-
----
-
-## **5. Visual Mind Mapping & Task Visualization**
-
-### **Core Features:**
-
-- Customizable mind maps and flowcharts for task planning.
 - Integration with Excalidraw for visual task organization.
 
 ### **Implementation Plan:**
 
-- **Auto-Generated Mind Maps:**
-  - AI automatically generates a visual task structure.
-  - Users can edit and refine the suggested layout.
 - **Task Visualization Enhancements:**
   - Subtasks connect dynamically to main tasks.
   - Drag-and-drop interactions for reorganization.
@@ -107,8 +102,13 @@
 
 ### **Core Features:**
 
+- Dedicated page for reminders which can be CRUD.
+- Integrating Apple reminders, and they can be synced and manipulated.
 - Smart reminders that adapt to user patterns.
 - Deadline consequence tracking for motivation.
+- Reminders from Apple and Custom Reminders possible to CRUD
+- Reminders from tasks and subtasks will be shown here
+- Any reminder can be converted to a task but not all reminders are tasks by thmeselvs
 
 ### **Implementation Plan:**
 
@@ -124,6 +124,19 @@
   - Estimated vs. actual completion time analysis.
 
 ---
+
+## Calendar
+
+- Integrated Calendars eg. Google
+- All events from calendars shown here in a big picture
+- Not all calendar events are tasks but they can be converted to task with one click
+- Not all tasks needs to be shown on the calendar but it should be possible to add any task on the calendar with one click
+
+## Stats
+
+- Stats of how I spent my time lately
+- Depending on the objective set by user guide them, eg. let’s replane to spend
+  more time on X in order for you to achieve Y
 
 ## **7. Task Momentum System**
 

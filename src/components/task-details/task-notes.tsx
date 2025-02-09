@@ -1,7 +1,6 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Code as CodeExtension } from '@tiptap/extension-code';
-import CodeBlock from '@tiptap/extension-code-block';
 import BulletList from '@tiptap/extension-bullet-list';
 import Link from '@tiptap/extension-link';
 import TaskItem from '@tiptap/extension-task-item';
@@ -44,6 +43,7 @@ function TaskNotes({ notes, onNotesChange }: TaskNotesProps) {
       }),
       StarterKit.configure({
         bulletList: false,
+        code: false,
       }),
       TaskList.configure({
         HTMLAttributes: {
@@ -67,12 +67,6 @@ function TaskNotes({ notes, onNotesChange }: TaskNotesProps) {
         HTMLAttributes: {
           class:
             'rounded-md bg-zinc-900 px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold text-pink-400',
-        },
-      }),
-      CodeBlock.configure({
-        HTMLAttributes: {
-          class:
-            'not-prose my-4 rounded-lg bg-zinc-900 [&_pre]:m-0 [&_pre]:bg-transparent [&_pre]:p-0 [&_code]:text-sm [&_code]:leading-relaxed [&_code]:text-gray-400',
         },
       }),
       Placeholder.configure({

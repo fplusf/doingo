@@ -121,6 +121,7 @@ export function TaskScheduler({
             selected={startDate}
             onSelect={(date) => date && handleStartDateChange(date)}
             initialFocus
+            weekStartsOn={1}
           />
         </PopoverContent>
       </Popover>

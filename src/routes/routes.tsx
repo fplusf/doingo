@@ -5,7 +5,7 @@ import Tags from '@/pages/tags-page';
 import { createRoute } from '@tanstack/react-router';
 import { RootRoute } from './__root';
 import TaskDetailsPage from '../pages/task-details-page';
-import { taskDetailHeader } from '../layouts/headers/task-details-header';
+import { TaskDetailHeader } from '../layouts/headers/task-details-header';
 
 // TODO: Steps to add a new route:
 // 1. Create a new page component in the '../pages/' directory (e.g., NewPage.tsx)
@@ -41,11 +41,11 @@ export const TasksIndexRoute = createRoute({
 
 export const TaskDetailsRoute = createRoute({
   getParentRoute: () => TasksRoute,
-  errorComponent: () => <div>Task not found</div>,
+  errorComponent: () => <div>Task details error 🚨</div>,
   path: '$taskId',
   component: TaskDetailsPage,
   context: () => ({
-    headerConfig: taskDetailHeader(),
+    headerConfig: TaskDetailHeader(),
   }),
 });
 
