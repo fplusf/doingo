@@ -22,7 +22,7 @@ export function TaskCanvas() {
   }, [excalidrawAPI]);
 
   return (
-    <div className="flex h-full w-full flex-col">
+    <div className="flex h-full w-full flex-col bg-sidebar">
       <div ref={excalidrawWrapperRef} className="relative w-full flex-1">
         <Suspense
           fallback={
