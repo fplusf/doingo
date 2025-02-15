@@ -1,6 +1,6 @@
 import { restrictToWindowEdges } from '@dnd-kit/modifiers';
-import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import React, { TouchEvent, useRef, useState, useEffect } from 'react';
+import { Link, useNavigate } from '@tanstack/react-router';
+import React, { useState, useEffect } from 'react';
 import { TIMELINE_CATEGORIES, TimelineItem } from '../timeline/timeline';
 import {
   TaskPriority,
@@ -278,8 +278,6 @@ const CategorySection = ({
 
 const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void }, DayContentProps>(
   (props, ref) => {
-    const search = useSearch({ from: '/tasks' });
-    const touchStartX = useRef<number | null>(null);
     const tasks = useStore(tasksStore, (state) => state.tasks);
     const [isCreating, setIsCreating] = useState(false);
     const [activeCategory, setActiveCategory] = useState<TaskCategory>('work');
@@ -389,17 +387,6 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
       document.body.style.cursor = '';
     };
 
-    const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
-      touchStartX.current = e.touches[0].clientX;
-    };
-
-    const handleTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
-      if (touchStartX.current === null) return;
-      const touchEndX = e.changedTouches[0].clientX;
-      const diff = touchStartX.current - touchEndX;
-      touchStartX.current = null;
-    };
-
     const formatDurationForDisplay = (durationMs: number) => {
       const duration = intervalToDuration({ start: 0, end: durationMs });
       if (duration.hours && duration.hours > 0) {
@@ -410,19 +397,6 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
       return '1 hr'; // fallback
     };
 
-    const handleDurationChange = (value: string) => {
-      // Convert the duration string to milliseconds
-      const durationInMinutes = value.includes('hr') ? parseInt(value) * 60 : parseInt(value);
-      const durationMs = durationInMinutes * 60 * 1000;
-      setDuration(durationMs);
-
-      if (startTime) {
-        const start = parse(startTime, 'HH:mm', new Date());
-        const end = new Date(start.getTime() + durationMs);
-        setEndTime(format(end, 'HH:mm'));
-      }
-    };
-
     // Update end time when start time changes
     useEffect(() => {
       if (startTime) {
@@ -431,59 +405,6 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
         setEndTime(format(end, 'HH:mm'));
       }
     }, [startTime, duration]);
-
-    const handleAddTask = () => {
-      if (!newTask.title) return;
-
-      const startDate = startTime ? parse(startTime, 'HH:mm', new Date()) : new Date();
-      const endDate = endTime
-        ? parse(endTime, 'HH:mm', new Date())
-        : new Date(startDate.getTime() + duration);
-      const durationMs = endDate.getTime() - startDate.getTime();
-
-      const task = {
-        title: newTask.title,
-        notes: newTask.notes,
-        time: startTime && endTime ? `${startTime}—${endTime}` : '',
-        startTime: startDate,
-        nextStartTime: endDate,
-        duration: durationMs,
-        dueDate,
-        completed: false,
-        priority: newTask.priority,
-        category: newTask.category,
-      };
-
-      addTask(task);
-      setNewTask({ title: '', notes: '', emoji: '', priority: 'none', category: 'work' });
-      setStartTime('');
-      setEndTime('');
-      setDuration(ONE_HOUR_IN_MS);
-      setDueDate(undefined);
-      setIsCreating(false);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        if (editingTaskId) {
-          handleSaveEdit();
-        } else {
-          handleAddTask();
-        }
-      } else if (e.key === 'Escape') {
-        if (editingTaskId) {
-          handleCancelEdit();
-        } else {
-          setIsCreating(false);
-          setNewTask({ title: '', notes: '', emoji: '', priority: 'none', category: 'work' });
-          setStartTime('');
-          setEndTime('');
-          setDuration(ONE_HOUR_IN_MS);
-          setDueDate(undefined);
-        }
-      }
-    };
 
     const handleStartEdit = (task: Task) => {
       setEditingTaskId(task.id);
@@ -513,40 +434,6 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
         }
       }
       setDueDate(task.dueDate);
-    };
-
-    const handleSaveEdit = () => {
-      if (!editingTaskId || !newTask.title) return;
-
-      const startDate = startTime ? parse(startTime, 'HH:mm', new Date()) : new Date();
-      const endDate = endTime
-        ? parse(endTime, 'HH:mm', new Date())
-        : new Date(startDate.getTime() + duration);
-      const durationMs = endDate.getTime() - startDate.getTime();
-
-      const updatedTask = {
-        title: newTask.title,
-        notes: newTask.notes,
-        time: startTime && endTime ? `${startTime}—${endTime}` : '',
-        startTime: startDate,
-        nextStartTime: endDate,
-        duration: durationMs,
-        dueDate,
-        priority: newTask.priority,
-        category: newTask.category,
-      };
-
-      updateTask(editingTaskId, updatedTask);
-      handleCancelEdit();
-    };
-
-    const handleCancelEdit = () => {
-      setEditingTaskId(null);
-      setNewTask({ title: '', notes: '', emoji: '', priority: 'none', category: 'work' });
-      setStartTime('');
-      setEndTime('');
-      setDuration(ONE_HOUR_IN_MS);
-      setDueDate(undefined);
     };
 
     const activeTask = activeId ? tasks.find((task) => task.id === activeId) : null;

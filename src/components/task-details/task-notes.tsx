@@ -66,7 +66,7 @@ function TaskNotes({ notes, onNotesChange }: TaskNotesProps) {
       CodeExtension.configure({
         HTMLAttributes: {
           class:
-            'rounded-md bg-zinc-900 px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold text-pink-400',
+            'rounded-md bg-zinc-900 px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold text-pink-400 whitespace-pre-wrap break-all',
         },
       }),
       Placeholder.configure({
@@ -155,7 +155,7 @@ function TaskNotes({ notes, onNotesChange }: TaskNotesProps) {
       )}
       <EditorContent
         editor={editor}
-        className="prose prose-sm dark:prose-invert h-full max-w-none [&_*:focus]:outline-none [&_.is-editor-empty]:relative [&_.is-editor-empty]:before:pointer-events-none [&_.is-editor-empty]:before:absolute [&_.is-editor-empty]:before:left-0 [&_.is-editor-empty]:before:float-left [&_.is-editor-empty]:before:text-muted-foreground [&_.is-editor-empty]:before:content-[attr(data-placeholder)] [&_a:hover]:text-blue-600 dark:[&_a:hover]:text-blue-300 [&_a]:cursor-pointer [&_a]:text-blue-500 [&_a]:transition-colors dark:[&_a]:text-blue-400 [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-xl [&_h2]:font-semibold"
+        className="prose prose-sm dark:prose-invert h-full max-w-none [&_*:focus]:outline-none [&_.is-editor-empty]:relative [&_.is-editor-empty]:before:pointer-events-none [&_.is-editor-empty]:before:absolute [&_.is-editor-empty]:before:left-0 [&_.is-editor-empty]:before:float-left [&_.is-editor-empty]:before:text-muted-foreground [&_.is-editor-empty]:before:content-[attr(data-placeholder)] [&_a:hover]:text-blue-600 dark:[&_a:hover]:text-blue-300 [&_a]:cursor-pointer [&_a]:text-blue-500 [&_a]:transition-colors dark:[&_a]:text-blue-400 [&_code]:whitespace-pre-wrap [&_code]:break-all [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-xl [&_h2]:font-semibold [&_pre]:whitespace-pre-wrap [&_pre]:break-all"
       />
     </div>
   );

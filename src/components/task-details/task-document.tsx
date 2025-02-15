@@ -55,28 +55,35 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
       </div>
 
       <ScrollArea className="flex flex-1 items-start will-change-scroll">
-        <textarea
-          placeholder="Task Title"
-          value={task.title}
-          onChange={handleTitleChange}
-          className="mb-2 w-full resize-none overflow-hidden border-b border-gray-700/40 bg-transparent text-2xl font-semibold tracking-tight focus:outline-none"
-          rows={3}
-          style={{ height: 'auto', minHeight: '2.5rem' }}
-          ref={(textareaRef) => {
-            if (textareaRef) {
-              // Reset height first to get accurate scrollHeight
-              textareaRef.style.height = '2.5rem';
-              const scrollHeight = textareaRef.scrollHeight;
-              // Only update if scrollHeight is reasonable (prevent excessive growth)
-              if (scrollHeight <= 300) {
-                textareaRef.style.height = `${scrollHeight}px`;
-              } else {
-                textareaRef.style.height = '300px';
-                textareaRef.style.overflowY = 'auto';
+        <section className="mb-2 border-b border-gray-700/40 pb-2">
+          <textarea
+            placeholder="Task Title"
+            value={task.title}
+            onChange={handleTitleChange}
+            className="mb-2 w-full resize-none overflow-hidden whitespace-pre-wrap break-words bg-transparent px-4 text-2xl font-semibold tracking-tight focus:outline-none"
+            rows={3}
+            style={{
+              height: 'auto',
+              minHeight: '2.5rem',
+              overflowWrap: 'break-word',
+              wordWrap: 'break-word',
+            }}
+            ref={(textareaRef) => {
+              if (textareaRef) {
+                // Reset height first to get accurate scrollHeight
+                textareaRef.style.height = '2.5rem';
+                const scrollHeight = textareaRef.scrollHeight;
+                // Only update if scrollHeight is reasonable (prevent excessive growth)
+                if (scrollHeight <= 300) {
+                  textareaRef.style.height = `${scrollHeight}px`;
+                } else {
+                  textareaRef.style.height = '300px';
+                  textareaRef.style.overflowY = 'auto';
+                }
               }
-            }
-          }}
-        />
+            }}
+          />
+        </section>
 
         <TaskNotes notes={notes} onNotesChange={handleNotesChange} />
       </ScrollArea>
