@@ -64,6 +64,7 @@ export function TaskDialog({
             {mode === 'create' ? 'Add a new task to your timeline' : 'Edit an existing task'}
           </DialogDescription>
         </DialogHeader>
+
         <TaskInput
           initialValues={initialValues}
           onSubmit={(values) => {

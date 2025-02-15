@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { EmojiPicker } from '@/components/emoji/emoji-picker';
+import { ScrollArea } from '../ui/scroll-area';
 interface TaskInputProps {
   initialValues?: {
     title: string;
@@ -137,7 +138,6 @@ export default function TaskInput({
   );
   const [dueDate, setDueDate] = useState<Date | undefined>(initialValues?.dueDate);
   const [priority, setPriority] = useState<TaskPriority>(initialValues?.priority || 'none');
-  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const adjustTextareaHeight = () => {
@@ -151,6 +151,14 @@ export default function TaskInput({
   // Adjust height on initial render and when content changes
   useEffect(() => {
     adjustTextareaHeight();
+  }, [title]);
+
+  // Auto-focus textarea and position cursor at the end when component mounts
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.setSelectionRange(title.length, title.length);
+    }
   }, [title]);
 
   const handleDurationChange = (value: DurationOption) => {
@@ -220,20 +228,22 @@ export default function TaskInput({
       )}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex items-start gap-2">
-          <EmojiPicker emoji={emoji} onEmojiSelect={(newEmoji) => setEmoji(newEmoji)} />
-          <Textarea
-            ref={textareaRef}
-            value={title}
-            onChange={(e) => {
-              setTitle(e.target.value);
-            }}
-            onKeyDown={handleKeyDown}
-            rows={3}
-            placeholder="Task description"
-            className="resize-none border-none bg-transparent px-3 text-xl font-semibold outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
-          />
-        </div>
+        <ScrollArea className="h-[150px]">
+          <div className="flex items-start gap-2">
+            <EmojiPicker emoji={emoji} onEmojiSelect={(newEmoji) => setEmoji(newEmoji)} />
+            <Textarea
+              ref={textareaRef}
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+              }}
+              onKeyDown={handleKeyDown}
+              rows={3}
+              placeholder="Task description"
+              className="resize-none border-none bg-transparent px-3 text-xl font-semibold outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+          </div>
+        </ScrollArea>
 
         {/* Action Bar */}
         <div className="flex items-center gap-1.5 border-t border-border pt-4">
