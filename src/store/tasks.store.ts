@@ -19,6 +19,7 @@ export interface Task {
   priority: TaskPriority;
   category: TaskCategory;
   dueDate?: Date;
+  canvasData?: string; // Serialized Excalidraw scene data
 }
 
 interface TasksState {

@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { TaskCategory, TaskPriority } from '@/store/tasks.store';
 import { Check } from 'lucide-react';
 import { Connector } from './connector';
-import completeTaskSound from '@/assets/sounds/complete-task.mp3';
+import completeTaskSound from '/public/complete-task.mp3';
 
 export const TIMELINE_CATEGORIES = {
   work: {

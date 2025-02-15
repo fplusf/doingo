@@ -27,7 +27,7 @@ export default defineConfig((env) => {
     define: {
       'process.env': {},
       // Define Excalidraw asset path for local serving
-      'window.EXCALIDRAW_ASSET_PATH': '"/"',
+      'window.EXCALIDRAW_ASSET_PATH': '"/excalidraw-assets-dev/"',
     },
     optimizeDeps: {
       esbuildOptions: {
@@ -36,12 +36,12 @@ export default defineConfig((env) => {
         },
       },
     },
-    publicDir: 'public',
+    publicDir: 'src/assets',
     // Configure static file serving
     server: {
       fs: {
-        // Allow serving files from node_modules
-        allow: ['..'],
+        // Allow serving files from node_modules and assets
+        allow: ['..', './src/assets'],
       },
     },
     clearScreen: false,

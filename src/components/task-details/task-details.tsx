@@ -1,7 +1,6 @@
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import React from 'react';
 import { Task } from '@/store/tasks.store';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { TaskCanvas } from './task-canvas';
 import { TaskDocument } from './task-document';
 import { cn } from '../../lib/utils';
@@ -15,6 +14,7 @@ export function TaskDetails({ task, onEdit }: TaskDetailsProps) {
   const navigate = useNavigate();
   const search = useSearch({ from: '/tasks/$taskId' });
   const currentTab = search.tab || 'document';
+  const [isCanvasVisible, setIsCanvasVisible] = React.useState(currentTab !== 'document');
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -27,39 +27,39 @@ export function TaskDetails({ task, onEdit }: TaskDetailsProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [navigate]);
 
+  React.useEffect(() => {
+    setIsCanvasVisible(currentTab !== 'document');
+  }, [currentTab]);
+
   return (
-    <Tabs value={currentTab} className="h-full w-full">
-      <TabsContent
-        value={currentTab}
+    <section
+      className={cn(
+        'm-0 flex h-full w-full justify-center overflow-auto',
+        (currentTab === 'canvas' || currentTab === 'both') && 'bg-sidebar',
+      )}
+    >
+      <div
         className={cn(
-          'm-0 flex h-[calc(100vh-4rem)]',
-          currentTab === 'canvas' && 'bg-sidebar',
-          currentTab === 'both' && 'bg-sidebar',
+          'overflow-y-auto rounded-l-xl bg-background',
+          currentTab === 'document' && 'w-[1000px]',
+          currentTab === 'both' && 'w-1/2',
+          currentTab === 'canvas' && 'w-0 opacity-0',
         )}
       >
+        <TaskDocument task={task} onEdit={onEdit} className="px-8" />
+      </div>
+      {isCanvasVisible && (
         <div
           className={cn(
-            'overflow-y-auto rounded-l-xl bg-background transition-all duration-300 ease-in-out',
-            currentTab === 'document' && 'mx-auto max-w-4xl',
-            currentTab === 'both' && 'w-1/2',
-            currentTab === 'canvas' && 'w-0 opacity-0',
-          )}
-        >
-          <TaskDocument task={task} onEdit={onEdit} className="p-8" />
-        </div>
-        <div
-          tabIndex={0}
-          className={cn(
-            'overflow-hidden bg-sidebar transition-all duration-300 ease-in-out',
-            'transform',
+            'h-full bg-background',
             currentTab === 'document' && 'w-0 translate-x-full opacity-0',
-            currentTab === 'both' && 'w-1/2 translate-x-0 rounded-r-xl',
-            currentTab === 'canvas' && 'w-full translate-x-0 rounded-xl',
+            currentTab === 'both' && 'w-1/2 rounded-r-xl',
+            currentTab === 'canvas' && 'w-full rounded-xl',
           )}
         >
-          <TaskCanvas />
+          <TaskCanvas task={task} />
         </div>
-      </TabsContent>
-    </Tabs>
+      )}
+    </section>
   );
 }

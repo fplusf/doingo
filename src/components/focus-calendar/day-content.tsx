@@ -554,7 +554,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
     console.log(activeTask);
 
     return (
-      <ScrollArea className="relative h-[calc(100vh-200px)] w-full overflow-y-auto">
+      <ScrollArea className="relative h-full w-full">
         <div className="mx-auto w-full max-w-[1200px] px-10">
           <DndContext
             sensors={sensors}

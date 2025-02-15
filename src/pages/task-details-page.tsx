@@ -4,6 +4,7 @@ import { TaskDetails } from '@/components/task-details/task-details';
 import { Task, tasksStore, updateTask } from '@/store/tasks.store';
 import { useStore } from '@tanstack/react-store';
 import { TaskDetailsRoute } from '../routes/routes';
+import { useSidebar } from '../components/ui/sidebar';
 
 interface TaskDetailsPageProps {
   taskId: string;
@@ -13,6 +14,7 @@ const TaskDetailsPage: React.FC<TaskDetailsPageProps> = () => {
   const { taskId } = useParams({ from: TaskDetailsRoute.fullPath });
   const tasks = useStore(tasksStore, (state) => state.tasks);
   const task = tasks.find((t) => t.id === taskId);
+  const sidebar = useSidebar();
 
   if (!task) {
     return <div>Task not found</div>;
@@ -29,7 +31,7 @@ const TaskDetailsPage: React.FC<TaskDetailsPageProps> = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] overflow-auto">
+    <div className="relative h-[calc(100vh-4rem)] w-full">
       <TaskDetails task={task} onEdit={handleTaskUpdate} />
     </div>
   );

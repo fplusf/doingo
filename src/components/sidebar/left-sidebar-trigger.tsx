@@ -3,6 +3,7 @@ import React, { useSyncExternalStore } from 'react';
 import { layoutStore, toggleSidebarState } from '../../layouts/state/layout.store';
 import { Button } from '../ui/button';
 import { SidebarTrigger, useSidebar } from '../ui/sidebar';
+import { cn } from '../../lib/utils';
 
 export const TopSidebarTrigger: React.FC = () => {
   const { toggleSidebar } = useSidebar();
@@ -14,7 +15,6 @@ export const TopSidebarTrigger: React.FC = () => {
   return (
     <SidebarTrigger
       onChange={(value) => {
-        console.log('value: ', value);
         toggleSidebarState(value as unknown as boolean);
       }}
       className="-ml-1 hidden"
@@ -31,10 +31,10 @@ export const TopSidebarTrigger: React.FC = () => {
  * This hack done since, the Sidebar context can't be use outside the SidebarContext
  * and in this case we need to keep the DragWindowRegion outside of the SidebarContext.
  */
-export const TopSidebarTriggerVisible = () => {
+export const TopSidebarTriggerVisible = ({ className }: { className: string }) => {
   const sidebarState = useSyncExternalStore(
     layoutStore.subscribe,
-    () => layoutStore.state.sidebar.open,
+    () => layoutStore.state.sidebar.isClosed,
   );
 
   return (
@@ -42,9 +42,9 @@ export const TopSidebarTriggerVisible = () => {
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      className="h-7 w-7"
+      className={cn('z-50 h-7 w-7', className)}
       onClick={() => {
-        toggleSidebarState();
+        toggleSidebarState(sidebarState ? false : true);
         console.log('Left sidebar trigger clicked');
       }}
     >
