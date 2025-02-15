@@ -1,6 +1,6 @@
 import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { Link, useNavigate } from '@tanstack/react-router';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TIMELINE_CATEGORIES, TimelineItem } from '../timeline/timeline';
 import {
   TaskPriority,
@@ -233,7 +233,7 @@ const CategorySection = ({
         {/* Task Cards with Timeline Items */}
         <div className="flex flex-col gap-y-3 space-y-0">
           {tasks.map((task) => (
-            <div key={task.id} className="relative">
+            <div key={task.id} data-id={task.id} className="relative">
               {/* Timeline Item */}
               <div className="absolute -top-1 left-2 -ml-4 w-full">
                 <TimelineItem
@@ -295,6 +295,40 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
     });
     const [activeId, setActiveId] = useState<string | null>(null);
     const navigate = useNavigate();
+    const tasksRef = useRef<HTMLDivElement | null>(null);
+    const viewportRef = useRef<HTMLDivElement | null>(null);
+
+    React.useEffect(() => {
+      const categoryPriorityMap = {
+        work: 0,
+        passion: 1,
+        play: 2,
+      };
+
+      const firstUncompletedTask = tasks
+        .sort((a, b) => {
+          return categoryPriorityMap[a.category] - categoryPriorityMap[b.category];
+        })
+        .find((task) => !task.completed);
+
+      if (!firstUncompletedTask) return;
+
+      if (firstUncompletedTask.id && tasksRef.current) {
+        const activeTaskElement = tasksRef.current.querySelector(
+          `[data-id="${firstUncompletedTask.id}"]`,
+        );
+        const activeTaskPosition = activeTaskElement?.getBoundingClientRect();
+
+        // Scroll to the active task
+        if (viewportRef.current && activeTaskPosition && activeTaskElement) {
+          const viewportRect = viewportRef.current.getBoundingClientRect();
+          const scrollOffset = activeTaskPosition.top - viewportRect.top - 100; // Add 100px padding from top
+          viewportRef.current.scrollTo({
+            top: viewportRef.current.scrollTop + scrollOffset,
+          });
+        }
+      }
+    }, []);
 
     React.useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -441,8 +475,8 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
     console.log(activeTask);
 
     return (
-      <ScrollArea className="relative h-full w-full">
-        <div className="mx-auto w-full max-w-[1200px] px-10 pb-16">
+      <ScrollArea viewportRef={viewportRef} className="relative h-full w-full">
+        <div ref={tasksRef} className="mx-auto w-full max-w-[1200px] px-10 pb-16">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}

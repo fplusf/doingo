@@ -96,17 +96,7 @@ function createWindow() {
   const appUrl = "http://localhost:5173";
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
     callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        "Content-Security-Policy": [
-          "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:;",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:;",
-          "style-src 'self' 'unsafe-inline';",
-          "img-src 'self' data: blob:;",
-          "connect-src 'self' blob:;",
-          "font-src 'self' data:;"
-        ].join(" ")
-      }
+      responseHeaders: details.responseHeaders
     });
   });
   mainWindow.loadURL(appUrl);
