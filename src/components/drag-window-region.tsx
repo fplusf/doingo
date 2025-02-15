@@ -14,7 +14,7 @@ interface DragWindowRegionProps {
 
 export function DragWindowRegion({ children }: { children: DragWindowRegionChildren }) {
   return (
-    <div className="relative flex h-12 w-screen flex-col items-stretch justify-between bg-sidebar">
+    <div className="fixed inset-0 flex h-12 w-screen flex-col items-stretch justify-between bg-sidebar">
       {/* Draggable background layer */}
       <div className="draglayer absolute inset-0" />
 
