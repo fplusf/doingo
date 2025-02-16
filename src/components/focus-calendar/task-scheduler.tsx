@@ -112,26 +112,36 @@ export function TaskScheduler({
             size="sm"
             className="h-8 gap-1.5 px-2 text-sm text-muted-foreground"
           >
-            {startDate ? format(startDate, 'MMM d') : format(new Date(), 'MMM d')}
+            {startDate ? (
+              <>
+                {format(startDate, 'MMM d')} at {startTime || format(new Date(), 'HH:mm')}
+              </>
+            ) : (
+              format(new Date(), 'MMM d')
+            )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={startDate}
-            onSelect={(date) => date && handleStartDateChange(date)}
-            initialFocus
-            weekStartsOn={1}
-          />
+        <PopoverContent className="w-auto p-0 text-xs" align="start" side="bottom" sideOffset={4}>
+          <div className="flex flex-col gap-0 p-0">
+            <Calendar
+              mode="single"
+              size="small"
+              selected={startDate}
+              onSelect={(date) => date && handleStartDateChange(date)}
+              initialFocus
+              weekStartsOn={1}
+            />
+            <div className="border-t border-border p-2">
+              <TimeSelect
+                value={startTime}
+                endTime={duration ? endTime : undefined}
+                onChange={handleStartTimeChange}
+                className="w-full"
+              />
+            </div>
+          </div>
         </PopoverContent>
       </Popover>
-
-      <TimeSelect
-        value={startTime}
-        endTime={duration ? endTime : undefined}
-        onChange={handleStartTimeChange}
-        className="h-8 text-muted-foreground"
-      />
 
       <DurationPicker value={duration} onValueChange={handleDurationChange} />
 

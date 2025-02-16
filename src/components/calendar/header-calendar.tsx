@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { CalendarDays, CalendarIcon } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -28,7 +28,7 @@ export function DatePicker() {
           <CalendarDays />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
+      <PopoverContent className="w-auto p-0" align="end" side="bottom" sideOffset={4}>
         <Calendar
           mode="single"
           weekStartsOn={1}
@@ -36,6 +36,7 @@ export function DatePicker() {
           defaultMonth={selectedDate}
           onSelect={onselect}
           initialFocus
+          className="w-[240px]"
         />
       </PopoverContent>
     </Popover>
