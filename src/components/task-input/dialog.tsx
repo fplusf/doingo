@@ -6,35 +6,14 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import TaskInput from './input';
-import { TaskPriority, TaskCategory } from '@/store/tasks.store';
-import { DurationOption } from '@/components/focus-calendar/duration-picker';
+import TaskInput, { TaskFormValues, TaskInputRef } from './input';
+import { useRef } from 'react';
 
 interface TaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialValues?: {
-    title: string;
-    notes?: string;
-    emoji?: string;
-    startTime?: string;
-    endTime?: string;
-    duration?: DurationOption;
-    dueDate?: Date;
-    priority?: TaskPriority;
-    category?: TaskCategory;
-  };
-  onSubmit: (values: {
-    title: string;
-    notes?: string;
-    emoji?: string;
-    startTime: string;
-    endTime: string;
-    duration: DurationOption;
-    dueDate?: Date;
-    priority: TaskPriority;
-    category: TaskCategory;
-  }) => void;
+  initialValues?: Partial<TaskFormValues>;
+  onSubmit: (values: TaskFormValues) => void;
   mode?: 'create' | 'edit';
   className?: string;
 }
@@ -47,10 +26,30 @@ export function TaskDialog({
   mode = 'create',
   className,
 }: TaskDialogProps) {
+  const formRef = useRef<TaskInputRef>(null);
+
+  const handleSubmitAndClose = (values: TaskFormValues) => {
+    onSubmit(values);
+    onOpenChange(false);
+  };
+
+  const handleClose = () => {
+    if (formRef.current) {
+      const values = formRef.current.getFormValues();
+      if (values) {
+        onSubmit(values);
+      }
+    }
+    onOpenChange(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
         overlayClassName="bg-black/10"
+        onEscapeKeyDown={handleClose}
+        onPointerDownOutside={handleClose}
+        onInteractOutside={handleClose}
         className={cn(
           'fixed left-1/2 top-[50%] z-50 w-full max-w-full -translate-x-1/2 -translate-y-1/2 rounded-lg border border-none border-zinc-800 bg-card p-6 text-zinc-400 shadow-[0_0_30px_rgba(0,0,0,0.8)] duration-75 dark:shadow-[0_0_30px_rgba(0,0,0,0.8)] sm:max-w-2xl',
           className,
@@ -66,12 +65,10 @@ export function TaskDialog({
         </DialogHeader>
 
         <TaskInput
+          ref={formRef}
           initialValues={initialValues}
-          onSubmit={(values) => {
-            onSubmit(values);
-            onOpenChange(false);
-          }}
-          onCancel={() => onOpenChange(false)}
+          onSubmit={handleSubmitAndClose}
+          onCancel={handleClose}
           submitLabel={mode === 'create' ? 'Add task' : 'Save changes'}
           className="border-none p-0 shadow-none"
         />

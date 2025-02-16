@@ -1,0 +1,107 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+import { TaskPriority } from '@/store/tasks.store';
+
+interface PrioritySelectProps {
+  value: TaskPriority;
+  onValueChange: (value: TaskPriority) => void;
+  className?: string;
+}
+
+const priorities: { value: TaskPriority; label: string; description: string }[] = [
+  {
+    value: 'high',
+    label: 'Important & Urgent',
+    description: 'Do it now',
+  },
+  {
+    value: 'medium',
+    label: 'Important & Not Urgent',
+    description: 'Schedule it',
+  },
+  {
+    value: 'low',
+    label: 'Not Important & Urgent',
+    description: 'Delegate it',
+  },
+  {
+    value: 'none',
+    label: 'Not Important & Not Urgent',
+    description: 'Eliminate it',
+  },
+];
+
+export function PrioritySelect({ value, onValueChange, className }: PrioritySelectProps) {
+  const handlePriorityChange = (newValue: TaskPriority) => {
+    onValueChange(newValue);
+  };
+
+  return (
+    <Select value={value} onValueChange={handlePriorityChange}>
+      <SelectTrigger className={cn('h-8 w-[120px] px-2 text-sm', className)}>
+        <div className="flex items-center">
+          <div
+            className="mr-1.5 h-full w-2.5"
+            style={{
+              backgroundColor:
+                value === 'high'
+                  ? '#ef4444'
+                  : value === 'medium'
+                    ? '#eab308'
+                    : value === 'low'
+                      ? '#3b82f6'
+                      : '#64748b',
+            }}
+          />
+          <SelectValue>
+            {value === 'high'
+              ? 'High'
+              : value === 'medium'
+                ? 'Medium'
+                : value === 'low'
+                  ? 'Low'
+                  : 'None'}
+          </SelectValue>
+        </div>
+      </SelectTrigger>
+      <SelectContent align="end">
+        <div className="grid grid-cols-2 gap-1 p-1">
+          {priorities.map((priority) => (
+            <SelectItem
+              defaultValue={''}
+              key={priority.value}
+              value={priority.value}
+              className={cn(
+                'relative col-span-1 flex cursor-pointer flex-col items-start overflow-hidden rounded-md p-3 hover:bg-accent',
+                'data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground',
+              )}
+            >
+              <div
+                className="absolute left-0 top-0 h-full w-2.5"
+                style={{
+                  backgroundColor:
+                    priority.value === 'high'
+                      ? '#ef4444'
+                      : priority.value === 'medium'
+                        ? '#eab308'
+                        : priority.value === 'low'
+                          ? '#3b82f6'
+                          : '#64748b',
+                }}
+              />
+
+              <div className="mt-2 pl-2 font-medium">{priority.label}</div>
+              <div className="pl-2 text-xs text-muted-foreground">{priority.description}</div>
+            </SelectItem>
+          ))}
+        </div>
+      </SelectContent>
+    </Select>
+  );
+}

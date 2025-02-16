@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { LocalStorageAdapter } from './adapters/local-storage-adapter';
 import { StorageAdapter } from './adapters/storage-adapter';
 
-export type TaskPriority = 'high' | 'medium' | 'low' | 'none';
+export type TaskPriority = 'none' | 'high' | 'medium' | 'low' | 'not-urgent-not-important' | '';
 export type TaskCategory = 'work' | 'passion' | 'play';
 
 export interface Task {
@@ -43,7 +43,7 @@ const updateStateAndStorage = (updater: (state: TasksState) => TasksState) => {
 
 export const addTask = (task: Omit<Task, 'id'>) => {
   updateStateAndStorage((state) => ({
-    tasks: [...state.tasks, { ...task, id: uuidv4() }],
+    tasks: [...state.tasks, { ...task, id: uuidv4(), priority: task.priority || 'none' }],
   }));
 };
 
