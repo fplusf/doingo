@@ -130,7 +130,7 @@ export function useTaskForm({ initialValues, onSubmit }: TaskFormProps) {
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!title || !startTime || !endTime || !duration || !priority) return;
+    if (!title) return;
 
     onSubmit({
       title,

@@ -90,7 +90,6 @@ const TaskInput = forwardRef<TaskInputRef, TaskInputProps>(
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleSubmit(e);
-        setTitle('');
       }
     };
 

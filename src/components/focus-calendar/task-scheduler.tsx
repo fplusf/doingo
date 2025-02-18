@@ -62,7 +62,8 @@ export function TaskScheduler({
           return;
         }
 
-        const start = parse(startTime, 'HH:mm', new Date());
+        const baseDate = new Date();
+        const start = parse(startTime, 'HH:mm', baseDate);
         if (isNaN(start.getTime())) {
           console.warn('Invalid parsed time:', start);
           return;
@@ -74,6 +75,15 @@ export function TaskScheduler({
         if (isNaN(end.getTime())) {
           console.warn('Invalid end time calculation');
           return;
+        }
+
+        // Check if the task crosses midnight
+        if (
+          end.getHours() < start.getHours() ||
+          (end.getHours() === start.getHours() && end.getMinutes() < start.getMinutes())
+        ) {
+          // Task ends tomorrow, add one day to the end time
+          end.setDate(end.getDate() + 1);
         }
 
         setEndTime(format(end, 'HH:mm'));

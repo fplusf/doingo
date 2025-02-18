@@ -36,7 +36,7 @@ export function TaskDialog({
   const handleClose = () => {
     if (formRef.current) {
       const values = formRef.current.getFormValues();
-      if (values) {
+      if (values?.title) {
         onSubmit(values);
       }
     }
@@ -44,12 +44,11 @@ export function TaskDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open}>
       <DialogContent
         overlayClassName="bg-black/10"
-        onEscapeKeyDown={handleClose}
-        onPointerDownOutside={handleClose}
         onInteractOutside={handleClose}
+        onEscapeKeyDown={handleClose}
         className={cn(
           'fixed left-1/2 top-[50%] z-50 w-full max-w-full -translate-x-1/2 -translate-y-1/2 rounded-lg border border-none border-zinc-800 bg-card p-6 text-zinc-400 shadow-[0_0_30px_rgba(0,0,0,0.8)] duration-75 dark:shadow-[0_0_30px_rgba(0,0,0,0.8)] sm:max-w-2xl',
           className,

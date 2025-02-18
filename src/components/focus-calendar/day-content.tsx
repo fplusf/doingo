@@ -115,11 +115,21 @@ const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void })
 
   function formatDurationForDisplay(duration: number): string {
     const minutes = duration / 60_000;
+    if (minutes < 0) {
+      // If duration is negative, it means the task crosses midnight
+      // Add 24 hours (1440 minutes) to get the correct duration
+      const adjustedMinutes = minutes + 1440;
+      if (adjustedMinutes >= 60) {
+        const hours = adjustedMinutes / 60;
+        return `${Math.floor(hours)} hr${hours > 1 ? 's' : ''}`;
+      }
+      return `${Math.floor(adjustedMinutes)} min`;
+    }
     if (minutes >= 60) {
       const hours = minutes / 60;
-      return `${hours} hr${hours > 1 ? 's' : ''}`;
+      return `${Math.floor(hours)} hr${hours > 1 ? 's' : ''}`;
     }
-    return `${minutes} min`;
+    return `${Math.floor(minutes)} min`;
   }
 
   return (
@@ -175,9 +185,20 @@ const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void })
 
               <section className="flex items-center">
                 <div className="mr-3 text-xs opacity-50 xl:text-sm">
-                  <span className="mr-2">{format(task.startTime, 'MMM dd yyyy')}</span>
-                  {format(task.startTime, 'HH:mm')} - {format(task.nextStartTime, 'HH:mm')} (
-                  {formatDurationForDisplay(task.duration)})
+                  <span className="mr-2">
+                    {task.startTime && !isNaN(task.startTime.getTime())
+                      ? format(task.startTime, 'MMM dd yyyy')
+                      : ''}
+                  </span>
+                  {task.startTime &&
+                  task.nextStartTime &&
+                  !isNaN(task.startTime.getTime()) &&
+                  !isNaN(task.nextStartTime.getTime()) ? (
+                    <>
+                      {format(task.startTime, 'HH:mm')} - {format(task.nextStartTime, 'HH:mm')} (
+                      {formatDurationForDisplay(task.duration)})
+                    </>
+                  ) : null}
                 </div>
 
                 <Link
@@ -265,7 +286,7 @@ const CategorySection = ({
           <Button
             onClick={onAddTask}
             variant="ghost"
-            className="ml-16 w-[calc(100%-4rem)] justify-start gap-2 bg-transparent text-muted-foreground hover:bg-transparent"
+            className="z-30 my-10 ml-16 w-[calc(100%-4rem)] justify-start gap-2 bg-transparent text-muted-foreground hover:bg-transparent"
           >
             <Plus className="h-4 w-4" />
             Add new task
@@ -422,6 +443,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
     };
 
     const formatDurationForDisplay = (durationMs: number) => {
+      if (!durationMs || durationMs <= 0) return '1 hr'; // Default fallback for invalid duration
       const duration = intervalToDuration({ start: 0, end: durationMs });
       if (duration.hours && duration.hours > 0) {
         return `${duration.hours} hr${duration.hours > 1 ? 's' : ''}`;
@@ -591,9 +613,11 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
             category: activeCategory,
           }}
           onSubmit={(values) => {
-            const startDate = parse(values.startTime, 'HH:mm', new Date());
-            const endDate = parse(values.endTime, 'HH:mm', new Date());
-            const durationMs = endDate.getTime() - startDate.getTime();
+            const startDate = parse(values.startTime || '09:00', 'HH:mm', new Date());
+            const endDate = new Date(
+              startDate.getTime() + (values.duration?.millis || ONE_HOUR_IN_MS),
+            );
+            const durationMs = values.duration?.millis || ONE_HOUR_IN_MS;
 
             const task = {
               title: values.title,
@@ -603,10 +627,10 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
               startTime: startDate,
               nextStartTime: endDate,
               duration: durationMs,
-              dueDate: values.dueDate,
+              dueDate: values.dueDate || new Date(),
+              priority: values.priority || 'none',
+              category: values.category || 'work',
               completed: false,
-              priority: values.priority,
-              category: values.category,
             };
 
             addTask(task);

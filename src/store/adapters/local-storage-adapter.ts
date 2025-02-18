@@ -12,12 +12,35 @@ export class LocalStorageAdapter implements StorageAdapter {
       const tasks = JSON.parse(tasksJson);
 
       // Convert date strings back to Date objects
-      return tasks.map((task: any) => ({
-        ...task,
-        startTime: new Date(task.startTime),
-        nextStartTime: new Date(task.nextStartTime),
-        dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-      }));
+      return tasks
+        .map((task: any) => {
+          // Validate dates before creating Date objects
+          const startTime = task.startTime ? new Date(task.startTime) : new Date();
+          const nextStartTime = task.nextStartTime ? new Date(task.nextStartTime) : new Date();
+          const dueDate = task.dueDate ? new Date(task.dueDate) : undefined;
+
+          // Verify that the dates are valid
+          if (isNaN(startTime.getTime())) {
+            console.warn('Invalid startTime for task:', task.id);
+            return null;
+          }
+          if (isNaN(nextStartTime.getTime())) {
+            console.warn('Invalid nextStartTime for task:', task.id);
+            return null;
+          }
+          if (dueDate && isNaN(dueDate.getTime())) {
+            console.warn('Invalid dueDate for task:', task.id);
+            return null;
+          }
+
+          return {
+            ...task,
+            startTime,
+            nextStartTime,
+            dueDate,
+          };
+        })
+        .filter(Boolean);
     } catch (error) {
       console.error('Error reading tasks from localStorage:', error);
       return [];
