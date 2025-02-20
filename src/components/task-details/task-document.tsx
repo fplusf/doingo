@@ -70,9 +70,13 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
             }}
             ref={(textareaRef) => {
               if (textareaRef) {
+                const scrollContainer = textareaRef.closest('.scroll-area-viewport');
+                const scrollTop = scrollContainer?.scrollTop;
+
                 // Reset height first to get accurate scrollHeight
                 textareaRef.style.height = '2.5rem';
                 const scrollHeight = textareaRef.scrollHeight;
+
                 // Only update if scrollHeight is reasonable (prevent excessive growth)
                 if (scrollHeight <= 300) {
                   textareaRef.style.height = `${scrollHeight}px`;
@@ -80,6 +84,11 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
                   textareaRef.style.height = '300px';
                   textareaRef.style.overflowY = 'auto';
                 }
+
+                // Restore scroll position
+                // if (scrollContainer && scrollTop) {
+                //   scrollContainer.scrollTop = scrollTop;
+                // }
               }
             }}
           />

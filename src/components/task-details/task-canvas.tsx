@@ -4,6 +4,7 @@ import { useTheme } from 'next-themes';
 import { Excalidraw } from '@excalidraw/excalidraw';
 import { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types/types';
 import { Task } from '@/store/tasks.store';
+import { useSearch } from '@tanstack/react-router';
 
 interface TaskCanvasProps {
   task: Task;
@@ -26,6 +27,7 @@ export function TaskCanvas({ task }: TaskCanvasProps) {
   const [viewModeEnabled, setViewModeEnabled] = useState(false);
   const [zenModeEnabled, setZenModeEnabled] = useState(false);
   const [gridModeEnabled, setGridModeEnabled] = useState(false);
+  const { tab } = useSearch({ from: '/tasks/$taskId' });
 
   useEffect(() => {
     if (!task.id || !excalidrawAPI) return;
@@ -50,12 +52,22 @@ export function TaskCanvas({ task }: TaskCanvasProps) {
         excalidrawAPI.updateScene({
           elements,
         });
-        excalidrawAPI.scrollToContent();
+        excalidrawAPI.scrollToContent(undefined, {
+          animate: true,
+          duration: 500,
+        });
       }, 100);
     }
 
+    if (tab === 'canvas') {
+      excalidrawAPI.scrollToContent(undefined, {
+        animate: true,
+        duration: 500,
+      });
+    }
+
     // Don't clear the scene on unmount as it causes the flickering
-  }, [excalidrawAPI, task.id]);
+  }, [excalidrawAPI, task.id, tab]);
 
   const handleChange = debounce({ delay: 1000 }, () => {
     if (!excalidrawAPI || !task.id) return;

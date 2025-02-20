@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Button } from '../ui/button';
 import React, { memo } from 'react';
 import { debounce } from 'radash';
+import { HorizontalRule } from '@tiptap/extension-horizontal-rule';
 
 interface TaskNotesProps {
   notes: string;
@@ -44,6 +45,11 @@ function TaskNotes({ notes, onNotesChange }: TaskNotesProps) {
       StarterKit.configure({
         bulletList: false,
         code: false,
+      }),
+      HorizontalRule.configure({
+        HTMLAttributes: {
+          class: 'inline-block my-8 h-1 w-full',
+        },
       }),
       TaskList.configure({
         HTMLAttributes: {
@@ -155,7 +161,7 @@ function TaskNotes({ notes, onNotesChange }: TaskNotesProps) {
       )}
       <EditorContent
         editor={editor}
-        className="prose prose-sm dark:prose-invert h-full max-w-none [&_*:focus]:outline-none [&_.is-editor-empty]:relative [&_.is-editor-empty]:before:pointer-events-none [&_.is-editor-empty]:before:absolute [&_.is-editor-empty]:before:left-0 [&_.is-editor-empty]:before:float-left [&_.is-editor-empty]:before:text-muted-foreground [&_.is-editor-empty]:before:content-[attr(data-placeholder)] [&_a:hover]:text-blue-600 dark:[&_a:hover]:text-blue-300 [&_a]:cursor-pointer [&_a]:text-blue-500 [&_a]:transition-colors dark:[&_a]:text-blue-400 [&_code]:whitespace-pre-wrap [&_code]:break-all [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-xl [&_h2]:font-semibold [&_pre]:whitespace-pre-wrap [&_pre]:break-all"
+        className="prose prose-sm dark:prose-invert mb-72 h-full max-w-none [&_*:focus]:outline-none [&_.is-editor-empty]:relative [&_.is-editor-empty]:before:pointer-events-none [&_.is-editor-empty]:before:absolute [&_.is-editor-empty]:before:left-0 [&_.is-editor-empty]:before:float-left [&_.is-editor-empty]:before:text-muted-foreground [&_.is-editor-empty]:before:content-[attr(data-placeholder)] [&_a:hover]:text-blue-600 dark:[&_a:hover]:text-blue-300 [&_a]:cursor-pointer [&_a]:text-blue-500 [&_a]:transition-colors dark:[&_a]:text-blue-400 [&_code]:whitespace-pre-wrap [&_code]:break-all [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-xl [&_h2]:font-semibold [&_pre]:whitespace-pre-wrap [&_pre]:break-all"
       />
     </div>
   );
