@@ -84,7 +84,7 @@ const TaskInput = forwardRef<TaskInputRef, TaskInputProps>(
         textareaRef.current.focus();
         textareaRef.current.setSelectionRange(title.length, title.length);
       }
-    }, [title]);
+    }, []);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {

@@ -13,12 +13,20 @@ interface TaskDetailsProps {
 export function TaskDetails({ task, onEdit }: TaskDetailsProps) {
   const navigate = useNavigate();
   const search = useSearch({ from: '/tasks/$taskId' });
+
   const currentTab = search.tab || 'document';
   const [isCanvasVisible, setIsCanvasVisible] = React.useState(currentTab !== 'document');
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        // reset the search params for tab to document
+        navigate({
+          to: '/tasks/$taskId',
+          params: { taskId: task.id },
+          search: { tab: 'document' },
+        });
+        // navigate back
         navigate({ to: '..' });
       }
     };

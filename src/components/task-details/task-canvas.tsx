@@ -17,40 +17,60 @@ function debounce({ delay }: { delay: number }, fn: () => void) {
   };
 }
 
+const getCanvasKey = (taskId: string) => `canvas_${taskId}`;
+
 export function TaskCanvas({ task }: TaskCanvasProps) {
   const { theme } = useTheme();
   const excalidrawWrapperRef = useRef<HTMLDivElement>(null);
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [viewModeEnabled, setViewModeEnabled] = useState(false);
   const [zenModeEnabled, setZenModeEnabled] = useState(false);
   const [gridModeEnabled, setGridModeEnabled] = useState(false);
 
   useEffect(() => {
-    const canvasData = localStorage.getItem('canvasData');
-    if (excalidrawAPI && canvasData) {
+    if (!task.id || !excalidrawAPI) return;
+
+    const canvasKey = getCanvasKey(task.id);
+    const canvasData = localStorage.getItem(canvasKey);
+    let sceneData = null;
+
+    if (canvasData) {
       try {
-        excalidrawAPI.updateScene(JSON.parse(canvasData));
+        sceneData = JSON.parse(canvasData);
       } catch (error) {
-        console.error('Failed to parse canvas data:', error);
+        console.error(`Failed to parse canvas data for task ${task.id}:`, error);
+        localStorage.removeItem(canvasKey);
       }
     }
 
-    return () => {
-      if (excalidrawAPI) {
-        excalidrawAPI.updateScene({ elements: [] });
-      }
-    };
-  }, []);
+    if (sceneData) {
+      const { elements } = sceneData;
+      // Use a small timeout to ensure the canvas is ready
+      setTimeout(() => {
+        excalidrawAPI.updateScene({
+          elements,
+        });
+        excalidrawAPI.scrollToContent();
+      }, 100);
+    }
 
-  const handleChange = debounce({ delay: 500 }, async () => {
-    if (!excalidrawAPI) return;
+    // Don't clear the scene on unmount as it causes the flickering
+  }, [excalidrawAPI, task.id]);
+
+  const handleChange = debounce({ delay: 1000 }, () => {
+    if (!excalidrawAPI || !task.id) return;
     try {
-      const sceneData = JSON.stringify(excalidrawAPI.getSceneElements());
-      // updateTask(task.id, { canvasData: sceneData });
-      localStorage.setItem('canvasData', sceneData);
+      const elements = excalidrawAPI.getSceneElements();
+      // Only save if there are actual changes
+      if (elements.length > 0) {
+        const sceneData = JSON.stringify({
+          elements,
+        });
+        const canvasKey = getCanvasKey(task.id);
+        localStorage.setItem(canvasKey, sceneData);
+      }
     } catch (error) {
-      console.error('Failed to save canvas data:', error);
+      console.error(`Failed to save canvas data for task ${task.id}:`, error);
     }
   });
 

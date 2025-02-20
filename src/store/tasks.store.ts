@@ -19,7 +19,7 @@ export interface Task {
   priority: TaskPriority;
   category: TaskCategory;
   dueDate?: Date;
-  canvasData?: string; // Serialized Excalidraw scene data
+  // canvasData?: string; // Serialized Excalidraw scene data
 }
 
 interface TasksState {
@@ -54,6 +54,11 @@ export const updateTask = (id: string, updates: Partial<Task>) => {
 };
 
 export const deleteTask = (id: string) => {
+  // remove the canvas data from local storage
+  if (id) {
+    localStorage.removeItem(`canvas_${id}`);
+  }
+
   updateStateAndStorage((state) => ({
     tasks: state.tasks.filter((task) => task.id !== id),
   }));
