@@ -1,4 +1,4 @@
-import { Focus, Inbox, Bell, Calendar, BarChart } from 'lucide-react';
+import { Bell, Calendar, BarChart, LucideFocus, Calendar1Icon } from 'lucide-react';
 import * as React from 'react';
 
 import { NavUser } from '@/components/sidebar/nav-user';
@@ -23,6 +23,16 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const focusedTask = {
+    id: '1',
+    title: 'Focus on something',
+    description: 'Focus on something',
+    dueDate: '2021-01-01',
+    priority: 'high',
+    status: 'in-progress',
+    tags: ['work'],
+  };
+
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader className="pt-10">
@@ -36,7 +46,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 inactiveProps={{ className: 'inactive' }}
               >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
-                  <Focus className="size-4" />
+                  <Calendar1Icon className="size-4" />
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -47,16 +57,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>
               <Link
-                to="/tags"
+                to="/tasks/$taskId"
+                params={{ taskId: focusedTask.id }}
                 activeProps={{ className: 'active' }}
                 inactiveProps={{ className: 'inactive' }}
               >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
-                  <Inbox className="size-4" />
+                  <LucideFocus className="size-4" />
                 </div>
               </Link>
             </SidebarMenuButton>
-            <span className="mt-0.5 truncate text-xs">Inbox</span>
+            <span className="mt-0.5 truncate text-xs">Focus</span>
           </SidebarMenuItem>
         </SidebarMenu>
         <SidebarMenu>

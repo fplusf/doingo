@@ -19,6 +19,7 @@ export interface Task {
   priority: TaskPriority;
   category: TaskCategory;
   dueDate?: Date;
+  isFocused: boolean;
   // canvasData?: string; // Serialized Excalidraw scene data
 }
 
@@ -61,6 +62,18 @@ export const deleteTask = (id: string) => {
 
   updateStateAndStorage((state) => ({
     tasks: state.tasks.filter((task) => task.id !== id),
+  }));
+};
+
+export const setFocused = (id: string, isFocused: boolean) => {
+  updateStateAndStorage((state) => ({
+    tasks: state.tasks.map((task) => {
+      if (task.id === id) {
+        return { ...task, isFocused };
+      }
+      // Ensure other tasks are unfocused
+      return { ...task, isFocused: false };
+    }),
   }));
 };
 

@@ -1,34 +1,35 @@
-import { restrictToWindowEdges } from '@dnd-kit/modifiers';
-import { Link, useNavigate } from '@tanstack/react-router';
-import React, { useState, useEffect, useRef } from 'react';
-import { TIMELINE_CATEGORIES, TimelineItem } from '../timeline/timeline';
-import {
-  TaskPriority,
-  TaskCategory,
-  Task,
-  addTask,
-  tasksStore,
-  updateTask,
-  toggleTaskCompletion,
-  deleteTask,
-} from '@/store/tasks.store';
 import { Button } from '@/components/ui/button';
-import { Plus, GripVertical, Trash2, Focus, Smile, ArrowRight } from 'lucide-react';
-import { useStore } from '@tanstack/react-store';
-import { parse, format, intervalToDuration } from 'date-fns';
-import { CategoryBadge } from '../timeline/category-line';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  DndContext,
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
+import {
+  addTask,
+  deleteTask,
+  setFocused,
+  Task,
+  TaskCategory,
+  TaskPriority,
+  tasksStore,
+  toggleTaskCompletion,
+  updateTask,
+} from '@/store/tasks.store';
+import {
   closestCenter,
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
-  DragStartEvent,
-  DragOverlay,
 } from '@dnd-kit/core';
+import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import {
   arrayMove,
   SortableContext,
@@ -37,14 +38,14 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { useStore } from '@tanstack/react-store';
+import { format, intervalToDuration, parse } from 'date-fns';
+import { ArrowRight, Focus, GripVertical, LucideFocus, Plus, Smile, Trash2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import { TaskDialog } from '../task-input/dialog';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu';
-import { cn } from '@/lib/utils';
+import { CategoryBadge } from '../timeline/category-line';
+import { TIMELINE_CATEGORIES, TimelineItem } from '../timeline/timeline';
 
 interface DayContentProps {
   ref: React.RefObject<{ setIsCreating: (value: boolean) => void }>;
@@ -96,6 +97,7 @@ const SortableTaskItem = ({ task, children }: { task: any; children: React.React
 };
 
 import { getEmojiBackground } from '@/lib/emoji-utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void }) => {
   const navigate = useNavigate({ from: '/tasks' });
@@ -105,6 +107,11 @@ const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void })
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isHovered && e.key.toLowerCase() === 'f') {
         e.preventDefault();
+        if (task.completed) {
+          // If the task is completed, don't focus it
+          return;
+        }
+        setFocused(task.id, true);
         navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
       }
     };
@@ -137,79 +144,123 @@ const TaskCard = ({ task, onEdit }: { task: Task; onEdit: (task: any) => void })
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'relative flex h-full w-full flex-col rounded-lg p-2 py-4 pr-6 text-current hover:bg-sidebar hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
+            'relative flex h-full w-full flex-col rounded-lg p-0.5 text-current hover:bg-sidebar hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
             task.completed && 'opacity-45',
+            task.isFocused && 'bg-gradient-to-r from-red-500 to-purple-500',
           )}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
           <div
-            className="flex flex-grow cursor-pointer items-start gap-4"
-            onClick={() => onEdit(task)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') onEdit(task);
-            }}
-            role="button"
-            tabIndex={0}
+            className={cn(
+              task.isFocused && 'bg-sidebar/95',
+              'h-full w-full rounded-md p-2 py-4 pr-6',
+            )}
           >
             <div
-              className={cn(
-                'flex h-12 w-12 shrink-0 items-center justify-center rounded-full p-0',
-                task.emoji ? getEmojiBackground(task.emoji, task.category) : 'hover:bg-accent/25',
-              )}
-              style={{
-                aspectRatio: '1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+              className="flex h-full flex-grow cursor-pointer items-start justify-between gap-4"
+              onClick={() => onEdit(task)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') onEdit(task);
               }}
+              role="button"
+              tabIndex={0}
             >
-              {task.emoji ? (
-                <span className="text-lg sm:text-xl">{task.emoji}</span>
-              ) : (
-                <Smile className="h-4 w-4 text-muted-foreground" />
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <h3
+              <div
                 className={cn(
-                  'mb-4 font-medium',
-                  task.completed && 'line-through',
-                  task.duration > 2 * 60 * 60 * 1000
-                    ? 'line-clamp-2 sm:line-clamp-3'
-                    : 'line-clamp-1 sm:line-clamp-2',
+                  'flex h-12 w-12 shrink-0 items-center justify-center rounded-full p-0',
+                  task.emoji ? getEmojiBackground(task.emoji, task.category) : 'hover:bg-accent/25',
                 )}
+                style={{
+                  aspectRatio: '1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
-                {task.title}
-              </h3>
-
-              <section className="flex items-center">
-                <div className="mr-3 text-xs opacity-50 xl:text-sm">
-                  <span className="mr-2">
-                    {task.startTime && !isNaN(task.startTime.getTime())
-                      ? format(task.startTime, 'MMM dd yyyy')
-                      : ''}
-                  </span>
-                  {task.startTime &&
-                  task.nextStartTime &&
-                  !isNaN(task.startTime.getTime()) &&
-                  !isNaN(task.nextStartTime.getTime()) ? (
-                    <>
-                      {format(task.startTime, 'HH:mm')} - {format(task.nextStartTime, 'HH:mm')} (
-                      {formatDurationForDisplay(task.duration)})
-                    </>
-                  ) : null}
-                </div>
-
-                <Link
-                  to={'/tasks/$taskId'}
-                  params={{ taskId: task.id }}
-                  className="flex h-6 w-32 items-center justify-start rounded-md p-3 text-xs text-muted-foreground hover:bg-gray-700 hover:text-foreground"
+                {task.emoji ? (
+                  <span className="text-lg sm:text-xl">{task.emoji}</span>
+                ) : (
+                  <Smile className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex h-full w-full flex-col gap-2">
+                <h3
+                  className={cn(
+                    'mb-auto font-medium',
+                    task.completed && 'line-through',
+                    task.duration > 2 * 60 * 60 * 1000
+                      ? 'line-clamp-2 sm:line-clamp-3'
+                      : 'line-clamp-1 sm:line-clamp-2',
+                  )}
                 >
-                  Open Details
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </section>
+                  {task.title}
+                </h3>
+
+                <section className="flex items-center">
+                  <div className="mr-3 text-xs opacity-50 xl:text-sm">
+                    <span className="mr-2">
+                      {task.startTime && !isNaN(task.startTime.getTime())
+                        ? format(task.startTime, 'MMM dd yyyy')
+                        : ''}
+                    </span>
+                    {task.startTime &&
+                    task.nextStartTime &&
+                    !isNaN(task.startTime.getTime()) &&
+                    !isNaN(task.nextStartTime.getTime()) ? (
+                      <>
+                        {format(task.startTime, 'HH:mm')} - {format(task.nextStartTime, 'HH:mm')} (
+                        {formatDurationForDisplay(task.duration)})
+                      </>
+                    ) : null}
+                  </div>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFocused(task.id, true);
+                            navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
+                          }}
+                          className={cn(
+                            'mx-4 mr-10 flex bg-transparent hover:bg-transparent',
+                            task.completed && 'hidden',
+                          )}
+                        >
+                          <LucideFocus
+                            className={cn(
+                              'ml-2 h-4 w-4 transition-all duration-200',
+                              task.isFocused
+                                ? 'fill-blue-500 text-blue-500'
+                                : 'text-muted-foreground',
+                              'hover:scale-150 hover:fill-blue-500 hover:text-blue-500 hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]',
+                            )}
+                          />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Focus</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  {isHovered && (
+                    <Link
+                      to={'/tasks/$taskId'}
+                      params={{ taskId: task.id }}
+                      className={cn(
+                        'flex items-center justify-start rounded-md p-3 text-xs text-muted-foreground hover:bg-gray-700/40 hover:text-foreground',
+                      )}
+                    >
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  )}
+                </section>
+              </div>
             </div>
           </div>
         </div>
@@ -631,9 +682,11 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
               priority: values.priority || 'none',
               category: values.category || 'work',
               completed: false,
+              isFocused: false,
             };
 
             addTask(task);
+
             setNewTask({
               title: '',
               notes: '',
@@ -641,6 +694,7 @@ const DayContent = React.forwardRef<{ setIsCreating: (value: boolean) => void },
               priority: 'none',
               category: activeCategory,
             });
+
             setStartTime('');
             setEndTime('');
             setDuration(ONE_HOUR_IN_MS);
