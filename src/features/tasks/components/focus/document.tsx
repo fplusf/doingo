@@ -1,15 +1,15 @@
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { EmojiPicker } from '@/features/tasks/components/schedule/emoji-picker';
+import { OptimalTask } from '@/features/tasks/types';
 import { convertTaskToSchedulerProps } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
-import { Task } from '@/store/tasks.store';
+import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import React from 'react';
 import { TaskScheduler } from '../schedule/task-scheduler';
 import TaskNotes from './notes';
 
 interface TaskDocumentProps {
-  task: Task;
-  onEdit: (task: Task) => void;
+  task: OptimalTask;
+  onEdit: (task: OptimalTask) => void;
   className?: string;
 }
 

@@ -1,14 +1,14 @@
+import { cn } from '@/lib/utils';
+import { Button } from '@/shared/components/ui/button';
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
-import { useState, useEffect, useRef } from 'react';
-import { Input } from '@/components/ui/input';
-import { CornerDownLeft, Check } from 'lucide-react';
+  DropdownMenuTrigger,
+} from '@/shared/components/ui/dropdown-menu';
+import { Input } from '@/shared/components/ui/input';
+import { ScrollArea } from '@/shared/components/ui/scroll-area';
+import { Check, CornerDownLeft } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 interface DurationOption {
   label: string;

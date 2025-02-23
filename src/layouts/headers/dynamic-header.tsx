@@ -1,6 +1,6 @@
+import { DragWindowRegion, DragWindowRegionChildren } from '@/shared/components/drag-window-region';
 import { useMatches } from '@tanstack/react-router';
 import { DefaultHeader } from './default-header';
-import { DragWindowRegion, DragWindowRegionChildren } from '../../components/drag-window-region';
 
 export function DynamicHeader() {
   const matches = useMatches();

@@ -1,5 +1,5 @@
+import { Task } from '@/features/tasks/store/tasks.store';
 import { cn } from '@/lib/utils';
-import { Task } from '@/store/tasks.store';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import React from 'react';
 import { TaskCanvas } from './canvas';

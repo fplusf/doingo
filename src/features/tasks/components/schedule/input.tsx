@@ -1,18 +1,18 @@
+import { EmojiPicker } from '@/features/tasks/components/schedule/emoji-picker';
+import { useTaskForm } from '@/features/tasks/hooks/use-task-form';
+import { TaskCategory, TaskPriority } from '@/features/tasks/types';
+import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { EmojiPicker } from '@/features/tasks/components/schedule/emoji-picker';
-import { useTaskForm } from '@/features/tasks/hooks/use-task-form';
-import { cn } from '@/lib/utils';
+} from '@/shared/components/ui/select';
+import { Textarea } from '@/shared/components/ui/textarea';
 import { ClipboardList, Hash } from 'lucide-react';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { ScrollArea } from '../../../../components/ui/scroll-area';
-import { TaskCategory, TaskPriority } from '../../../../store/tasks.store';
 import { DurationOption } from './duration-picker';
 import { PrioritySelect } from './priority-select';
 import { TaskScheduler } from './task-scheduler';

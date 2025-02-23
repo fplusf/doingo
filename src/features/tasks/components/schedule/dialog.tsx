@@ -1,11 +1,11 @@
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
+} from '@/shared/components/ui/dialog';
 import { useRef } from 'react';
 import TaskInput, { TaskFormValues, TaskInputRef } from './input';
 

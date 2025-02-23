@@ -1,5 +1,5 @@
+import { useSidebar } from '@/shared/components/ui/sidebar';
 import { useEffect, useRef } from 'react';
-import { useSidebar } from '../../../components/ui/sidebar';
 import { cn } from '../../../lib/utils';
 import { DayContainer } from '../components/list/day-container';
 import { WeekNavigator } from '../components/weekly-calendar/week-navigator';

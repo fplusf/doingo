@@ -1,8 +1,8 @@
-import { Button } from '@/components/ui/button';
-import { CategoryBadge } from '@/features/tasks/components/timeline/category-line';
+import { CategoryBadge } from '@/features/tasks/components/timeline/category-badge';
 import { TIMELINE_CATEGORIES, TimelineItem } from '@/features/tasks/components/timeline/timeline';
+import { toggleTaskCompletion, updateTask } from '@/features/tasks/store/tasks.store';
 import { cn } from '@/lib/utils';
-import { toggleTaskCompletion, updateTask } from '@/store/tasks.store';
+import { Button } from '@/shared/components/ui/button';
 import { Plus } from 'lucide-react';
 import { CategorySectionProps } from '../../types';
 import { SortableTaskItem } from '../list/sortable-task-item';

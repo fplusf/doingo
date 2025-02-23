@@ -1,6 +1,5 @@
 import FocusPage from '@/features/tasks/pages/today-page';
-import AboutPage from '@/pages/about-page';
-import Tags from '@/pages/tags-page';
+
 import { createRoute } from '@tanstack/react-router';
 import TaskDetailsPage from '../features/tasks/pages/focus-page';
 import { TaskDetailHeader } from '../layouts/headers/task-details-header';
@@ -48,20 +47,6 @@ export const TaskDetailsRoute = createRoute({
   }),
 });
 
-// Parent route for /tags
-export const TagsRoute = createRoute({
-  getParentRoute: () => RootRoute,
-  path: '/tags',
-  component: Tags,
-});
-
-export const AboutRoute = createRoute({
-  getParentRoute: () => RootRoute,
-  path: '/about',
-  component: AboutPage,
-});
-
 export const rootTree = RootRoute.addChildren([
   TasksRoute.addChildren([TasksIndexRoute, TaskDetailsRoute]),
-  AboutRoute,
 ]);

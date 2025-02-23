@@ -6,7 +6,9 @@
       "@/*": ["./src/*"],
       "@/features/*": ["./src/features/*"],
       "@/lib/*": ["./src/lib/*"],
-      "@/components/*": ["./src/components/*"]
+      "@/shared/*": ["./src/shared/*"],
+      "@/layouts/*": ["./src/layouts/*"],
+      "@/features/tasks/*": ["./src/features/tasks/*"]
     },
     "outDir": "dist"
   },

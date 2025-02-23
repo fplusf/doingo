@@ -1,13 +1,6 @@
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { TaskDialog } from '@/features/tasks/components/schedule/dialog';
-import {
-  Task,
-  TaskCategory,
-  TaskPriority,
-  addTask,
-  tasksStore,
-  updateTask,
-} from '@/store/tasks.store';
+import { addTask, tasksStore, updateTask } from '@/features/tasks/store/tasks.store';
+import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import {
   DndContext,
   DragEndEvent,
@@ -30,6 +23,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { format, parse } from 'date-fns';
 import React, { useEffect, useRef, useState } from 'react';
+import { OptimalTask, TaskCategory, TaskPriority } from '../../types';
 import { CategorySection } from './category-section';
 import { SortableTaskItem } from './sortable-task-item';
 import { TaskCard } from './task-card';
@@ -131,9 +125,9 @@ export const DayContainer = React.forwardRef<
   // Group tasks by category
   const tasksByCategory = React.useMemo(() => {
     const grouped = {
-      work: [] as Task[],
-      passion: [] as Task[],
-      play: [] as Task[],
+      work: [] as OptimalTask[],
+      passion: [] as OptimalTask[],
+      play: [] as OptimalTask[],
     };
 
     tasks.forEach((task) => {
@@ -208,7 +202,7 @@ export const DayContainer = React.forwardRef<
     }
   }, [startTime, duration]);
 
-  const handleStartEdit = (task: Task) => {
+  const handleStartEdit = (task: OptimalTask) => {
     setEditingTaskId(task.id);
     setNewTask({
       title: task.title,

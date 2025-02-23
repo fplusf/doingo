@@ -1,3 +1,4 @@
+import { ThemeProvider } from '@/shared/components/theme-provider';
 import {
   Outlet,
   createRootRoute,
@@ -5,9 +6,8 @@ import {
   stripSearchParams,
 } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
+import BaseLayout from '../layouts/base-layout';
 import { weeklyCalendarSchema } from './searchParams';
-import { ThemeProvider } from '../components/theme-provider';
-import BaseLayout from '../layouts/BaseLayout';
 
 export const RootRoute = createRootRoute({
   component: Root,

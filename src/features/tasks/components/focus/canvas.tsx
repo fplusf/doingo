@@ -1,10 +1,10 @@
-import { Suspense, useEffect, useRef, useState } from 'react';
-import { Loader2 } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import { Task } from '@/features/tasks/store/tasks.store';
 import { Excalidraw } from '@excalidraw/excalidraw';
 import { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types/types';
-import { Task } from '@/store/tasks.store';
 import { useSearch } from '@tanstack/react-router';
+import { Loader2 } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { Suspense, useEffect, useRef, useState } from 'react';
 
 interface TaskCanvasProps {
   task: Task;

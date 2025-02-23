@@ -1,9 +1,9 @@
-import { DatePicker } from '@/components/calendar/header-calendar';
-import { Button } from '@/components/ui/button';
 import { useWeekNavigation } from '@/features/tasks/hooks/use-week-navigation';
+import { DatePicker } from '@/layouts/headers/header-calendar';
+import { DragWindowRegion } from '@/shared/components/drag-window-region';
+import { Button } from '@/shared/components/ui/button';
 import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { DragWindowRegion } from '../../components/drag-window-region';
 
 export function DefaultHeader() {
   const { handleNext, handlePrev, navigateToDate } = useWeekNavigation();

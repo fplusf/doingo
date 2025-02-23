@@ -1,5 +1,3 @@
-import { Task } from '@/store/tasks.store';
-
 export const ONE_HOUR_IN_MS = 3600000; // 1 hour in milliseconds
 export const CARD_MARGIN_BOTTOM = 30; // margin between cards
 
@@ -8,22 +6,46 @@ export interface DragHandleProps {
 }
 
 export interface SortableTaskItemProps {
-  task: Task;
+  task: OptimalTask;
   children: React.ReactNode;
 }
 
 export interface TaskCardProps {
-  task: Task;
-  onEdit: (task: Task) => void;
+  task: OptimalTask;
+  onEdit: (task: OptimalTask) => void;
 }
 
 export interface CategorySectionProps {
-  category: Task['category'];
-  tasks: Task[];
+  category: OptimalTask['category'];
+  tasks: OptimalTask[];
   onAddTask: () => void;
-  onEditTask: (task: Task) => void;
+  onEditTask: (task: OptimalTask) => void;
 }
 
 export interface DayContentProps {
   ref: React.RefObject<{ setIsCreating: (value: boolean) => void }>;
+}
+
+export type TaskPriority = 'none' | 'high' | 'medium' | 'low' | 'not-urgent-not-important' | '';
+export type TaskCategory = 'work' | 'passion' | 'play';
+
+export interface OptimalTask {
+  id: string;
+  title: string;
+  notes?: string;
+  emoji?: string;
+  time: string; // Human readable format for display
+  startTime: Date;
+  nextStartTime: Date;
+  duration: number; // Duration in milliseconds
+  completed: boolean;
+  priority: TaskPriority;
+  category: TaskCategory;
+  dueDate?: Date;
+  isFocused: boolean;
+  // canvasData?: string; // Serialized Excalidraw scene data
+}
+
+export interface TasksState {
+  tasks: OptimalTask[];
 }

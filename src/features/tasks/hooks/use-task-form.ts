@@ -1,5 +1,5 @@
 import { DurationOption } from '@/components/focus-calendar/duration-picker';
-import { TaskCategory, TaskPriority } from '@/store/tasks.store';
+import { TaskCategory, TaskPriority } from '@/features/tasks/store/tasks.store';
 import { addMinutes, format, parse } from 'date-fns';
 import { useEffect, useState } from 'react';
 

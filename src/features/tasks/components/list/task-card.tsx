@@ -1,19 +1,24 @@
-import { Button } from '@/components/ui/button';
+import { deleteTask, setFocused } from '@/features/tasks/store/tasks.store';
+import { getEmojiBackground } from '@/lib/emoji-utils';
+import { cn } from '@/lib/utils';
+import { Button } from '@/shared/components/ui/button';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
-} from '@/components/ui/context-menu';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { getEmojiBackground } from '@/lib/emoji-utils';
-import { cn } from '@/lib/utils';
-import { deleteTask, setFocused } from '@/store/tasks.store';
+} from '@/shared/components/ui/context-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/shared/components/ui/tooltip';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { format } from 'date-fns';
 import { ArrowRight, LucideFocus, Smile, Trash2 } from 'lucide-react';
 import React from 'react';
-import { TaskCardProps } from '../types';
+import { TaskCardProps } from '../../types';
 
 export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
   const navigate = useNavigate({ from: '/tasks' });

@@ -1,8 +1,8 @@
+import { useWeekNavigation } from '@/features/tasks/hooks/use-week-navigation';
 import { cn } from '@/lib/utils';
 import { useGesture } from '@use-gesture/react';
 import { format, isSameDay } from 'date-fns';
 import * as React from 'react';
-import { useWeekNavigation } from '../../hooks/use-week-navigation';
 import { DayChart } from './day-chart';
 
 let isTransitioning = false;

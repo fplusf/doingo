@@ -1,7 +1,7 @@
 import { exec } from 'child_process';
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
-import registerListeners from './helpers/ipc/listeners-register';
+import registerListeners from './shared/helpers/ipc/listeners-register';
 
 const inDevelopment = process.env.NODE_ENV === 'development';
 

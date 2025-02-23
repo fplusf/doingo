@@ -1,15 +1,15 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { format, isBefore, startOfDay, addMinutes } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { ScrollArea } from '@/components/ui/scroll-area';
+} from '@/shared/components/ui/dropdown-menu';
+import { ScrollArea } from '@/shared/components/ui/scroll-area';
+import { addMinutes, format, isBefore, startOfDay } from 'date-fns';
 import { Check } from 'lucide-react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 interface TimeSelectProps {
   value: string;

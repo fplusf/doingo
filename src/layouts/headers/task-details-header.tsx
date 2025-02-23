@@ -1,7 +1,7 @@
-import { Button } from '@/components/ui/button';
-import { ChevronLeft } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/shared/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
 import { useMatch, useNavigate, useSearch } from '@tanstack/react-router';
+import { ChevronLeft } from 'lucide-react';
 
 export function TaskDetailHeader() {
   return {

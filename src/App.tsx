@@ -2,10 +2,10 @@ import { RouterProvider } from '@tanstack/react-router';
 import React, { useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useTranslation } from 'react-i18next';
-import { updateAppLanguage } from './helpers/language_helpers';
-import { syncThemeWithLocal } from './helpers/theme_helpers';
 import './localization/i18n';
 import { router } from './routes/router';
+import { updateAppLanguage } from './shared/helpers/language_helpers';
+import { syncThemeWithLocal } from './shared/helpers/theme_helpers';
 
 export default function App() {
   const { i18n } = useTranslation();

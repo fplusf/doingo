@@ -1,8 +1,8 @@
-import { DurationOption } from '@/components/focus-calendar/duration-picker';
-import { Task } from '@/store/tasks.store';
+import { DurationOption } from '@/features/tasks/components/schedule/duration-picker';
+import { OptimalTask } from '@/features/tasks/types';
 import { format } from 'date-fns';
 
-export const convertTaskToSchedulerProps = (task: Task) => {
+export const convertTaskToSchedulerProps = (task: OptimalTask) => {
   // startTime is already in HH:mm format
   // Convert startTime from Date to string in HH:mm format
   const startTimeStr = format(task.startTime, 'HH:mm');

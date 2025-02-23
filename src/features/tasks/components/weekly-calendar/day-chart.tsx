@@ -1,5 +1,5 @@
-import { ChartConfig, ChartContainer } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
+import { ChartConfig, ChartContainer } from '@/shared/components/ui/chart';
 import { format } from 'date-fns';
 import { PolarAngleAxis, RadialBar, RadialBarChart } from 'recharts';
 
