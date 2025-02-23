@@ -3,11 +3,11 @@ import { useGesture } from '@use-gesture/react';
 import { format, isSameDay } from 'date-fns';
 import * as React from 'react';
 import { useWeekNavigation } from '../../hooks/use-week-navigation';
-import DayChart from './day-chart';
+import { DayChart } from './day-chart';
 
 let isTransitioning = false;
 
-function WeekNavigator({ className }: { className?: string }) {
+export function WeekNavigator({ className }: { className?: string }) {
   const { selectedDate, weeks, handleDateSelect, handleNext, handlePrev } = useWeekNavigation();
   const containerRef = React.useRef<HTMLDivElement>(null);
 

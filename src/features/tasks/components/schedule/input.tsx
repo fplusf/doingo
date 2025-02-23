@@ -1,5 +1,3 @@
-import { EmojiPicker } from '@/components/emoji/emoji-picker';
-import { TaskScheduler } from '@/components/focus-calendar/task-scheduler';
 import {
   Select,
   SelectContent,
@@ -8,14 +6,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useTaskForm } from '@/hooks/use-task-form';
+import { EmojiPicker } from '@/features/tasks/components/schedule/emoji-picker';
+import { useTaskForm } from '@/features/tasks/hooks/use-task-form';
 import { cn } from '@/lib/utils';
 import { ClipboardList, Hash } from 'lucide-react';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { TaskCategory, TaskPriority } from '../../store/tasks.store';
-import { DurationOption } from '../focus-calendar/duration-picker';
-import { PrioritySelect } from '../priority/priority-select';
-import { ScrollArea } from '../ui/scroll-area';
+import { ScrollArea } from '../../../../components/ui/scroll-area';
+import { TaskCategory, TaskPriority } from '../../../../store/tasks.store';
+import { DurationOption } from './duration-picker';
+import { PrioritySelect } from './priority-select';
+import { TaskScheduler } from './task-scheduler';
 
 export interface TaskFormValues {
   title: string;

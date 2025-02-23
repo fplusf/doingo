@@ -1,11 +1,11 @@
-import { TaskScheduler } from '@/components/focus-calendar/task-scheduler';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { EmojiPicker } from '@/features/tasks/components/schedule/emoji-picker';
 import { convertTaskToSchedulerProps } from '@/lib/task-utils';
-import React from 'react';
-import TaskNotes from './task-notes';
-import { EmojiPicker } from '@/components/emoji/emoji-picker';
+import { cn } from '@/lib/utils';
 import { Task } from '@/store/tasks.store';
-import { cn } from '../../lib/utils';
-import { ScrollArea } from '../ui/scroll-area';
+import React from 'react';
+import { TaskScheduler } from '../schedule/task-scheduler';
+import TaskNotes from './notes';
 
 interface TaskDocumentProps {
   task: Task;

@@ -1,7 +1,7 @@
-import React from 'react';
 import { cn } from '@/lib/utils';
 import { TaskCategory, TaskPriority } from '@/store/tasks.store';
 import { Check } from 'lucide-react';
+import React from 'react';
 import { Connector } from './connector';
 import completeTaskSound from '/public/complete-task.mp3';
 

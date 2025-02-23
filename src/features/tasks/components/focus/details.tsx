@@ -1,9 +1,9 @@
+import { cn } from '@/lib/utils';
+import { Task } from '@/store/tasks.store';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import React from 'react';
-import { Task } from '@/store/tasks.store';
-import { TaskCanvas } from './task-canvas';
-import { TaskDocument } from './task-document';
-import { cn } from '../../lib/utils';
+import { TaskCanvas } from './canvas';
+import { TaskDocument } from './document';
 
 interface TaskDetailsProps {
   task: Task;

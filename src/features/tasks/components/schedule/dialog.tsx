@@ -1,13 +1,13 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import TaskInput, { TaskFormValues, TaskInputRef } from './input';
 import { useRef } from 'react';
+import TaskInput, { TaskFormValues, TaskInputRef } from './input';
 
 interface TaskDialogProps {
   open: boolean;

@@ -1,10 +1,10 @@
-import React from 'react';
-import { useParams } from '@tanstack/react-router';
-import { TaskDetails } from '@/components/task-details/task-details';
 import { Task, tasksStore, updateTask } from '@/store/tasks.store';
+import { useParams } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
-import { TaskDetailsRoute } from '../routes/routes';
-import { useSidebar } from '../components/ui/sidebar';
+import React from 'react';
+import { useSidebar } from '../../../components/ui/sidebar';
+import { TaskDetailsRoute } from '../../../routes/routes';
+import { TaskDetails } from '../components';
 
 interface TaskDetailsPageProps {
   taskId: string;

@@ -1,5 +1,70 @@
 # electron-shadcn
 
+## New feature based folder structure
+
+src/
+├─ features/
+│ ├─ tasks/
+│ │ ├─ components/
+│ │ │ ├─ TaskList.jsx
+│ │ │ ├─ TaskList.test.jsx // Test right next to the component
+│ │ │ ├─ TaskItem.jsx
+│ │ │ └─ TaskItem.test.jsx
+│ │ ├─ hooks/
+│ │ │ ├─ useTasks.js
+│ │ │ └─ useTasks.test.js
+│ │ ├─ services/
+│ │ │ ├─ tasksAPI.js
+│ │ │ └─ tasksAPI.test.js
+│ │ ├─ pages/
+│ │ │ ├─ TasksPage.jsx
+│ │ │ └─ TasksPage.test.jsx
+│ │ └─ index.js
+│ │
+│ ├─ calendar/
+│ │ ├─ components/
+│ │ │ ├─ CalendarView.jsx
+│ │ │ ├─ CalendarView.test.jsx
+│ │ │ ├─ CalendarHeader.jsx
+│ │ │ └─ CalendarHeader.test.jsx
+│ │ ├─ hooks/
+│ │ │ ├─ useCalendar.js
+│ │ │ └─ useCalendar.test.js
+│ │ ├─ services/
+│ │ │ ├─ calendarAPI.js
+│ │ │ └─ calendarAPI.test.js
+│ │ ├─ pages/
+│ │ │ ├─ CalendarPage.jsx
+│ │ │ └─ CalendarPage.test.jsx
+│ │ └─ index.js
+│ │
+│ └─ reminders/
+│ ├─ components/
+│ ├─ hooks/
+│ ├─ services/
+│ ├─ pages/
+│ └─ index.js
+│
+├─ shared/
+│ ├─ components/
+│ │ ├─ Button.jsx
+│ │ └─ Button.test.jsx
+│ │ └─ Modal.jsx
+│ │ └─ Modal.test.jsx
+│ ├─ hooks/
+│ │ ├─ useLocalStorage.js
+│ │ └─ useLocalStorage.test.js
+│ ├─ utils/
+│ │ ├─ dateHelpers.js
+│ │ └─ dateHelpers.test.js
+│ └─ ...
+│
+├─ router/
+│ └─ index.jsx
+│
+├─ App.jsx
+└─ index.jsx
+
 Electron in all its glory. Everything you will need to develop your beautiful desktop application.
 
 ![Demo GIF](https://github.com/LuanRoger/electron-shadcn/blob/main/images/demo.gif)
@@ -145,4 +210,5 @@ npm run start
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](https://github.com/LuanRoger/electron-shadcn/blob/main/LICENSE) file for details.
+
 # optimal-adhd-react

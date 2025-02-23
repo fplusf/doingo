@@ -1,11 +1,6 @@
-import { useState, useEffect } from 'react';
-import { format, parse, addMinutes } from 'date-fns';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { TimeSelect } from './time-select';
-import { DurationPicker, DurationOption } from './duration-picker';
 import {
   Select,
   SelectContent,
@@ -13,6 +8,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+import { addMinutes, format, parse } from 'date-fns';
+import { useEffect, useState } from 'react';
+import { DurationOption, DurationPicker } from './duration-picker';
+import { TimeSelect } from './time-select';
 
 export type RepetitionOption = 'once' | 'daily' | 'weekly' | 'custom';
 

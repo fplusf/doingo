@@ -1,9 +1,9 @@
-import * as React from 'react';
-import { CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useWeekNavigation } from '../../hooks/use-week-navigation';
+import { CalendarDays } from 'lucide-react';
+import * as React from 'react';
+import { useWeekNavigation } from '../../features/tasks/hooks/use-week-navigation';
 
 export function DatePicker() {
   const { navigateToDate, selectedDate } = useWeekNavigation();

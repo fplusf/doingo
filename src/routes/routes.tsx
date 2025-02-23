@@ -1,11 +1,10 @@
-import { TagDetails } from '@/components/tags';
+import FocusPage from '@/features/tasks/pages/today-page';
 import AboutPage from '@/pages/about-page';
-import FocusPage from '@/pages/focus-page';
 import Tags from '@/pages/tags-page';
 import { createRoute } from '@tanstack/react-router';
-import { RootRoute } from './__root';
-import TaskDetailsPage from '../pages/task-details-page';
+import TaskDetailsPage from '../features/tasks/pages/focus-page';
 import { TaskDetailHeader } from '../layouts/headers/task-details-header';
+import { RootRoute } from './__root';
 
 // TODO: Steps to add a new route:
 // 1. Create a new page component in the '../pages/' directory (e.g., NewPage.tsx)
@@ -56,13 +55,6 @@ export const TagsRoute = createRoute({
   component: Tags,
 });
 
-// Child route for /tags/$tagName
-export const TagDetailsRoute = createRoute({
-  getParentRoute: () => TagsRoute,
-  path: '$tagName',
-  component: TagDetails,
-});
-
 export const AboutRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: '/about',
@@ -71,6 +63,5 @@ export const AboutRoute = createRoute({
 
 export const rootTree = RootRoute.addChildren([
   TasksRoute.addChildren([TasksIndexRoute, TaskDetailsRoute]),
-  TagsRoute.addChildren([TagDetailsRoute]), // Fix: Nest TagDetailsRoute under TagsRoute
   AboutRoute,
 ]);

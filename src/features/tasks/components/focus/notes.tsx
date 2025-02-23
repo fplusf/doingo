@@ -1,18 +1,17 @@
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import { Code as CodeExtension } from '@tiptap/extension-code';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import BulletList from '@tiptap/extension-bullet-list';
+import { Code as CodeExtension } from '@tiptap/extension-code';
+import { HorizontalRule } from '@tiptap/extension-horizontal-rule';
 import Link from '@tiptap/extension-link';
+import Placeholder from '@tiptap/extension-placeholder';
 import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
-import Placeholder from '@tiptap/extension-placeholder';
-import { BubbleMenu } from '@tiptap/react';
-import { Bold, Italic, Link as LinkIcon, Strikethrough, Code, Heading2 } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Button } from '../ui/button';
-import React, { memo } from 'react';
+import { BubbleMenu, EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import { Bold, Code, Heading2, Italic, Link as LinkIcon, Strikethrough } from 'lucide-react';
 import { debounce } from 'radash';
-import { HorizontalRule } from '@tiptap/extension-horizontal-rule';
+import React, { memo } from 'react';
 
 interface TaskNotesProps {
   notes: string;

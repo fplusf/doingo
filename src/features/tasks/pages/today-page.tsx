@@ -1,8 +1,8 @@
-import DayContent from '../components/focus-calendar/day-content';
-import WeekNavigator from '../components/focus-calendar/week-navigator';
-import { useSidebar } from '../components/ui/sidebar';
-import { cn } from '../lib/utils';
 import { useEffect, useRef } from 'react';
+import { useSidebar } from '../../../components/ui/sidebar';
+import { cn } from '../../../lib/utils';
+import { DayContainer } from '../components/list/day-container';
+import { WeekNavigator } from '../components/weekly-calendar/week-navigator';
 
 export default function FocusPage() {
   const sidebar = useSidebar();
@@ -41,7 +41,7 @@ export default function FocusPage() {
       </div>
       {/* Day Content */}
       <div className="h-full bg-background pb-4 shadow-[0_4px_10px_-4px_rgba(0,0,0,0.1)]">
-        <DayContent ref={dayContentRef} />
+        <DayContainer ref={dayContentRef} />
       </div>
     </div>
   );

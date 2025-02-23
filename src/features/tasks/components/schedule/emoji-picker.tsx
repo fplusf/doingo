@@ -1,11 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Smile } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
+import { Smile } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useState } from 'react';
 
 interface EmojiPickerProps {
   emoji?: string;

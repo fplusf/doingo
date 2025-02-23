@@ -1,8 +1,7 @@
+import { ChartConfig, ChartContainer } from '@/components/ui/chart';
+import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { memo } from 'react';
 import { PolarAngleAxis, RadialBar, RadialBarChart } from 'recharts';
-import { cn } from '../../lib/utils';
-import { ChartConfig, ChartContainer } from '../ui/chart';
 
 export type DayChartProps = {
   progress: number;
@@ -22,10 +21,8 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-function DayChart({ date, progress, isSelected, isToday }: DayChartProps) {
-  // Convert percentage string to number properly
-  // const value = parseInt(progress.replace('%', ''));
-  const data = [{ value: progress }]; // Simple array with value object
+export function DayChart({ date, progress, isSelected, isToday }: DayChartProps) {
+  const data = [{ value: progress }];
 
   return (
     <div className="flex w-full cursor-pointer flex-col items-center">
@@ -74,5 +71,3 @@ function DayChart({ date, progress, isSelected, isToday }: DayChartProps) {
     </div>
   );
 }
-
-export default memo(DayChart);
