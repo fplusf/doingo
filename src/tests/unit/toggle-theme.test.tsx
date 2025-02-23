@@ -1,5 +1,6 @@
-import ToggleTheme from '@/components/toggle-theme';
+import ToggleTheme from '@/shared/components/toggle-theme';
 import { render } from '@testing-library/react';
+import { expect, test } from 'vitest';
 
 test('renders ToggleTheme', () => {
   const { getByRole } = render(<ToggleTheme />);
@@ -21,5 +22,5 @@ test('is moon icon', () => {
   const { getByRole } = render(<ToggleTheme />);
   const svg = getByRole('button').querySelector('svg');
 
-  expect(svg.classList).toContain(svgIconClassName);
+  expect(svg?.classList).toContain(svgIconClassName);
 });
