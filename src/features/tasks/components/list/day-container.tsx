@@ -21,7 +21,7 @@ import {
 } from '@dnd-kit/sortable';
 import { useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
-import { format, parse } from 'date-fns';
+import { format, isValid, parse } from 'date-fns';
 import React, { useEffect, useRef, useState } from 'react';
 import { OptimalTask, TaskCategory, TaskPriority } from '../../types';
 import { CategorySection } from './category-section';
@@ -198,6 +198,7 @@ export const DayContainer = React.forwardRef<
     if (startTime) {
       const start = parse(startTime, 'HH:mm', new Date());
       const end = new Date(start.getTime() + duration);
+      console.log('end', end);
       setEndTime(format(end, 'HH:mm'));
     }
   }, [startTime, duration]);
@@ -350,17 +351,50 @@ export const DayContainer = React.forwardRef<
           category: activeCategory,
         }}
         onSubmit={(values) => {
-          const startDate = parse(values.startTime || '09:00', 'HH:mm', new Date());
-          const endDate = new Date(
-            startDate.getTime() + (values.duration?.millis || ONE_HOUR_IN_MS),
-          );
-          const durationMs = values.duration?.millis || ONE_HOUR_IN_MS;
+          // Create base date for today
+          const baseDate = new Date();
+          let startDate, endDate, durationMs;
+
+          try {
+            startDate = values.startTime
+              ? parse(values.startTime || '09:00', 'HH:mm', baseDate)
+              : baseDate;
+
+            // Use duration if available, otherwise calculate from end time
+            if (values.duration?.millis) {
+              durationMs = values.duration.millis;
+              endDate = new Date(startDate.getTime() + durationMs);
+            } else if (values.endTime) {
+              endDate = parse(values.endTime, 'HH:mm', baseDate);
+              durationMs = endDate.getTime() - startDate.getTime();
+            } else {
+              durationMs = ONE_HOUR_IN_MS;
+              endDate = new Date(startDate.getTime() + durationMs);
+            }
+
+            // Ensure we have valid dates
+            if (!isValid(startDate)) startDate = baseDate;
+            if (!isValid(endDate)) endDate = new Date(startDate.getTime() + durationMs);
+            if (durationMs <= 0) durationMs = ONE_HOUR_IN_MS; // Ensure positive duration
+          } catch (error) {
+            console.error('Error parsing dates:', error);
+            // Fallback values
+            startDate = baseDate;
+            durationMs = ONE_HOUR_IN_MS;
+            endDate = new Date(startDate.getTime() + durationMs);
+          }
+
+          // Ensure we have a valid time string
+          const timeString =
+            values.startTime && values.endTime
+              ? `${values.startTime}—${values.endTime}`
+              : `${format(startDate, 'HH:mm')}—${format(endDate, 'HH:mm')}`;
 
           const task = {
             title: values.title,
             notes: values.notes,
             emoji: values.emoji,
-            time: `${values.startTime}—${values.endTime}`,
+            time: timeString,
             startTime: startDate,
             nextStartTime: endDate,
             duration: durationMs,
@@ -393,7 +427,21 @@ export const DayContainer = React.forwardRef<
         <TaskDialog
           open={!!editingTaskId}
           onOpenChange={(open) => {
-            if (!open) setEditingTaskId(null);
+            if (!open) {
+              setEditingTaskId(null);
+              // Reset all form values when dialog is closed
+              setNewTask({
+                title: '',
+                notes: '',
+                emoji: '',
+                priority: 'none',
+                category: activeCategory,
+              });
+              setStartTime('');
+              setEndTime('');
+              setDuration(ONE_HOUR_IN_MS);
+              setDueDate(undefined);
+            }
           }}
           mode="edit"
           initialValues={{
@@ -411,22 +459,50 @@ export const DayContainer = React.forwardRef<
             category: newTask.category,
           }}
           onSubmit={(values) => {
-            const startDate = parse(values.startTime, 'HH:mm', new Date());
-            const endDate = parse(values.endTime, 'HH:mm', new Date());
-            const durationMs = endDate.getTime() - startDate.getTime();
+            // Create base date for today
+            const baseDate = new Date();
+            let startDate, endDate, durationMs;
+
+            try {
+              startDate = values.startTime ? parse(values.startTime, 'HH:mm', baseDate) : baseDate;
+              endDate = values.endTime
+                ? parse(values.endTime, 'HH:mm', baseDate)
+                : new Date(baseDate.getTime() + ONE_HOUR_IN_MS);
+
+              // Ensure we have valid dates
+              if (!isValid(startDate)) startDate = baseDate;
+              if (!isValid(endDate)) endDate = new Date(startDate.getTime() + ONE_HOUR_IN_MS);
+
+              // Calculate duration
+              durationMs = endDate.getTime() - startDate.getTime();
+              if (durationMs <= 0) durationMs = ONE_HOUR_IN_MS; // Ensure positive duration
+            } catch (error) {
+              console.error('Error parsing dates:', error);
+              // Fallback values
+              startDate = baseDate;
+              endDate = new Date(baseDate.getTime() + ONE_HOUR_IN_MS);
+              durationMs = ONE_HOUR_IN_MS;
+            }
+
+            // Ensure we have a valid time string
+            const timeString =
+              values.startTime && values.endTime
+                ? `${values.startTime}—${values.endTime}`
+                : `${format(startDate, 'HH:mm')}—${format(endDate, 'HH:mm')}`;
 
             updateTask(editingTaskId, {
               title: values.title,
               notes: values.notes,
               emoji: values.emoji,
-              time: `${values.startTime}—${values.endTime}`,
+              time: timeString,
               startTime: startDate,
               nextStartTime: endDate,
               duration: durationMs,
-              dueDate: values.dueDate,
+              dueDate: values.dueDate || new Date(),
               priority: values.priority,
               category: values.category,
             });
+
             setEditingTaskId(null);
             setNewTask({
               title: '',
