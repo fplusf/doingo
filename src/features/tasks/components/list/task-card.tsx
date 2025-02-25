@@ -194,7 +194,16 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
           <Trash2 className="mr-2 h-4 w-4" />
           Delete Task
         </ContextMenuItem>
-        <ContextMenuItem className="flex items-center gap-2">
+        <ContextMenuItem
+          className="flex items-center gap-2"
+          onClick={() => {
+            if (task.completed) {
+              return; // Don't focus completed tasks
+            }
+            setFocused(task.id, true);
+            navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
+          }}
+        >
           <LucideFocus className="mr-2 h-4 w-4" />
           Focus
         </ContextMenuItem>

@@ -1,5 +1,5 @@
 import { TaskDialog } from '@/features/tasks/components/schedule/dialog';
-import { addTask, tasksStore, updateTask } from '@/features/tasks/store/tasks.store';
+import { addTask, setFocused, tasksStore, updateTask } from '@/features/tasks/store/tasks.store';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import {
   DndContext,
@@ -65,11 +65,17 @@ export const DayContainer = React.forwardRef<
       play: 2,
     };
 
-    const firstUncompletedTask = tasks
-      .sort((a, b) => {
-        return categoryPriorityMap[a.category] - categoryPriorityMap[b.category];
-      })
-      .find((task) => !task.completed);
+    const sortedTasks = tasks.sort((a, b) => {
+      return categoryPriorityMap[a.category] - categoryPriorityMap[b.category];
+    });
+
+    const firstUncompletedTask = sortedTasks.find((task) => !task.completed);
+    const hasFocusedTask = tasks.some((task) => task.isFocused);
+
+    // If there's no focused task but we have tasks, focus the first uncompleted task
+    if (!hasFocusedTask && firstUncompletedTask) {
+      setFocused(firstUncompletedTask.id, true);
+    }
 
     if (!firstUncompletedTask) return;
 
@@ -88,7 +94,7 @@ export const DayContainer = React.forwardRef<
         });
       }
     }
-  }, []);
+  }, [tasks]);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
