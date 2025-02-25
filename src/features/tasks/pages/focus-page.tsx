@@ -3,6 +3,7 @@ import { useSidebar } from '@/shared/components/ui/sidebar';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import React, { useEffect } from 'react';
+import { toggleSidebarState } from '../../../layouts/store/layout.store';
 import { TaskDetailsRoute } from '../../../routes/routes';
 import { TaskDetails } from '../components';
 import { OptimalTask } from '../types';
@@ -17,6 +18,15 @@ const TaskDetailsPage: React.FC<TaskDetailsPageProps> = () => {
   const task = tasks.find((t) => t.id === taskId);
   const sidebar = useSidebar();
   const navigate = useNavigate();
+
+  // Hide sidebar when entering task details page
+  useEffect(() => {
+    toggleSidebarState(true); // true = closed
+    return () => {
+      // Optionally restore sidebar when leaving the page
+      toggleSidebarState(false);
+    };
+  }, []);
 
   // Redirect to first task if task not found
   useEffect(() => {

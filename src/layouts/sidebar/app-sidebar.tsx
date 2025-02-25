@@ -12,6 +12,7 @@ import {
 } from '@/shared/components/ui/sidebar';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
+import { format } from 'date-fns';
 import { BarChart, Bell, Calendar, Calendar1Icon, LucideFocus } from 'lucide-react';
 import * as React from 'react';
 
@@ -25,7 +26,10 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const tasks = useStore(tasksStore, (state) => state.tasks);
+  const selectedDate = useStore(tasksStore, (state) => state.selectedDate);
   const navigate = useNavigate();
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const isToday = selectedDate === today;
 
   // Find the currently focused task
   const focusedTask = React.useMemo(() => {
@@ -81,7 +85,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
               </Link>
             </SidebarMenuButton>
-            <span className="mt-0.5 truncate text-xs">Focus</span>
+            <span className="mt-0.5 truncate text-xs">{isToday ? 'Focus' : 'Details'}</span>
           </SidebarMenuItem>
         </SidebarMenu>
         <SidebarMenu>

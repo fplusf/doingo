@@ -1,4 +1,5 @@
 import { OptimalTask } from '@/features/tasks/types';
+import { format } from 'date-fns';
 import { StorageAdapter } from './storage-adapter';
 
 const TASKS_STORAGE_KEY = 'optimal-adhd-tasks';
@@ -10,6 +11,7 @@ export class LocalStorageAdapter implements StorageAdapter {
       if (!tasksJson) return [];
 
       const tasks = JSON.parse(tasksJson);
+      const today = format(new Date(), 'yyyy-MM-dd');
 
       // Convert date strings back to Date objects
       return tasks
@@ -33,11 +35,13 @@ export class LocalStorageAdapter implements StorageAdapter {
             return null;
           }
 
+          // Ensure all tasks have a taskDate, defaulting to today if missing
           return {
             ...task,
             startTime,
             nextStartTime,
             dueDate,
+            taskDate: task.taskDate || today,
           };
         })
         .filter(Boolean);

@@ -23,13 +23,15 @@ import { TaskCardProps } from '../../types';
 export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
   const navigate = useNavigate({ from: '/tasks' });
   const [isHovered, setIsHovered] = React.useState(false);
+  const today = new Date();
+  const isToday = task.taskDate === format(today, 'yyyy-MM-dd');
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isHovered && e.key.toLowerCase() === 'f') {
         e.preventDefault();
-        if (task.completed) {
-          // If the task is completed, don't focus it
+        if (task.completed || !isToday) {
+          // Don't focus completed tasks or tasks not scheduled for today
           return;
         }
         setFocused(task.id, true);
@@ -39,7 +41,7 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isHovered, navigate, task.id, task.completed]);
+  }, [isHovered, navigate, task.id, task.completed, isToday]);
 
   function formatDurationForDisplay(duration: number): string {
     const minutes = duration / 60_000;
@@ -136,38 +138,40 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
                     ) : null}
                   </div>
 
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setFocused(task.id, true);
-                            navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
-                          }}
-                          className={cn(
-                            'mx-4 mr-10 flex bg-transparent hover:bg-transparent',
-                            task.completed && 'hidden',
-                          )}
-                        >
-                          <LucideFocus
+                  {isToday && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFocused(task.id, true);
+                              navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
+                            }}
                             className={cn(
-                              'ml-2 h-4 w-4 transition-all duration-200',
-                              task.isFocused
-                                ? 'fill-blue-500 text-blue-500'
-                                : 'text-muted-foreground',
-                              'hover:scale-150 hover:fill-blue-500 hover:text-blue-500 hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]',
+                              'mx-4 mr-10 flex bg-transparent hover:bg-transparent',
+                              task.completed && 'hidden',
                             )}
-                          />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Focus</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                          >
+                            <LucideFocus
+                              className={cn(
+                                'ml-2 h-4 w-4 transition-all duration-200',
+                                task.isFocused
+                                  ? 'fill-blue-500 text-blue-500'
+                                  : 'text-muted-foreground',
+                                'hover:scale-150 hover:fill-blue-500 hover:text-blue-500 hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]',
+                              )}
+                            />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Focus</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
 
                   {isHovered && (
                     <Link
@@ -194,19 +198,21 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
           <Trash2 className="mr-2 h-4 w-4" />
           Delete Task
         </ContextMenuItem>
-        <ContextMenuItem
-          className="flex items-center gap-2"
-          onClick={() => {
-            if (task.completed) {
-              return; // Don't focus completed tasks
-            }
-            setFocused(task.id, true);
-            navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
-          }}
-        >
-          <LucideFocus className="mr-2 h-4 w-4" />
-          Focus
-        </ContextMenuItem>
+        {isToday && (
+          <ContextMenuItem
+            className="flex items-center gap-2"
+            onClick={() => {
+              if (task.completed) {
+                return; // Don't focus completed tasks
+              }
+              setFocused(task.id, true);
+              navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
+            }}
+          >
+            <LucideFocus className="mr-2 h-4 w-4" />
+            Focus
+          </ContextMenuItem>
+        )}
       </ContextMenuContent>
     </ContextMenu>
   );

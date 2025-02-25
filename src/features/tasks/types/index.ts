@@ -43,9 +43,11 @@ export interface OptimalTask {
   category: TaskCategory;
   dueDate?: Date;
   isFocused: boolean;
+  taskDate: string; // ISO format date string (YYYY-MM-DD) for filtering tasks by day
   // canvasData?: string; // Serialized Excalidraw scene data
 }
 
 export interface TasksState {
   tasks: OptimalTask[];
+  selectedDate: string; // ISO format date string (YYYY-MM-DD)
 }

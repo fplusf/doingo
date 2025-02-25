@@ -1,7 +1,7 @@
-import { Task } from '../../../features/tasks/store/tasks.store';
+import { OptimalTask } from '../../../features/tasks/types';
 
 export interface StorageAdapter {
-  getTasks(): Task[];
-  saveTasks(tasks: Task[]): void;
+  getTasks(): OptimalTask[];
+  saveTasks(tasks: OptimalTask[]): void;
   clear(): void;
 }

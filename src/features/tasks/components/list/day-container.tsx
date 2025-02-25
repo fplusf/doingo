@@ -1,5 +1,12 @@
 import { TaskDialog } from '@/features/tasks/components/schedule/dialog';
-import { addTask, setFocused, tasksStore, updateTask } from '@/features/tasks/store/tasks.store';
+import {
+  addTask,
+  getTasksByDate,
+  setFocused,
+  setSelectedDate,
+  tasksStore,
+  updateTask,
+} from '@/features/tasks/store/tasks.store';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import {
   DndContext,
@@ -19,10 +26,11 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { format, isValid, parse } from 'date-fns';
 import React, { useEffect, useRef, useState } from 'react';
+import { TasksRoute } from '../../../../routes/routes';
 import { OptimalTask, TaskCategory, TaskPriority } from '../../types';
 import { CategorySection } from './category-section';
 import { SortableTaskItem } from './sortable-task-item';
@@ -38,7 +46,9 @@ export const DayContainer = React.forwardRef<
   { setIsCreating: (value: boolean) => void },
   DayContainerProps
 >((props, ref) => {
-  const tasks = useStore(tasksStore, (state) => state.tasks);
+  const allTasks = useStore(tasksStore, (state) => state.tasks);
+  const selectedDate = useStore(tasksStore, (state) => state.selectedDate);
+  const search = useSearch({ from: TasksRoute.fullPath });
   const [isCreating, setIsCreating] = useState(false);
   const [activeCategory, setActiveCategory] = useState<TaskCategory>('work');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -58,6 +68,18 @@ export const DayContainer = React.forwardRef<
   const tasksRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
 
+  // Update the selected date when the URL parameter changes
+  React.useEffect(() => {
+    if (search.date && search.date !== selectedDate) {
+      setSelectedDate(search.date);
+    }
+  }, [search.date, selectedDate]);
+
+  // Filter tasks based on selected date
+  const tasks = React.useMemo(() => {
+    return getTasksByDate(selectedDate);
+  }, [selectedDate, allTasks]);
+
   React.useEffect(() => {
     const categoryPriorityMap = {
       work: 0,
@@ -66,6 +88,26 @@ export const DayContainer = React.forwardRef<
     };
 
     const sortedTasks = tasks.sort((a, b) => {
+      // First, sort completed tasks to the top
+      if (a.completed !== b.completed) {
+        return a.completed ? -1 : 1;
+      }
+
+      // Then, if both are completed, keep them in their original order
+      // This ensures the most recently completed stays at the end
+      if (a.completed && b.completed) {
+        // Use the task's position in the original array to maintain order
+        return tasks.findIndex((t) => t.id === a.id) - tasks.findIndex((t) => t.id === b.id);
+      }
+
+      // For uncompleted tasks, sort focused task to the top
+      if (!a.completed && !b.completed) {
+        if (a.isFocused !== b.isFocused) {
+          return a.isFocused ? -1 : 1;
+        }
+      }
+
+      // Finally, sort by category priority
       return categoryPriorityMap[a.category] - categoryPriorityMap[b.category];
     });
 
@@ -175,7 +217,15 @@ export const DayContainer = React.forwardRef<
       const oldIndex = tasks.findIndex((task) => task.id === active.id);
       const newIndex = tasks.findIndex((task) => task.id === over.id);
       const newTasks = arrayMove(tasks, oldIndex, newIndex);
-      tasksStore.setState((state) => ({ tasks: newTasks }));
+
+      // Get all existing tasks that are not in the current filtered list
+      const otherTasks = allTasks.filter((task) => task.taskDate !== selectedDate);
+
+      // Update the store with both the reordered current tasks and other tasks
+      tasksStore.setState((state) => ({
+        ...state,
+        tasks: [...otherTasks, ...newTasks],
+      }));
     } else {
       // If tasks are in different categories, update the category
       updateTask(activeTask.id, { category: overTask.category });
@@ -409,6 +459,7 @@ export const DayContainer = React.forwardRef<
             category: values.category || 'work',
             completed: false,
             isFocused: false,
+            taskDate: selectedDate, // Set the task date to the selected date
           };
 
           addTask(task);
