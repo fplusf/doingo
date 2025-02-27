@@ -76,16 +76,28 @@ export const deleteTask = (id: string) => {
 };
 
 export const setFocused = (id: string, isFocused: boolean) => {
-  updateStateAndStorage((state) => ({
-    ...state,
-    tasks: state.tasks.map((task) => {
-      if (task.id === id) {
-        return { ...task, isFocused };
-      }
-      // Ensure other tasks are unfocused
-      return { ...task, isFocused: false };
-    }),
-  }));
+  const today = format(new Date(), 'yyyy-MM-dd');
+
+  updateStateAndStorage((state) => {
+    // Find the task that should be focused
+    const taskToFocus = state.tasks.find((task) => task.id === id);
+
+    // If the task is not for today, don't allow focusing
+    if (taskToFocus && taskToFocus.taskDate !== today && isFocused) {
+      return state;
+    }
+
+    return {
+      ...state,
+      tasks: state.tasks.map((task) => {
+        if (task.id === id) {
+          return { ...task, isFocused };
+        }
+        // Ensure other tasks are unfocused
+        return { ...task, isFocused: false };
+      }),
+    };
+  });
 };
 
 export const toggleTaskCompletion = (id: string) => {

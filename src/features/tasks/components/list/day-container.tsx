@@ -67,6 +67,8 @@ export const DayContainer = React.forwardRef<
   const navigate = useNavigate();
   const tasksRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const prevTasksRef = useRef<OptimalTask[]>([]);
+  const initialRenderRef = useRef<boolean>(true);
 
   // Update the selected date when the URL parameter changes
   React.useEffect(() => {
@@ -119,23 +121,43 @@ export const DayContainer = React.forwardRef<
       setFocused(firstUncompletedTask.id, true);
     }
 
-    if (!firstUncompletedTask) return;
+    // Check if this is the initial render or date change
+    const isInitialRender = initialRenderRef.current;
+    const isDateChange =
+      prevTasksRef.current.length > 0 &&
+      tasks.length > 0 &&
+      prevTasksRef.current[0]?.taskDate !== tasks[0]?.taskDate;
 
-    if (firstUncompletedTask.id && tasksRef.current) {
-      const activeTaskElement = tasksRef.current.querySelector(
-        `[data-id="${firstUncompletedTask.id}"]`,
-      );
-      const activeTaskPosition = activeTaskElement?.getBoundingClientRect();
+    // We should only scroll in specific scenarios:
+    // 1. On initial render
+    // 2. When changing dates
+    // 3. Not when just marking a task as uncompleted
+    const shouldScroll = isInitialRender || isDateChange;
 
-      // Scroll to the active task
-      if (viewportRef.current && activeTaskPosition && activeTaskElement) {
-        const viewportRect = viewportRef.current.getBoundingClientRect();
-        const scrollOffset = activeTaskPosition.top - viewportRect.top - 100; // Add 100px padding from top
-        viewportRef.current.scrollTo({
-          top: viewportRef.current.scrollTop + scrollOffset,
-        });
-      }
+    if (shouldScroll && firstUncompletedTask && firstUncompletedTask.id && tasksRef.current) {
+      // Small delay to ensure the DOM has updated
+      setTimeout(() => {
+        const activeTaskElement = tasksRef.current?.querySelector(
+          `[data-id="${firstUncompletedTask.id}"]`,
+        );
+        const activeTaskPosition = activeTaskElement?.getBoundingClientRect();
+
+        // Scroll to the active task
+        if (viewportRef.current && activeTaskPosition && activeTaskElement) {
+          const viewportRect = viewportRef.current.getBoundingClientRect();
+          const scrollOffset = activeTaskPosition.top - viewportRect.top - 100; // Add 100px padding from top
+          viewportRef.current.scrollTo({
+            top: viewportRef.current.scrollTop + scrollOffset,
+          });
+        }
+      }, 0);
     }
+
+    // After first render, set this to false
+    initialRenderRef.current = false;
+
+    // Save current tasks for next comparison
+    prevTasksRef.current = [...tasks];
   }, [tasks]);
 
   React.useEffect(() => {

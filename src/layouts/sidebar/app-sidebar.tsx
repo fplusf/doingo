@@ -10,10 +10,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/shared/components/ui/sidebar';
+import { toast } from '@/shared/hooks/use-toast';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
-import { BarChart, Bell, Calendar, Calendar1Icon, LucideFocus } from 'lucide-react';
+import { BarChart, Bell, Calendar, Calendar1Icon } from 'lucide-react';
 import * as React from 'react';
 
 const data = {
@@ -41,11 +42,45 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return tasks.find((task) => !task.completed);
   }, [tasks]);
 
+  // Clear focus on tasks from days other than today
+  React.useEffect(() => {
+    // Get all focused tasks that are not today's tasks
+    const focusedNonTodayTasks = tasks.filter((task) => task.isFocused && task.taskDate !== today);
+
+    // If there are any focused tasks from other days, remove their focus
+    if (focusedNonTodayTasks.length > 0) {
+      focusedNonTodayTasks.forEach((task) => {
+        setFocused(task.id, false);
+      });
+    }
+  }, [tasks, today]);
+
   // Handle focusing the first available task if no task is focused
   const handleFocusClick = (e: React.MouseEvent) => {
+    if (!isToday) {
+      e.preventDefault();
+      // Show toast notification for tasks from other days
+      toast({
+        title: 'Focus not available',
+        description:
+          "Focusing possible only on today's tasks. If you want to focus on a task, move it to today.",
+        duration: 5000,
+      });
+      return;
+    }
+
     if (!focusedTask && firstUncompletedTask) {
       e.preventDefault();
       setFocused(firstUncompletedTask.id, true);
+    }
+  };
+
+  // Handle opening task details
+  const handleDetailsClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (focusedTask) {
+      navigate({ to: '/tasks/$taskId', params: { taskId: focusedTask.id } });
+    } else if (firstUncompletedTask) {
       navigate({ to: '/tasks/$taskId', params: { taskId: firstUncompletedTask.id } });
     }
   };
@@ -70,12 +105,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <span className="mt-0.5 truncate text-xs">Today</span>
           </SidebarMenuItem>
         </SidebarMenu>
-        <SidebarMenu>
+
+        {/* <SidebarMenu>
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>
               <Link
-                to="/tasks/$taskId"
-                params={{ taskId: focusedTask?.id || firstUncompletedTask?.id || '1' }}
+                to="/"
                 activeProps={{ className: 'active' }}
                 inactiveProps={{ className: 'inactive' }}
                 onClick={handleFocusClick}
@@ -85,25 +120,33 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
               </Link>
             </SidebarMenuButton>
-            <span className="mt-0.5 truncate text-xs">{isToday ? 'Focus' : 'Details'}</span>
+            <span className="mt-0.5 truncate text-xs">Focus</span>
           </SidebarMenuItem>
-        </SidebarMenu>
-        <SidebarMenu>
+        </SidebarMenu> */}
+
+        {/* <SidebarMenu>
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>
               <Link
-                to="/"
+                to={focusedTask || firstUncompletedTask ? '/tasks/$taskId' : '/'}
+                params={
+                  focusedTask || firstUncompletedTask
+                    ? { taskId: focusedTask?.id || firstUncompletedTask?.id }
+                    : {}
+                }
                 activeProps={{ className: 'active' }}
                 inactiveProps={{ className: 'inactive' }}
+                onClick={handleDetailsClick}
               >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
-                  <Bell className="size-4" />
+                  <Calendar className="size-4" />
                 </div>
               </Link>
             </SidebarMenuButton>
-            <span className="mt-0.5 truncate text-xs">Reminders</span>
+            <span className="mt-0.5 truncate text-xs">Details</span>
           </SidebarMenuItem>
-        </SidebarMenu>
+        </SidebarMenu> */}
+
         <SidebarMenu>
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>
@@ -120,6 +163,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <span className="mt-0.5 truncate text-xs">Calendar</span>
           </SidebarMenuItem>
         </SidebarMenu>
+
+        <SidebarMenu>
+          <SidebarMenuItem className="flex flex-col items-center">
+            <SidebarMenuButton size="lg" asChild>
+              <Link
+                to="/"
+                activeProps={{ className: 'active' }}
+                inactiveProps={{ className: 'inactive' }}
+              >
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
+                  <Bell className="size-4" />
+                </div>
+              </Link>
+            </SidebarMenuButton>
+            <span className="mt-0.5 truncate text-xs">Reminders</span>
+          </SidebarMenuItem>
+        </SidebarMenu>
+
         <SidebarMenu>
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>

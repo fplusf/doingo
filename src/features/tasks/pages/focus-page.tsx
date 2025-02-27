@@ -1,4 +1,4 @@
-import { setFocused, tasksStore, updateTask } from '@/features/tasks/store/tasks.store';
+import { tasksStore, updateTask } from '@/features/tasks/store/tasks.store';
 import { useSidebar } from '@/shared/components/ui/sidebar';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
@@ -34,8 +34,7 @@ const TaskDetailsPage: React.FC<TaskDetailsPageProps> = () => {
       const firstUncompletedTask = tasks.find((t) => !t.completed);
 
       if (firstUncompletedTask) {
-        // Set focus on the first task and navigate to it
-        setFocused(firstUncompletedTask.id, true);
+        // Navigate to first uncompleted task without focusing it
         navigate({ to: '/tasks/$taskId', params: { taskId: firstUncompletedTask.id } });
       } else {
         // If no tasks available, navigate back to tasks page
@@ -44,10 +43,8 @@ const TaskDetailsPage: React.FC<TaskDetailsPageProps> = () => {
       return;
     }
 
-    // Set this task as focused when viewing it
-    if (!task.isFocused) {
-      setFocused(task.id, true);
-    }
+    // We no longer automatically focus the task when viewing its details
+    // This allows viewing task details without changing the focused state
   }, [task, tasks, taskId, navigate]);
 
   // Handle not found case with a loading state while redirection happens

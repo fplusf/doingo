@@ -37,6 +37,12 @@ export const TasksIndexRoute = createRoute({
   component: FocusPage,
 });
 
+// export const CalendarRoute = createRoute({
+//   getParentRoute: () => TasksRoute,
+//   path: 'calendar',
+//   component: CalendarPage,
+// });
+
 export const TaskDetailsRoute = createRoute({
   getParentRoute: () => TasksRoute,
   errorComponent: () => <div>Task details error 🚨</div>,
