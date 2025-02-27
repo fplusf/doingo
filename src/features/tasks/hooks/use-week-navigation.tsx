@@ -22,14 +22,13 @@ export function useWeekNavigation() {
   const search = useSearch({ from: TasksRoute.fullPath });
   const today = new Date();
 
-  const [selectedDate, setSelectedDate] = useState(() =>
-    search.date ? parse(search.date, DATE_FORMAT, today) : today,
-  );
-  const [viewDate, setViewDate] = useState(() => selectedDate);
+  // Initialize with today's date regardless of what's in search params
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [viewDate, setViewDate] = useState(today);
   const [isInitialized, setIsInitialized] = useState(false);
 
   const [weeks, setWeeks] = useState(() => {
-    const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+    const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
     return Array.from({ length: 3 }).map((_, offset) => {
       const weekStart = addWeeks(currentWeekStart, offset - 1);
       return createWeekData(weekStart);
@@ -53,7 +52,9 @@ export function useWeekNavigation() {
     setWeeks(newWeeks);
   }, [selectedDate]);
 
+  // Always update search params with today's date on initial load
   useEffect(() => {
+    // If there's no date in search params, set it to today
     if (!search.date) {
       navigate({
         search: (prev) => ({
@@ -62,12 +63,24 @@ export function useWeekNavigation() {
         }),
       });
     } else {
+      // If there is a date in search params, use it
       const newDate = parse(search.date, DATE_FORMAT, today);
       const newWeekStart = startOfWeek(newDate, { weekStartsOn: 1 });
       setSelectedDate(newDate);
-      setViewDate(newWeekStart); // It's causing the issue of re-renders
+      setViewDate(newWeekStart);
     }
-  }, [search.date]);
+  }, [search.date, navigate]);
+
+  // Add a reset effect that runs on mount to always set today as default
+  useEffect(() => {
+    // Set today as the default date when the component mounts
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        date: format(today, DATE_FORMAT),
+      }),
+    });
+  }, []);
 
   const handleDateSelect = useCallback(
     (date: Date) => {
