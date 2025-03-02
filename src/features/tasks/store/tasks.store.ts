@@ -51,6 +51,8 @@ export const addTask = (task: Omit<OptimalTask, 'id'>) => {
         id: uuidv4(),
         priority: task.priority || 'none',
         taskDate,
+        subtasks: task.subtasks || [],
+        progress: task.progress || 0,
       },
     ],
   }));

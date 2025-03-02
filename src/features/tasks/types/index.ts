@@ -29,6 +29,12 @@ export interface DayContentProps {
 export type TaskPriority = 'none' | 'high' | 'medium' | 'low' | 'not-urgent-not-important' | '';
 export type TaskCategory = 'work' | 'passion' | 'play';
 
+export interface Subtask {
+  id: string;
+  title: string;
+  isCompleted: boolean;
+}
+
 export interface OptimalTask {
   id: string;
   title: string;
@@ -44,6 +50,8 @@ export interface OptimalTask {
   dueDate?: Date;
   isFocused: boolean;
   taskDate: string; // ISO format date string (YYYY-MM-DD) for filtering tasks by day
+  subtasks?: Subtask[];
+  progress?: number; // Percentage of completed subtasks (0-100)
   // canvasData?: string; // Serialized Excalidraw scene data
 }
 

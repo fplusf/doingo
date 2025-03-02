@@ -1,5 +1,5 @@
-import { DurationOption } from '@/components/focus-calendar/duration-picker';
-import { TaskCategory, TaskPriority } from '@/features/tasks/store/tasks.store';
+import { DurationOption } from '@/features/tasks/components/schedule/duration-picker';
+import { Subtask, TaskCategory, TaskPriority } from '@/features/tasks/types';
 import { addMinutes, format, parse } from 'date-fns';
 import { useEffect, useState } from 'react';
 
@@ -13,6 +13,8 @@ interface TaskFormValues {
   dueDate?: Date;
   priority: TaskPriority;
   category: TaskCategory;
+  subtasks?: Subtask[];
+  progress?: number;
 }
 
 interface TaskFormProps {
@@ -101,6 +103,8 @@ export function useTaskForm({ initialValues, onSubmit }: TaskFormProps) {
   );
   const [dueDate, setDueDate] = useState<Date | undefined>(initialValues?.dueDate);
   const [priority, setPriority] = useState<TaskPriority | ''>(initialValues?.priority || '');
+  const [subtasks, setSubtasks] = useState<Subtask[]>(initialValues?.subtasks || []);
+  const [progress, setProgress] = useState<number>(initialValues?.progress || 0);
 
   // Auto-suggest emoji when title or category changes
   useEffect(() => {
@@ -120,12 +124,27 @@ export function useTaskForm({ initialValues, onSubmit }: TaskFormProps) {
     }
   }, [startTime, duration]);
 
+  // Update progress when subtasks change
+  useEffect(() => {
+    if (subtasks.length > 0) {
+      const completedCount = subtasks.filter((subtask) => subtask.isCompleted).length;
+      const newProgress = Math.round((completedCount / subtasks.length) * 100);
+      setProgress(newProgress);
+    } else {
+      setProgress(0);
+    }
+  }, [subtasks]);
+
   const handleDurationChange = (value: DurationOption) => {
     setDuration(value);
   };
 
   const handleStartTimeChange = (time: string) => {
     setStartTime(time);
+  };
+
+  const handleSubtasksChange = (newSubtasks: Subtask[]) => {
+    setSubtasks(newSubtasks);
   };
 
   const handleSubmit = (e?: React.FormEvent) => {
@@ -142,6 +161,8 @@ export function useTaskForm({ initialValues, onSubmit }: TaskFormProps) {
       dueDate,
       priority,
       category,
+      subtasks,
+      progress,
     });
   };
 
@@ -158,6 +179,8 @@ export function useTaskForm({ initialValues, onSubmit }: TaskFormProps) {
       dueDate,
       priority,
       category,
+      subtasks,
+      progress,
     },
     setters: {
       setTitle,
@@ -167,10 +190,12 @@ export function useTaskForm({ initialValues, onSubmit }: TaskFormProps) {
       setDueDate,
       setPriority,
       setCategory,
+      setSubtasks,
     },
     handlers: {
       handleDurationChange,
       handleStartTimeChange,
+      handleSubtasksChange,
       handleSubmit,
     },
     isValid,

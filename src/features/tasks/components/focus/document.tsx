@@ -1,11 +1,13 @@
 import { EmojiPicker } from '@/features/tasks/components/schedule/emoji-picker';
-import { OptimalTask } from '@/features/tasks/types';
+import { OptimalTask, Subtask } from '@/features/tasks/types';
 import { convertTaskToSchedulerProps } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import React from 'react';
+import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { TaskScheduler } from '../schedule/task-scheduler';
 import TaskNotes from './notes';
+import { SubtaskList } from './subtasks';
 
 interface TaskDocumentProps {
   task: OptimalTask;
@@ -16,6 +18,8 @@ interface TaskDocumentProps {
 export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
   const [notes, setNotes] = React.useState(task.notes || '');
   const schedulerProps = React.useMemo(() => convertTaskToSchedulerProps(task), [task]);
+  // Store previous subtask states to restore when uncompleting a task
+  const previousSubtaskStatesRef = React.useRef<Subtask[] | null>(null);
 
   const handleNotesChange = React.useCallback(
     (content: string) => {
@@ -39,6 +43,77 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
     [task, onEdit],
   );
 
+  const handleTaskCompletedChange = React.useCallback(
+    (completed: boolean) => {
+      // If there are no subtasks, just update the main task
+      if (!task.subtasks || task.subtasks.length === 0) {
+        onEdit({ ...task, completed });
+        return;
+      }
+
+      if (completed) {
+        // Store current subtask states before completing all
+        previousSubtaskStatesRef.current = [...(task.subtasks || [])];
+
+        // Complete all subtasks
+        const updatedSubtasks = task.subtasks.map((subtask) => ({
+          ...subtask,
+          isCompleted: true,
+        }));
+
+        // Calculate progress (should be 100% since all are completed)
+        const progress = 100;
+
+        // Update the task with completed subtasks
+        onEdit({
+          ...task,
+          completed,
+          subtasks: updatedSubtasks,
+          progress,
+        });
+      } else {
+        // Restore previous subtask states if available
+        if (previousSubtaskStatesRef.current) {
+          // Calculate progress percentage based on restored states
+          const completedCount = previousSubtaskStatesRef.current.filter(
+            (subtask) => subtask.isCompleted,
+          ).length;
+          const progress =
+            previousSubtaskStatesRef.current.length > 0
+              ? Math.round((completedCount / previousSubtaskStatesRef.current.length) * 100)
+              : 0;
+
+          // Update the task with restored subtask states
+          onEdit({
+            ...task,
+            completed,
+            subtasks: previousSubtaskStatesRef.current,
+            progress,
+          });
+
+          // Clear the reference after restoring
+          previousSubtaskStatesRef.current = null;
+        } else {
+          // If no previous states are stored (edge case), just update completion status
+          onEdit({ ...task, completed });
+        }
+      }
+    },
+    [task, onEdit],
+  );
+
+  const handleSubtasksChange = React.useCallback(
+    (subtasks: Subtask[]) => {
+      // Calculate progress percentage
+      const completedCount = subtasks.filter((subtask) => subtask.isCompleted).length;
+      const progress =
+        subtasks.length > 0 ? Math.round((completedCount / subtasks.length) * 100) : 0;
+
+      onEdit({ ...task, subtasks, progress });
+    },
+    [task, onEdit],
+  );
+
   return (
     <div className={cn(className, 'flex h-full flex-col')}>
       {/* Schedule Information - Sticky Header */}
@@ -55,12 +130,18 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
       </div>
 
       <ScrollArea className="flex flex-1 items-start will-change-scroll">
-        <section className="mb-2 border-b border-gray-700/40 pb-2">
+        <section className="mb-2 flex items-center justify-between border-b border-gray-700/40 pb-2">
+          <TaskCheckbox
+            checked={task.completed}
+            onCheckedChange={handleTaskCompletedChange}
+            size="lg"
+            ariaLabel={`Toggle subtask: ${task.title}`}
+          />
           <textarea
             placeholder="Task Title"
             value={task.title}
             onChange={handleTitleChange}
-            className="mb-2 w-full resize-none overflow-hidden whitespace-pre-wrap break-words bg-transparent px-4 text-2xl font-semibold tracking-tight focus:outline-none"
+            className="w-full resize-none overflow-hidden whitespace-pre-wrap break-words bg-transparent px-4 text-2xl font-semibold tracking-tight focus:outline-none"
             rows={3}
             style={{
               height: 'auto',
@@ -92,6 +173,11 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
               }
             }}
           />
+        </section>
+
+        {/* Subtasks Section */}
+        <section className="mb-2 border-b border-gray-700/40 pb-2">
+          <SubtaskList subtasks={task.subtasks || []} onSubtasksChange={handleSubtasksChange} />
         </section>
 
         <TaskNotes notes={notes} onNotesChange={handleNotesChange} />

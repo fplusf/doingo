@@ -1,9 +1,8 @@
 import { cn } from '@/lib/utils';
-import { Check } from 'lucide-react';
+import { TaskCheckbox } from '@/shared/components/task-checkbox';
 import React from 'react';
 import { TaskCategory, TaskPriority } from '../../types';
 import { Connector } from './connector';
-import completeTaskSound from '/public/complete-task.mp3';
 
 export const TIMELINE_CATEGORIES = {
   work: {
@@ -60,16 +59,6 @@ export const TimelineItem = ({
     setProgress(completed ? 100 : 0);
   }, [completed]);
 
-  const handleCompletedChange = (checked: boolean) => {
-    if (onCompletedChange) {
-      onCompletedChange(checked);
-      if (checked) {
-        const audio = new Audio(completeTaskSound);
-        audio.play().catch(console.error);
-      }
-    }
-  };
-
   return (
     <div className={cn('relative flex w-full', 'h-[122px] lg:h-[156px]')}>
       {/* Timeline connector line */}
@@ -81,35 +70,12 @@ export const TimelineItem = ({
 
       {/* Checkbox */}
       <div className="absolute left-2 top-1/2 z-10 -translate-y-1/2">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleCompletedChange(!completed);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              e.stopPropagation();
-              handleCompletedChange(!completed);
-            }
-          }}
-          className={cn(
-            'flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-600 outline-none ring-0 transition-colors hover:border-green-500 focus:outline-none focus:ring-green-500',
-            completed ? 'border-green-500 bg-green-500' : 'bg-background',
-          )}
-          role="checkbox"
-          aria-checked={completed}
-          aria-label="Toggle task completion"
-          tabIndex={0}
-        >
-          <Check
-            className={cn(
-              'h-4 w-4',
-              completed ? 'text-white opacity-100' : 'text-gray-400 opacity-50',
-            )}
-          />
-        </button>
+        <TaskCheckbox
+          checked={completed}
+          onCheckedChange={onCompletedChange}
+          size="lg"
+          soundSrc="/complete-task.mp3"
+        />
       </div>
     </div>
   );
