@@ -1,7 +1,6 @@
 import { CategoryBadge } from '@/features/tasks/components/timeline/category-badge';
 import { TIMELINE_CATEGORIES, TimelineItem } from '@/features/tasks/components/timeline/timeline';
 import { toggleTaskCompletion, updateTask } from '@/features/tasks/store/tasks.store';
-import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import { Plus } from 'lucide-react';
 import { CategorySectionProps } from '../../types';
@@ -38,19 +37,13 @@ export const CategorySection = ({
                   onPriorityChange={(priority) => updateTask(task.id, { priority })}
                   onCompletedChange={() => toggleTaskCompletion(task.id)}
                   isLastItem={index === tasks.length - 1}
+                  fixedHeight={true}
                 />
               </div>
 
               {/* Task Card */}
               <SortableTaskItem task={task}>
-                <div
-                  className={cn(
-                    'relative h-full',
-                    (task.nextStartTime.getTime() - task.startTime.getTime()) / (1000 * 60 * 60) > 2
-                      ? 'h-[140px] lg:h-[180px]'
-                      : 'h-[100px] lg:h-[120px]',
-                  )}
-                >
+                <div className="relative h-[120px] lg:h-[140px]">
                   <TaskCard task={task} onEdit={onEditTask} />
                 </div>
               </SortableTaskItem>

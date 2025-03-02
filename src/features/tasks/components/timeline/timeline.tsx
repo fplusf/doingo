@@ -34,6 +34,7 @@ interface TimelineItemProps {
   dotColor?: TaskPriority;
   onPriorityChange?: (priority: TaskPriority) => void;
   isLastItem?: boolean;
+  fixedHeight?: boolean;
 }
 
 export const TimelineItem = ({
@@ -47,15 +48,11 @@ export const TimelineItem = ({
   dotColor,
   onPriorityChange,
   isLastItem = false,
+  fixedHeight = false,
 }: TimelineItemProps) => {
   const timeDiffMinutes = React.useMemo(() => {
     return (nextStartTime.getTime() - startTime.getTime()) / (1000 * 60);
   }, [startTime, nextStartTime]);
-
-  const isLargeTask = React.useMemo(() => {
-    const timeDiffHours = timeDiffMinutes / 60;
-    return timeDiffHours > 2;
-  }, [timeDiffMinutes]);
 
   const [progress, setProgress] = React.useState(completed ? 100 : 0);
 
@@ -74,26 +71,16 @@ export const TimelineItem = ({
   };
 
   return (
-    <div
-      className={cn(
-        'relative flex w-full',
-        isLargeTask ? 'h-[210px] lg:h-[240px]' : 'h-[122px] lg:h-[156px]',
-      )}
-    >
+    <div className={cn('relative flex w-full', 'h-[122px] lg:h-[156px]')}>
       {/* Timeline connector line */}
       {!isLastItem && (
-        <div
-          className={cn(
-            'absolute left-5',
-            isLargeTask ? 'top-[40px] h-[calc(100%-36px)]' : 'top-[32px] h-[calc(100%-20px)]',
-          )}
-        >
+        <div className="absolute left-5 top-[96px] h-full max-h-[110px] lg:max-h-[120px]">
           <Connector progress={progress} />
         </div>
       )}
 
       {/* Checkbox */}
-      <div className={cn('absolute left-2 z-10', isLargeTask ? 'top-[33px]' : 'top-[30px]')}>
+      <div className="absolute left-2 top-1/2 z-10 -translate-y-1/2">
         <button
           type="button"
           onClick={(e) => {

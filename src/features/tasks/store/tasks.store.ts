@@ -242,28 +242,7 @@ export const toggleTaskCompletion = (id: string) => {
     };
   });
 
-  // If the task was focused and is now completed, focus the next task
-  if (wasFocused && isBeingCompleted) {
-    // Wait a small amount of time to ensure the state is updated
-    setTimeout(() => {
-      // Get the updated tasks after the completion toggle
-      const updatedTasks = tasksStore.state.tasks;
-
-      // Find the next uncompleted task for the same date
-      const nextUncompletedTask = updatedTasks
-        .filter((task) => task.taskDate === taskDate && !task.completed)
-        .sort((a, b) => {
-          // Sort by category first
-          const categoryOrder = { work: 0, passion: 1, play: 2 };
-          return categoryOrder[a.category] - categoryOrder[b.category];
-        })[0]; // Get the first task
-
-      // If there's a next task, focus it
-      if (nextUncompletedTask) {
-        setFocused(nextUncompletedTask.id, true);
-      }
-    }, 0);
-  }
+  // Removed auto-focus behavior
 };
 
 export const clearTasks = () => {

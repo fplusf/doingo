@@ -2,7 +2,6 @@ import { TaskDialog } from '@/features/tasks/components/schedule/dialog';
 import {
   addTask,
   getTasksByDate,
-  setFocused,
   setSelectedDate,
   tasksStore,
   updateTask,
@@ -116,11 +115,6 @@ export const DayContainer = React.forwardRef<
     const firstUncompletedTask = sortedTasks.find((task) => !task.completed);
     const hasFocusedTask = tasks.some((task) => task.isFocused);
 
-    // If there's no focused task but we have tasks, focus the first uncompleted task
-    if (!hasFocusedTask && firstUncompletedTask) {
-      setFocused(firstUncompletedTask.id, true);
-    }
-
     // Check if this is the initial render or date change
     const isInitialRender = initialRenderRef.current;
     const isDateChange =
@@ -202,6 +196,25 @@ export const DayContainer = React.forwardRef<
 
     tasks.forEach((task) => {
       grouped[task.category || 'work'].push(task);
+    });
+
+    // Sort tasks within each category to ensure completed tasks are at the top
+    Object.keys(grouped).forEach((category) => {
+      grouped[category as TaskCategory].sort((a, b) => {
+        // First, sort completed tasks to the top
+        if (a.completed !== b.completed) {
+          return a.completed ? -1 : 1;
+        }
+
+        // For uncompleted tasks, sort focused task to the top
+        if (!a.completed && !b.completed) {
+          if (a.isFocused !== b.isFocused) {
+            return a.isFocused ? -1 : 1;
+          }
+        }
+
+        return 0;
+      });
     });
 
     return grouped;

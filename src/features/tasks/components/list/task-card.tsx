@@ -117,7 +117,7 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'task-card relative flex h-full w-full flex-col rounded-lg p-0.5 text-current hover:bg-sidebar hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
+            'task-card relative flex h-full w-full flex-col rounded-lg border border-gray-600/50 p-0.5 text-current hover:bg-sidebar hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
             task.completed && 'opacity-45',
             task.isFocused && isToday && 'bg-gradient-to-r from-red-500 to-purple-500',
           )}
@@ -131,7 +131,7 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
             )}
           >
             <div
-              className="flex h-full flex-grow cursor-pointer items-start justify-between gap-4"
+              className="flex h-full flex-grow cursor-pointer items-center justify-between gap-4"
               onClick={() => onEdit(task)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') onEdit(task);
@@ -141,7 +141,7 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
             >
               <div
                 className={cn(
-                  'flex h-12 w-12 shrink-0 items-center justify-center rounded-full p-0',
+                  'flex h-12 w-12 shrink-0 items-center justify-center self-center rounded-full p-0',
                   task.emoji ? getEmojiBackground(task.emoji, task.category) : 'hover:bg-accent/25',
                 )}
                 style={{
@@ -157,20 +157,12 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
                   <Smile className="h-4 w-4 text-muted-foreground" />
                 )}
               </div>
-              <div className="flex h-full w-full flex-col gap-2">
-                <h3
-                  className={cn(
-                    'mb-auto font-medium',
-                    task.completed && 'line-through',
-                    task.duration > 2 * 60 * 60 * 1000
-                      ? 'line-clamp-2 sm:line-clamp-3'
-                      : 'line-clamp-1 sm:line-clamp-2',
-                  )}
-                >
+              <div className="flex h-full w-full flex-col justify-between py-1">
+                <h3 className={cn('line-clamp-2 font-medium', task.completed && 'line-through')}>
                   {task.title}
                 </h3>
 
-                <section className="flex items-center">
+                <section className="mt-auto flex items-center">
                   <div className="mr-3 text-xs opacity-50 xl:text-sm">
                     <span className="mr-2">
                       {task.startTime && !isNaN(task.startTime.getTime())
