@@ -25,7 +25,7 @@ export const CategorySection = ({
       <div className="relative mt-4">
         {/* Task Cards with Timeline Items */}
         <div className="flex flex-col gap-y-3 space-y-0">
-          {tasks.map((task) => (
+          {tasks.map((task, index) => (
             <div key={task.id} data-id={task.id} className="relative">
               {/* Timeline Item */}
               <div className="absolute -top-1 left-2 -ml-4 w-full">
@@ -37,6 +37,7 @@ export const CategorySection = ({
                   strikethrough={task.completed}
                   onPriorityChange={(priority) => updateTask(task.id, { priority })}
                   onCompletedChange={() => toggleTaskCompletion(task.id)}
+                  isLastItem={index === tasks.length - 1}
                 />
               </div>
 

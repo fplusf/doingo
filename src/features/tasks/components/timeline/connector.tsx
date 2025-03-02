@@ -8,7 +8,7 @@ interface ConnectorProps {
 
 export function Connector({ progress, className }: ConnectorProps) {
   return (
-    <div className={cn('relative h-full w-[2.5px]', className)}>
+    <div className={cn('relative h-full w-[2.5px] opacity-60', className)}>
       <div
         className="absolute inset-0 rounded-full"
         style={{

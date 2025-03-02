@@ -1,7 +1,7 @@
-import { TaskCategory, TaskPriority } from '@/features/tasks/store/tasks.store';
 import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
 import React from 'react';
+import { TaskCategory, TaskPriority } from '../../types';
 import { Connector } from './connector';
 import completeTaskSound from '/public/complete-task.mp3';
 
@@ -33,6 +33,7 @@ interface TimelineItemProps {
   isNew?: boolean;
   dotColor?: TaskPriority;
   onPriorityChange?: (priority: TaskPriority) => void;
+  isLastItem?: boolean;
 }
 
 export const TimelineItem = ({
@@ -45,6 +46,7 @@ export const TimelineItem = ({
   isNew = false,
   dotColor,
   onPriorityChange,
+  isLastItem = false,
 }: TimelineItemProps) => {
   const timeDiffMinutes = React.useMemo(() => {
     return (nextStartTime.getTime() - startTime.getTime()) / (1000 * 60);
@@ -79,14 +81,16 @@ export const TimelineItem = ({
       )}
     >
       {/* Timeline connector line */}
-      <div
-        className={cn(
-          'absolute left-5',
-          isLargeTask ? 'top-[40px] h-[calc(100%-36px)]' : 'top-[32px] h-[calc(100%-20px)]',
-        )}
-      >
-        <Connector progress={progress} />
-      </div>
+      {!isLastItem && (
+        <div
+          className={cn(
+            'absolute left-5',
+            isLargeTask ? 'top-[40px] h-[calc(100%-36px)]' : 'top-[32px] h-[calc(100%-20px)]',
+          )}
+        >
+          <Connector progress={progress} />
+        </div>
+      )}
 
       {/* Checkbox */}
       <div className={cn('absolute left-2 z-10', isLargeTask ? 'top-[33px]' : 'top-[30px]')}>
