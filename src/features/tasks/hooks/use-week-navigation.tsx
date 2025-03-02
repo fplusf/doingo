@@ -1,7 +1,7 @@
 import { gsap } from '@/lib/gsap';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { addDays, addWeeks, format, isSameWeek, parse, startOfWeek } from 'date-fns';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TasksRoute } from '../../../routes/routes';
 import { DATE_FORMAT } from '../../../shared/constants/date';
 
@@ -20,7 +20,10 @@ function createWeekData(startDate: Date): WeekData {
 export function useWeekNavigation() {
   const navigate = useNavigate({ from: TasksRoute.fullPath });
   const search = useSearch({ from: TasksRoute.fullPath });
-  const today = new Date();
+
+  // Use a ref for today to avoid recreating it on every render
+  const todayRef = useRef(new Date());
+  const today = todayRef.current;
 
   // Initialize with today's date regardless of what's in search params
   const [selectedDate, setSelectedDate] = useState(today);
@@ -50,9 +53,9 @@ export function useWeekNavigation() {
       return createWeekData(weekStart);
     });
     setWeeks(newWeeks);
-  }, [selectedDate]);
+  }, [viewDate]);
 
-  // Always update search params with today's date on initial load
+  // Update selected date and view date when search params change
   useEffect(() => {
     // If there's no date in search params, set it to today
     if (!search.date) {
@@ -70,17 +73,6 @@ export function useWeekNavigation() {
       setViewDate(newWeekStart);
     }
   }, [search.date, navigate]);
-
-  // Add a reset effect that runs on mount to always set today as default
-  useEffect(() => {
-    // Set today as the default date when the component mounts
-    navigate({
-      search: (prev) => ({
-        ...prev,
-        date: format(today, DATE_FORMAT),
-      }),
-    });
-  }, []);
 
   const handleDateSelect = useCallback(
     (date: Date) => {

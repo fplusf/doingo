@@ -25,6 +25,9 @@ const TaskDetailsPage: React.FC<TaskDetailsPageProps> = () => {
     return () => {
       // Optionally restore sidebar when leaving the page
       toggleSidebarState(false);
+
+      // Don't manipulate scroll position when navigating back
+      // Let the router handle scroll restoration
     };
   }, []);
 

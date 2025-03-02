@@ -129,7 +129,10 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
         />
       </div>
 
-      <ScrollArea className="flex flex-1 items-start will-change-scroll">
+      <ScrollArea
+        className="flex flex-1 items-start will-change-scroll"
+        preserveScrollPosition={true}
+      >
         <section className="mb-2 flex items-center justify-between border-b border-gray-700/40 pb-2">
           <TaskCheckbox
             checked={task.completed}

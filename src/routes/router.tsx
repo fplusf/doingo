@@ -1,6 +1,6 @@
 import { createRouter } from '@tanstack/react-router';
+import { DragWindowRegionChildren } from '../shared/components/drag-window-region';
 import { rootTree } from './routes';
-import { DragWindowRegionChildren } from '../components/drag-window-region';
 
 declare module '@tanstack/react-router' {
   interface Register {

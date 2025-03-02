@@ -28,6 +28,9 @@ export default function FocusPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Don't add any code here that would reset scroll position
+  // Let the router handle scroll restoration
+
   return (
     <div
       className={cn(

@@ -112,13 +112,17 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
     navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
   };
 
+  // Calculate if we should show the progress bar
+  const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+  const progress = task.progress ?? 0;
+
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'task-card relative flex h-full w-full flex-col rounded-lg border border-gray-600/50 p-0.5 text-current hover:bg-sidebar hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
-            task.completed && 'opacity-45',
+            'task-card relative flex h-full w-full flex-col rounded-lg border-gray-600/50 bg-gray-800/50 p-0.5 text-current hover:bg-gray-800 hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
+            task.completed && 'bg-transparent opacity-45',
             task.isFocused && isToday && 'bg-gradient-to-r from-red-500 to-purple-500',
           )}
           onMouseEnter={() => setIsHovered(true)}
@@ -127,9 +131,24 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
           <div
             className={cn(
               task.isFocused && isToday && 'bg-sidebar/95',
-              'h-full w-full rounded-md p-2 py-4 pr-6',
+              'relative h-full w-full rounded-md p-2 py-4 pr-6',
             )}
           >
+            {/* Progress bar - only visible for tasks with subtasks */}
+            {hasSubtasks && !task.completed && (
+              <div className="absolute left-0 top-0 h-[3px] w-full overflow-hidden rounded-t-md">
+                <div
+                  className="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                  aria-label={`${progress}% complete`}
+                  role="progressbar"
+                  aria-valuenow={progress}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
+              </div>
+            )}
+
             <div
               className="flex h-full flex-grow cursor-pointer items-center justify-between gap-4"
               onClick={() => onEdit(task)}
@@ -162,8 +181,8 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
                   {task.title}
                 </h3>
 
-                <section className="mt-auto flex items-center">
-                  <div className="mr-3 text-xs opacity-50 xl:text-sm">
+                <section className="mt-auto flex items-center justify-between">
+                  <div className="text-xs opacity-50 xl:text-sm">
                     <span className="mr-2">
                       {task.startTime && !isNaN(task.startTime.getTime())
                         ? format(task.startTime, 'MMM dd yyyy')
@@ -180,54 +199,67 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
                     ) : null}
                   </div>
 
-                  {/* Focus button - always visible but only works for today's tasks */}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={handleFocusClick}
-                          className={cn(
-                            'mx-4 mr-6 flex bg-transparent hover:bg-transparent',
-                            task.completed && 'hidden',
-                          )}
-                        >
-                          <LucideFocus
-                            className={cn(
-                              'ml-2 h-4 w-4 transition-all duration-200',
-                              task.isFocused && isToday
-                                ? 'fill-blue-500 text-blue-500'
-                                : 'text-muted-foreground',
-                              'hover:scale-150 hover:fill-blue-500 hover:text-blue-500 hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]',
-                            )}
-                          />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Focus (F)</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <div className="flex items-center">
+                    {/* Subtask progress indicator - only visible for tasks with subtasks */}
+                    {hasSubtasks && task.subtasks && (
+                      <div className="mr-4 text-xs text-muted-foreground">
+                        <span>{Math.round(progress)}%</span>
+                        <span className="ml-1">
+                          ({task.subtasks.filter((st) => st.isCompleted).length}/
+                          {task.subtasks.length})
+                        </span>
+                      </div>
+                    )}
 
-                  {/* Details button - always works */}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={handleDetailsClick}
-                          className="mr-4 flex bg-transparent hover:bg-transparent"
-                        >
-                          <ArrowRight className="ml-2 h-4 w-4 text-muted-foreground hover:text-foreground" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Details (D)</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                    {/* Focus button - always visible but only works for today's tasks */}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleFocusClick}
+                            className={cn(
+                              'mx-4 mr-6 flex bg-transparent hover:bg-transparent',
+                              task.completed && 'hidden',
+                            )}
+                          >
+                            <LucideFocus
+                              className={cn(
+                                'ml-2 h-4 w-4 transition-all duration-200',
+                                task.isFocused && isToday
+                                  ? 'fill-blue-500 text-blue-500'
+                                  : 'text-muted-foreground',
+                                'hover:scale-150 hover:fill-blue-500 hover:text-blue-500 hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]',
+                              )}
+                            />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Focus (F)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    {/* Details button - always works */}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleDetailsClick}
+                            className="mr-4 flex bg-transparent hover:bg-transparent"
+                          >
+                            <ArrowRight className="ml-2 h-4 w-4 text-muted-foreground hover:text-foreground" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Details (D)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                 </section>
               </div>
             </div>

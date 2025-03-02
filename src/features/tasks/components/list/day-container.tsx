@@ -66,7 +66,6 @@ export const DayContainer = React.forwardRef<
   const navigate = useNavigate();
   const tasksRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const prevTasksRef = useRef<OptimalTask[]>([]);
   const initialRenderRef = useRef<boolean>(true);
 
   // Update the selected date when the URL parameter changes
@@ -101,57 +100,17 @@ export const DayContainer = React.forwardRef<
         return tasks.findIndex((t) => t.id === a.id) - tasks.findIndex((t) => t.id === b.id);
       }
 
-      // For uncompleted tasks, sort focused task to the top
-      if (!a.completed && !b.completed) {
-        if (a.isFocused !== b.isFocused) {
-          return a.isFocused ? -1 : 1;
-        }
-      }
+      // For uncompleted tasks, we no longer sort focused tasks to the top
+      // Instead, we maintain their original position
 
-      // Finally, sort by category priority
+      // Sort by category priority
       return categoryPriorityMap[a.category] - categoryPriorityMap[b.category];
     });
-
-    const firstUncompletedTask = sortedTasks.find((task) => !task.completed);
-    const hasFocusedTask = tasks.some((task) => task.isFocused);
-
-    // Check if this is the initial render or date change
-    const isInitialRender = initialRenderRef.current;
-    const isDateChange =
-      prevTasksRef.current.length > 0 &&
-      tasks.length > 0 &&
-      prevTasksRef.current[0]?.taskDate !== tasks[0]?.taskDate;
-
-    // We should only scroll in specific scenarios:
-    // 1. On initial render
-    // 2. When changing dates
-    // 3. Not when just marking a task as uncompleted
-    const shouldScroll = isInitialRender || isDateChange;
-
-    if (shouldScroll && firstUncompletedTask && firstUncompletedTask.id && tasksRef.current) {
-      // Small delay to ensure the DOM has updated
-      setTimeout(() => {
-        const activeTaskElement = tasksRef.current?.querySelector(
-          `[data-id="${firstUncompletedTask.id}"]`,
-        );
-        const activeTaskPosition = activeTaskElement?.getBoundingClientRect();
-
-        // Scroll to the active task
-        if (viewportRef.current && activeTaskPosition && activeTaskElement) {
-          const viewportRect = viewportRef.current.getBoundingClientRect();
-          const scrollOffset = activeTaskPosition.top - viewportRect.top - 100; // Add 100px padding from top
-          viewportRef.current.scrollTo({
-            top: viewportRef.current.scrollTop + scrollOffset,
-          });
-        }
-      }, 0);
-    }
 
     // After first render, set this to false
     initialRenderRef.current = false;
 
-    // Save current tasks for next comparison
-    prevTasksRef.current = [...tasks];
+    // Don't manipulate scroll position here to allow router's scroll restoration to work
   }, [tasks]);
 
   React.useEffect(() => {
@@ -206,12 +165,8 @@ export const DayContainer = React.forwardRef<
           return a.completed ? -1 : 1;
         }
 
-        // For uncompleted tasks, sort focused task to the top
-        if (!a.completed && !b.completed) {
-          if (a.isFocused !== b.isFocused) {
-            return a.isFocused ? -1 : 1;
-          }
-        }
+        // For uncompleted tasks, we no longer sort focused tasks to the top
+        // Instead, we maintain their original position by not applying any special sorting
 
         return 0;
       });
@@ -326,7 +281,12 @@ export const DayContainer = React.forwardRef<
   const activeTask = activeId ? tasks.find((task) => task.id === activeId) : null;
 
   return (
-    <ScrollArea viewportRef={viewportRef} className="relative h-full w-full">
+    <ScrollArea
+      viewportRef={viewportRef}
+      className="relative h-full w-full"
+      preserveScrollPosition={true}
+      // Don't reset scroll position when component re-renders
+    >
       <div ref={tasksRef} className="mx-auto w-full max-w-[1200px] px-10 pb-16">
         <DndContext
           sensors={sensors}

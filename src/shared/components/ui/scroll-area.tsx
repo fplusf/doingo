@@ -1,5 +1,5 @@
-import * as React from 'react';
 import * as ScrollAreaPrimitive from '@radix-ui/react-scroll-area';
+import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -7,14 +7,19 @@ const ScrollArea = React.forwardRef<
   React.ElementRef<typeof ScrollAreaPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
     viewportRef?: React.RefObject<HTMLDivElement>;
+    preserveScrollPosition?: boolean;
   }
->(({ className, children, viewportRef, ...props }, ref) => (
+>(({ className, children, viewportRef, preserveScrollPosition = false, ...props }, ref) => (
   <ScrollAreaPrimitive.Root
     ref={ref}
     className={cn('relative overflow-hidden', className)}
     {...props}
   >
-    <ScrollAreaPrimitive.Viewport ref={viewportRef} className="h-full w-full rounded-[inherit]">
+    <ScrollAreaPrimitive.Viewport
+      ref={viewportRef}
+      className="h-full w-full rounded-[inherit]"
+      data-preserve-scroll={preserveScrollPosition ? 'true' : 'false'}
+    >
       {children}
     </ScrollAreaPrimitive.Viewport>
     <ScrollBar />

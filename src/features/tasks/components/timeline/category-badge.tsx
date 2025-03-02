@@ -24,14 +24,20 @@ export const CategoryBadge: React.FC<CategoryLineProps> = ({
     const scrollContainer = document.querySelector('[data-radix-scroll-area-viewport]');
     if (!scrollContainer) return;
 
-    // Calculate the scroll position
-    const elementPosition = element.offsetTop - (element.parentElement?.offsetTop || 0);
+    // Check if we should preserve scroll position
+    const shouldPreserve = scrollContainer.getAttribute('data-preserve-scroll') === 'true';
 
-    // Smooth scroll to the position
-    scrollContainer.scrollTo({
-      top: elementPosition,
-      behavior: 'smooth',
-    });
+    // Only scroll if we're not preserving scroll position from router
+    if (!shouldPreserve) {
+      // Calculate the scroll position
+      const elementPosition = element.offsetTop - (element.parentElement?.offsetTop || 0);
+
+      // Smooth scroll to the position
+      scrollContainer.scrollTo({
+        top: elementPosition,
+        behavior: 'smooth',
+      });
+    }
   };
 
   return (
