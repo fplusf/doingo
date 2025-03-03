@@ -32,8 +32,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { TasksRoute } from '../../../../routes/routes';
 import { OptimalTask, TaskCategory, TaskPriority } from '../../types';
 import { CategorySection } from './category-section';
-import { SortableTaskItem } from './sortable-task-item';
-import { TaskItem } from './task-item';
+import { SortableTimelineTaskItem } from './sortable-timeline-task-item';
 
 interface DayContainerProps {
   ref?: React.RefObject<{ setIsCreating: (value: boolean) => void }>;
@@ -352,9 +351,7 @@ export const DayContainer = React.forwardRef<
             }}
           >
             {activeId && activeTask ? (
-              <SortableTaskItem task={activeTask}>
-                <TaskItem task={activeTask} onEdit={handleStartEdit} />
-              </SortableTaskItem>
+              <SortableTimelineTaskItem task={activeTask} onEdit={handleStartEdit} />
             ) : null}
           </DragOverlay>
         </DndContext>
