@@ -33,7 +33,7 @@ import { TasksRoute } from '../../../../routes/routes';
 import { OptimalTask, TaskCategory, TaskPriority } from '../../types';
 import { CategorySection } from './category-section';
 import { SortableTaskItem } from './sortable-task-item';
-import { TaskCard } from './task-card';
+import { TaskCard } from './task-item';
 
 interface DayContainerProps {
   ref?: React.RefObject<{ setIsCreating: (value: boolean) => void }>;

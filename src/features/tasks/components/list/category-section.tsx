@@ -5,7 +5,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Plus } from 'lucide-react';
 import { CategorySectionProps } from '../../types';
 import { SortableTaskItem } from '../list/sortable-task-item';
-import { TaskCard } from '../list/task-card';
+import { TaskCard } from './task-item';
 
 export const CategorySection = ({
   category,
@@ -38,6 +38,9 @@ export const CategorySection = ({
                   onCompletedChange={() => toggleTaskCompletion(task.id)}
                   isLastItem={index === tasks.length - 1}
                   fixedHeight={true}
+                  emoji={task.emoji}
+                  onEditTask={() => onEditTask(task)}
+                  taskId={task.id}
                 />
               </div>
 

@@ -23,7 +23,7 @@ export function EmojiPicker({ emoji, onEmojiSelect, className }: EmojiPickerProp
           variant="ghost"
           size="icon"
           className={cn(
-            'h-10 w-10 shrink-0 rounded-full p-0',
+            'h-full w-10 shrink-0 rounded-full p-0',
             emoji ? 'bg-accent/15 hover:bg-accent/25' : 'hover:bg-accent/25',
             className,
           )}

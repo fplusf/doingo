@@ -1,27 +1,23 @@
 import { cn } from '@/lib/utils';
-import { Progress } from '@/shared/components/ui/progress';
 
 interface ConnectorProps {
-  progress: number;
   className?: string;
+  dashed?: boolean;
 }
 
-export function Connector({ progress, className }: ConnectorProps) {
+export function Connector({ className, dashed = false }: ConnectorProps) {
   return (
-    <div className={cn('relative h-full w-[2.5px] opacity-60', className)}>
-      <div
-        className="absolute inset-0 rounded-full"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(0deg, transparent, transparent 4px, #767a81 4px, #767a81 8px)',
-        }}
-      />
-      <Progress
-        value={progress}
-        isVertical
-        indicatorClassName="bg-green-500 transition-all duration-500"
-        className="h-full w-full bg-transparent"
-      />
-    </div>
+    <div
+      className={cn('relative h-full w-[2px]', dashed ? 'opacity-60' : 'bg-gray-600/40', className)}
+      style={
+        dashed
+          ? {
+              backgroundImage:
+                'repeating-linear-gradient(0deg, transparent, transparent 4px, #767a81 4px, #767a81 8px)',
+              backgroundSize: '2px 12px',
+            }
+          : undefined
+      }
+    />
   );
 }

@@ -4,7 +4,7 @@ export { CategorySection } from './list/category-section';
 export { DayContainer } from './list/day-container';
 export { DragHandle } from './list/drag-handle';
 export { SortableTaskItem } from './list/sortable-task-item';
-export { TaskCard } from './list/task-card';
+export { TaskCard } from './list/task-item';
 export { TaskDialog } from './schedule/dialog';
 export { TaskScheduler } from './schedule/task-scheduler';
 export { TimeSelect } from './schedule/time-select';

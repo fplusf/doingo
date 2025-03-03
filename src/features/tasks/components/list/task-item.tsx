@@ -121,7 +121,7 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'task-card relative flex h-full w-full flex-col rounded-lg border-gray-600/50 bg-gray-800/50 p-0.5 text-current hover:bg-gray-800 hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
+            'task-card border-secondary-600/50 relative flex h-full w-full flex-col rounded-2xl bg-card p-0.5 text-current hover:bg-card hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
             task.completed && 'bg-transparent opacity-45',
             task.isFocused && isToday && 'bg-gradient-to-r from-red-500 to-purple-500',
           )}
