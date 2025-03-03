@@ -42,7 +42,7 @@ export function TimelineNode({
       className={cn(
         'relative flex items-center justify-center',
         'w-11 rounded-3xl px-2',
-        completed ? 'opacity-30' : 'border border-white/20',
+        completed ? 'opacity-85' : 'border border-white/20',
         colorMap[color],
         'cursor-pointer',
         className,

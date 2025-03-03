@@ -188,7 +188,7 @@ export const TimelineItem = ({
           className={cn(
             'absolute -bottom-[20px] left-5 z-[5] h-[20px] w-[2px]',
             connectorColorClass,
-            completed && 'opacity-30',
+            completed && 'opacity-90',
           )}
         />
       )}

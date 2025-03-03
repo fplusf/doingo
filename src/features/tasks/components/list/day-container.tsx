@@ -88,21 +88,6 @@ export const DayContainer = React.forwardRef<
     };
 
     const sortedTasks = tasks.sort((a, b) => {
-      // First, sort completed tasks to the top
-      if (a.completed !== b.completed) {
-        return a.completed ? -1 : 1;
-      }
-
-      // Then, if both are completed, keep them in their original order
-      // This ensures the most recently completed stays at the end
-      if (a.completed && b.completed) {
-        // Use the task's position in the original array to maintain order
-        return tasks.findIndex((t) => t.id === a.id) - tasks.findIndex((t) => t.id === b.id);
-      }
-
-      // For uncompleted tasks, we no longer sort focused tasks to the top
-      // Instead, we maintain their original position
-
       // Sort by category priority
       return categoryPriorityMap[a.category] - categoryPriorityMap[b.category];
     });
@@ -157,17 +142,15 @@ export const DayContainer = React.forwardRef<
       grouped[task.category || 'work'].push(task);
     });
 
-    // Sort tasks within each category to ensure completed tasks are at the top
+    // Sort tasks within each category - but don't move completed tasks to the top
     Object.keys(grouped).forEach((category) => {
       grouped[category as TaskCategory].sort((a, b) => {
-        // First, sort completed tasks to the top
-        if (a.completed !== b.completed) {
-          return a.completed ? -1 : 1;
-        }
+        // We no longer sort completed tasks to the top
+        // if (a.completed !== b.completed) {
+        //   return a.completed ? -1 : 1;
+        // }
 
-        // For uncompleted tasks, we no longer sort focused tasks to the top
-        // Instead, we maintain their original position by not applying any special sorting
-
+        // For uncompleted tasks, we maintain their original position
         return 0;
       });
     });
