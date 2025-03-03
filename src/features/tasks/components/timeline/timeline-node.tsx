@@ -7,13 +7,13 @@ interface TimelineNodeProps {
   emoji: string;
   color?: NodeColor;
   className?: string;
-  isActive?: boolean;
+  completed?: boolean;
   height?: string;
   onClick?: () => void;
 }
 
-const colorMap = {
-  yellow: 'bg-yellow-500/80',
+export const colorMap = {
+  yellow: 'bg-yellow-400/80',
   pink: 'bg-pink-400/80',
   green: 'bg-green-500/80',
   blue: 'bg-blue-400/80',
@@ -24,7 +24,7 @@ export function TimelineNode({
   emoji,
   color = 'default',
   className,
-  isActive = false,
+  completed = false,
   height,
   onClick,
 }: TimelineNodeProps) {
@@ -41,10 +41,10 @@ export function TimelineNode({
     <div
       className={cn(
         'relative flex items-center justify-center',
-        'w-12 rounded-[24px] px-2',
-        isActive ? 'ring-2 ring-white/20' : '',
+        'w-11 rounded-3xl px-2',
+        completed ? 'opacity-30' : 'border border-white/20',
         colorMap[color],
-        'cursor-pointer transition-all duration-300 hover:scale-105',
+        'cursor-pointer',
         className,
       )}
       style={{
@@ -62,9 +62,11 @@ export function TimelineNode({
         }
       }}
     >
-      <div className="flex h-full w-full items-center justify-center py-2">
+      <div className="flex h-full w-full select-none items-center justify-center py-2">
         {emoji ? (
-          <span className="text-lg">{emoji}</span>
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-500/30">
+            <span className="text-xl">{emoji}</span>
+          </div>
         ) : (
           <div className="h-6 w-6 rounded-full bg-gray-500/20" />
         )}

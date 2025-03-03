@@ -43,15 +43,14 @@ export const CategoryBadge: React.FC<CategoryLineProps> = ({
   return (
     <div
       className={cn(
-        'relative left-0 flex scroll-mt-20 items-center justify-center py-4 opacity-90',
-        'bg-gradient-to-b from-background via-background to-transparent',
+        'relative left-0 flex scroll-mt-20 items-center justify-center py-4',
         isSticky && 'sticky top-0 z-30',
         className,
       )}
     >
       <button
         onClick={handleClick}
-        className="relative left-0 z-10 w-24 cursor-pointer rounded-full px-6 py-1 text-center text-sm font-medium opacity-100 transition-all hover:shadow-md focus:outline-none active:scale-95"
+        className="relative left-0 z-10 w-24 cursor-pointer rounded-full px-6 py-1 text-center text-sm font-medium opacity-100 transition-all hover:shadow-xl focus:outline-none active:scale-95"
         style={{
           backgroundColor: color,
           color: '#fff',

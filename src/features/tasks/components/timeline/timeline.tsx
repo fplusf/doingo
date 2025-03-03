@@ -1,7 +1,6 @@
 import { cn } from '@/lib/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { TaskCategory, TaskPriority } from '../../types';
-import { Connector } from './connector';
+import { ONE_HOUR_IN_MS, TaskCategory, TaskPriority } from '../../types';
 import { NodeColor, TimelineNode } from './timeline-node';
 
 export const TIMELINE_CATEGORIES = {
@@ -47,6 +46,7 @@ interface TimelineItemProps {
   emoji?: string;
   onEditTask?: () => void;
   taskId?: string;
+  duration?: number; // Add duration prop
 }
 
 export const TimelineItem = ({
@@ -64,6 +64,7 @@ export const TimelineItem = ({
   emoji = '',
   onEditTask,
   taskId,
+  duration = 0, // Default to 0 if not provided
 }: TimelineItemProps) => {
   const timeDiffMinutes = React.useMemo(() => {
     return (nextStartTime.getTime() - startTime.getTime()) / (1000 * 60);
@@ -73,19 +74,70 @@ export const TimelineItem = ({
   const [nodeHeight, setNodeHeight] = useState('0px');
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Calculate dynamic height based on time difference if not fixed
+  // Get the background color class for connectors based on the node color
+  const getConnectorColorClass = () => {
+    switch (nodeColor) {
+      case 'yellow':
+        return 'bg-yellow-500/80';
+      case 'pink':
+        return 'bg-pink-400/80';
+      case 'green':
+        return 'bg-green-500/80';
+      case 'blue':
+        return 'bg-blue-400/80';
+      default:
+        return 'bg-gray-600/60';
+    }
+  };
+
+  const connectorColorClass = getConnectorColorClass();
+
+  // Get height based on task duration
+  const getHeightFromDuration = () => {
+    // 0 to 1 hour: 110px height
+    if (duration <= ONE_HOUR_IN_MS) {
+      return 'h-[110px]';
+    }
+    // 1 to 3 hours: 170px height
+    else if (duration <= ONE_HOUR_IN_MS * 3) {
+      return 'h-[170px]';
+    }
+    // 3+ hours: 230px height
+    else {
+      return 'h-[230px]';
+    }
+  };
+
+  // Use duration-based height if available, otherwise use the old dynamic height
+  const durationBasedHeight = duration ? getHeightFromDuration() : null;
   const dynamicHeight = fixedHeight
     ? 'h-[122px] lg:h-[156px]'
-    : `h-[${Math.max(122, Math.min(300, timeDiffMinutes * 0.5))}px] lg:h-[${Math.max(156, Math.min(400, timeDiffMinutes * 0.7))}px]`;
+    : durationBasedHeight ||
+      `h-[${Math.max(122, Math.min(300, timeDiffMinutes * 0.5))}px] lg:h-[${Math.max(
+        156,
+        Math.min(400, timeDiffMinutes * 0.7),
+      )}px]`;
 
   // Update node height when the content height changes
   useEffect(() => {
     if (contentRef.current) {
       const updateNodeHeight = () => {
-        const contentHeight = contentRef.current?.offsetHeight;
-        if (contentHeight) {
-          const paddedHeight = Math.max(48, contentHeight - 16); // Minimum height of 48px with 16px padding
-          setNodeHeight(`${paddedHeight}px`);
+        if (duration) {
+          // Set explicit height based on duration
+          if (duration <= ONE_HOUR_IN_MS) {
+            setNodeHeight('110px');
+          } else if (duration <= ONE_HOUR_IN_MS * 3) {
+            setNodeHeight('170px');
+          } else {
+            setNodeHeight('230px');
+          }
+        } else {
+          // Use the old calculation if no duration provided
+          const contentHeight = contentRef.current?.offsetHeight;
+          if (contentHeight) {
+            const paddedHeight = Math.max(48, contentHeight - 16); // Minimum height of 48px with 16px padding
+            setNodeHeight(`${paddedHeight}px`);
+          }
         }
       };
 
@@ -101,7 +153,7 @@ export const TimelineItem = ({
         }
       };
     }
-  }, [dynamicHeight]);
+  }, [dynamicHeight, duration]);
 
   // Handle node click to open task modal
   const handleNodeClick = () => {
@@ -130,11 +182,15 @@ export const TimelineItem = ({
       className={cn('group relative flex w-full', dynamicHeight)}
       onClick={handleNodeClick} // Add click handler to the entire row
     >
-      {/* Timeline connector line */}
+      {/* Add connector extension that goes beyond the current item for visual continuity */}
       {!isLastItem && (
-        <div className="absolute left-6 top-0 h-full">
-          <Connector />
-        </div>
+        <div
+          className={cn(
+            'absolute -bottom-[20px] left-5 z-[5] h-[20px] w-[2px]',
+            connectorColorClass,
+            completed && 'opacity-30',
+          )}
+        />
       )}
 
       {/* Timeline node with emoji */}
@@ -146,66 +202,13 @@ export const TimelineItem = ({
         }}
       >
         <TimelineNode
+          completed={completed}
           emoji={emoji}
           color={nodeColor}
-          isActive={completed}
           height={nodeHeight}
           onClick={handleNodeClick}
         />
       </div>
-
-      {/* Priority change button */}
-      <div
-        className="absolute -right-2 top-0 z-20 cursor-pointer rounded-full bg-gray-800/50 p-1 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-70"
-        onClick={handlePriorityChange}
-        role="button"
-        tabIndex={0}
-        aria-label="Change priority"
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            if (onPriorityChange) {
-              const priorities: TaskPriority[] = ['none', 'low', 'medium', 'high'];
-              const currentIndex = priorities.indexOf(dotColor);
-              const nextIndex = (currentIndex + 1) % priorities.length;
-              onPriorityChange(priorities[nextIndex]);
-            }
-          }
-        }}
-      >
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M8 12H16"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M12 8V16"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </div>
-
-      {/* Task content can be added here */}
-      <div className="ml-16 w-full cursor-pointer">{/* Task content placeholder */}</div>
     </div>
   );
 };

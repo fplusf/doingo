@@ -33,7 +33,7 @@ import { TasksRoute } from '../../../../routes/routes';
 import { OptimalTask, TaskCategory, TaskPriority } from '../../types';
 import { CategorySection } from './category-section';
 import { SortableTaskItem } from './sortable-task-item';
-import { TaskCard } from './task-item';
+import { TaskItem } from './task-item';
 
 interface DayContainerProps {
   ref?: React.RefObject<{ setIsCreating: (value: boolean) => void }>;
@@ -281,13 +281,8 @@ export const DayContainer = React.forwardRef<
   const activeTask = activeId ? tasks.find((task) => task.id === activeId) : null;
 
   return (
-    <ScrollArea
-      viewportRef={viewportRef}
-      className="relative h-full w-full"
-      preserveScrollPosition={true}
-      // Don't reset scroll position when component re-renders
-    >
-      <div ref={tasksRef} className="mx-auto w-full max-w-[1200px] px-10 pb-16">
+    <ScrollArea viewportRef={viewportRef} className="relative h-full w-full">
+      <div ref={tasksRef} className="mx-auto w-full max-w-[900px] px-10 pb-16">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -375,7 +370,7 @@ export const DayContainer = React.forwardRef<
           >
             {activeId && activeTask ? (
               <SortableTaskItem task={activeTask}>
-                <TaskCard task={activeTask} onEdit={handleStartEdit} />
+                <TaskItem task={activeTask} onEdit={handleStartEdit} />
               </SortableTaskItem>
             ) : null}
           </DragOverlay>

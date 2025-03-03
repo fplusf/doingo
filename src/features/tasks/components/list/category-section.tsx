@@ -5,7 +5,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Plus } from 'lucide-react';
 import { CategorySectionProps } from '../../types';
 import { SortableTaskItem } from '../list/sortable-task-item';
-import { TaskCard } from './task-item';
+import { TaskItem } from './task-item';
 
 export const CategorySection = ({
   category,
@@ -23,11 +23,11 @@ export const CategorySection = ({
       />
       <div className="relative mt-4">
         {/* Task Cards with Timeline Items */}
-        <div className="flex flex-col gap-y-3 space-y-0">
+        <div className="flex flex-col gap-y-5 space-y-0">
           {tasks.map((task, index) => (
-            <div key={task.id} data-id={task.id} className="relative">
+            <div key={task.id} data-id={task.id} className="relative mb-0 pb-0">
               {/* Timeline Item */}
-              <div className="absolute -top-1 left-2 -ml-4 w-full">
+              <div className="absolute left-2 -ml-4 w-full">
                 <TimelineItem
                   dotColor={task.priority}
                   startTime={task.startTime}
@@ -37,18 +37,17 @@ export const CategorySection = ({
                   onPriorityChange={(priority) => updateTask(task.id, { priority })}
                   onCompletedChange={() => toggleTaskCompletion(task.id)}
                   isLastItem={index === tasks.length - 1}
-                  fixedHeight={true}
+                  fixedHeight={false}
                   emoji={task.emoji}
                   onEditTask={() => onEditTask(task)}
                   taskId={task.id}
+                  duration={task.duration}
                 />
               </div>
 
               {/* Task Card */}
               <SortableTaskItem task={task}>
-                <div className="relative h-[120px] lg:h-[140px]">
-                  <TaskCard task={task} onEdit={onEditTask} />
-                </div>
+                <TaskItem task={task} onEdit={onEditTask} />
               </SortableTaskItem>
             </div>
           ))}

@@ -1,5 +1,4 @@
-import { deleteTask, setFocused } from '@/features/tasks/store/tasks.store';
-import { getEmojiBackground } from '@/lib/emoji-utils';
+import { deleteTask, setFocused, toggleTaskCompletion } from '@/features/tasks/store/tasks.store';
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -17,11 +16,12 @@ import {
 import { toast } from '@/shared/hooks/use-toast';
 import { useNavigate } from '@tanstack/react-router';
 import { format } from 'date-fns';
-import { ArrowRight, LucideFocus, Smile, Trash2 } from 'lucide-react';
+import { ArrowRight, LucideFocus, Trash2 } from 'lucide-react';
 import React from 'react';
-import { TaskCardProps } from '../../types';
+import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
+import { ONE_HOUR_IN_MS, TaskCardProps } from '../../types';
 
-export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
+export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
   const navigate = useNavigate({ from: '/tasks' });
   const [isHovered, setIsHovered] = React.useState(false);
   const today = new Date();
@@ -116,13 +116,41 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
   const hasSubtasks = task.subtasks && task.subtasks.length > 0;
   const progress = task.progress ?? 0;
 
+  // Get dynamic height and line clamp classes based on task duration
+  const getCardHeightClasses = () => {
+    // 0 to 1 hour: 110px height, 2 lines of text
+    if (task.duration <= ONE_HOUR_IN_MS) {
+      return {
+        cardHeight: 'h-[110px]',
+        lineClamp: 'line-clamp-2',
+      };
+    }
+    // 1 to 3 hours: 170px height, 4 lines of text
+    else if (task.duration <= ONE_HOUR_IN_MS * 3) {
+      return {
+        cardHeight: 'h-[170px]',
+        lineClamp: 'line-clamp-4',
+      };
+    }
+    // 3+ hours: 230px height, 8 lines of text
+    else {
+      return {
+        cardHeight: 'h-[230px]',
+        lineClamp: 'line-clamp-8',
+      };
+    }
+  };
+
+  const { cardHeight, lineClamp } = getCardHeightClasses();
+
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'task-card border-secondary-600/50 relative flex h-full w-full flex-col rounded-2xl bg-card p-0.5 text-current hover:bg-card hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
-            task.completed && 'bg-transparent opacity-45',
+            'task-card border-secondary-600/50 relative flex w-full flex-col rounded-3xl bg-card p-0.5 text-current hover:bg-card/80 hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
+            cardHeight,
+            task.completed && 'opacity-30',
             task.isFocused && isToday && 'bg-gradient-to-r from-red-500 to-purple-500',
           )}
           onMouseEnter={() => setIsHovered(true)}
@@ -158,26 +186,15 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
               role="button"
               tabIndex={0}
             >
-              <div
-                className={cn(
-                  'flex h-12 w-12 shrink-0 items-center justify-center self-center rounded-full p-0',
-                  task.emoji ? getEmojiBackground(task.emoji, task.category) : 'hover:bg-accent/25',
-                )}
-                style={{
-                  aspectRatio: '1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {task.emoji ? (
-                  <span className="text-lg sm:text-xl">{task.emoji}</span>
-                ) : (
-                  <Smile className="h-4 w-4 text-muted-foreground" />
-                )}
-              </div>
+              <TaskCheckbox
+                className="m-2"
+                size="lg"
+                checked={task.completed}
+                onCheckedChange={() => toggleTaskCompletion(task.id)}
+              />
+
               <div className="flex h-full w-full flex-col justify-between py-1">
-                <h3 className={cn('line-clamp-2 font-medium', task.completed && 'line-through')}>
+                <h3 className={cn(lineClamp, 'font-medium', task.completed && 'line-through')}>
                   {task.title}
                 </h3>
 

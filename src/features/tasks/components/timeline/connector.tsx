@@ -8,7 +8,12 @@ interface ConnectorProps {
 export function Connector({ className, dashed = false }: ConnectorProps) {
   return (
     <div
-      className={cn('relative h-full w-[2px]', dashed ? 'opacity-60' : 'bg-gray-600/40', className)}
+      className={cn(
+        'relative h-full w-[2px]',
+        dashed ? 'opacity-70' : className || 'bg-gray-600/60',
+        !dashed && !className ? 'bg-gray-600/60' : '',
+        className,
+      )}
       style={
         dashed
           ? {
