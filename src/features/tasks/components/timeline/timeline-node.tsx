@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import React from 'react';
-import { EMOJI_BG, PRIORITY_BG_CLASSES } from '../../constants/priority-colors';
+import { PRIORITY_BG_CLASSES } from '../../constants/priority-colors';
 import { TaskPriority } from '../../types';
 
 interface TimelineNodeProps {
@@ -26,6 +26,24 @@ export function TimelineNode({
     e.stopPropagation();
     if (onClick) {
       onClick();
+    }
+  };
+
+  // Dynamic text shadow configuration based on priority
+  const getEmojiTextShadow = (priority: TaskPriority) => {
+    switch (priority) {
+      case 'high':
+        // For red/high priority (darker background)
+        return '0px 1px 2px rgba(0, 0, 0, 0.15), 0px 0px 1px rgba(255, 255, 255, 0.9)';
+      case 'medium':
+        // For orange/medium priority (medium background)
+        return '0px 1px 2px rgba(0, 0, 0, 0.15), 0px 0px 3px rgba(0, 0, 0, 0.7)';
+      case 'low':
+        // For yellow/low priority (light background)
+        return '0px 1px 2px rgba(0, 0, 0, 0.35), 0px 0px 1px rgba(255, 255, 255, 0.6)';
+      default:
+        // For default/none priority
+        return '0px 1px 2px rgba(0, 0, 0, 0.2), 0px 0px 1px rgba(255, 255, 255, 0.8)';
     }
   };
 
@@ -55,13 +73,16 @@ export function TimelineNode({
     >
       <div className="flex h-full w-full select-none items-center justify-center py-2">
         {emoji ? (
-          <div
-            className={cn(
-              'flex h-6 w-6 items-center justify-center rounded-full',
-              EMOJI_BG[priority],
-            )}
-          >
-            <span className="text-xl">{emoji}</span>
+          <div className="flex h-6 w-6 items-center justify-center">
+            <span
+              className="text-xl"
+              style={{
+                textShadow: getEmojiTextShadow(priority),
+                filter: 'saturate(1.2) contrast(1.1)',
+              }}
+            >
+              {emoji}
+            </span>
           </div>
         ) : (
           <div className="h-6 w-6 rounded-full bg-gray-500/20" />
