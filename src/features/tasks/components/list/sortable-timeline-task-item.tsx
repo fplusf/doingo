@@ -11,12 +11,14 @@ interface SortableTimelineTaskItemProps {
   task: OptimalTask;
   onEdit: (task: OptimalTask) => void;
   isLastItem?: boolean;
+  nextTask?: OptimalTask;
 }
 
 export const SortableTimelineTaskItem = ({
   task,
   onEdit,
   isLastItem = false,
+  nextTask,
 }: SortableTimelineTaskItemProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -59,6 +61,7 @@ export const SortableTimelineTaskItem = ({
           onEditTask={() => onEdit(task)}
           taskId={task.id}
           duration={task.duration}
+          nextTaskPriority={nextTask?.priority}
         />
       </div>
 

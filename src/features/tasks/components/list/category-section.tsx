@@ -28,6 +28,7 @@ export const CategorySection = ({
               task={task}
               onEdit={onEditTask}
               isLastItem={index === tasks.length - 1}
+              nextTask={index < tasks.length - 1 ? tasks[index + 1] : undefined}
             />
           ))}
           <Button

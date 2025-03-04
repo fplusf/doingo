@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { PRIORITY_BG_CLASSES } from '../../constants/priority-colors';
+import { PRIORITY_COLORS } from '../../constants/priority-colors';
 import { ONE_HOUR_IN_MS, TaskCategory, TaskPriority } from '../../types';
 import { TimelineNode } from './timeline-node';
 
@@ -38,6 +38,7 @@ interface TimelineItemProps {
   onEditTask?: () => void;
   taskId?: string;
   duration?: number; // Add duration prop
+  nextTaskPriority?: TaskPriority; // Add nextTaskPriority prop for gradient effect
 }
 
 export const TimelineItem = ({
@@ -56,6 +57,7 @@ export const TimelineItem = ({
   onEditTask,
   taskId,
   duration = 0, // Default to 0 if not provided
+  nextTaskPriority = 'none', // Default to none if not provided
 }: TimelineItemProps) => {
   const timeDiffMinutes = React.useMemo(() => {
     return (nextStartTime.getTime() - startTime.getTime()) / (1000 * 60);
@@ -136,16 +138,20 @@ export const TimelineItem = ({
     }
   };
 
-  // Handle priority change
-  const handlePriorityChange = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  // Create a gradient for the connector line
+  const getConnectorGradient = () => {
+    const currentColor = PRIORITY_COLORS[priority];
+    const nextColor = PRIORITY_COLORS[nextTaskPriority];
 
-    if (onPriorityChange) {
-      const priorities: TaskPriority[] = ['none', 'low', 'medium', 'high'];
-      const currentIndex = priorities.indexOf(priority);
-      const nextIndex = (currentIndex + 1) % priorities.length;
-      onPriorityChange(priorities[nextIndex]);
+    // If colors are the same, just use a solid color
+    if (currentColor === nextColor) {
+      return { background: currentColor };
     }
+
+    // Create a linear gradient from top to bottom
+    return {
+      background: `linear-gradient(to bottom, ${currentColor} 0%, ${nextColor} 100%)`,
+    };
   };
 
   return (
@@ -157,10 +163,8 @@ export const TimelineItem = ({
       {/* Add connector extension that goes beyond the current item for visual continuity */}
       {!isLastItem && (
         <div
-          className={cn(
-            'absolute -bottom-[20px] left-5 z-[5] h-[20px] w-[3px]',
-            PRIORITY_BG_CLASSES[priority],
-          )}
+          className="absolute -bottom-[20px] left-5 z-[5] h-[20px] w-[3px]"
+          style={getConnectorGradient()}
         />
       )}
 

@@ -37,13 +37,13 @@ export function TimelineNode({
         return '0px 1px 2px rgba(0, 0, 0, 0.15), 0px 0px 1px rgba(255, 255, 255, 0.9)';
       case 'medium':
         // For orange/medium priority (medium background)
-        return '0px 1px 2px rgba(0, 0, 0, 0.15), 0px 0px 3px rgba(0, 0, 0, 0.7)';
+        return '0px 1px 2px rgba(0, 0, 0, 0.15), 0px 0px 4px rgba(55, 55, 55, 0.7)';
       case 'low':
         // For yellow/low priority (light background)
         return '0px 1px 2px rgba(0, 0, 0, 0.35), 0px 0px 1px rgba(255, 255, 255, 0.6)';
       default:
         // For default/none priority
-        return '0px 1px 2px rgba(0, 0, 0, 0.2), 0px 0px 1px rgba(255, 255, 255, 0.8)';
+        return '0px 1px 2px rgba(0, 0, 0, 0.2), 0px 0px 3px rgba(255, 255, 255, 0.9)';
     }
   };
 

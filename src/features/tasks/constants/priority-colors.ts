@@ -5,9 +5,9 @@ export const PRIORITY_COLORS = {
   high: '#ef4444', // red-500
   medium: '#eab308', // yellow-500
   low: '#3b82f6', // blue-500
-  none: '#2d2f30', // card-bg 210 7% 19%
-  '': '#2d2f30', // card-bg 210 7% 19%
-  'not-urgent-not-important': '#2d2f30', // card-bg 210 7% 19%
+  none: '#5c6169',
+  '': '#5c6169',
+  'not-urgent-not-important': '#5c6169',
 } as const;
 
 // Tailwind background classes for each priority level
@@ -15,9 +15,9 @@ export const PRIORITY_BG_CLASSES = {
   high: 'bg-red-500/90',
   medium: 'bg-yellow-500/90',
   low: 'bg-blue-500/90',
-  none: 'bg-card',
-  '': 'bg-card',
-  'not-urgent-not-important': 'bg-card',
+  none: 'bg-gray-500/40',
+  '': 'bg-gray-500/40',
+  'not-urgent-not-important': 'bg-gray-500/40',
 } as const;
 
 export const EMOJI_BG = {
