@@ -10,11 +10,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/shared/components/ui/sidebar';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { toast } from '@/shared/hooks/use-toast';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
-import { BarChart, Bell, Calendar, Calendar1Icon } from 'lucide-react';
+import { BarChart, Bell, Calendar, Calendar1Icon, LucideFocus } from 'lucide-react';
 import * as React from 'react';
 
 const data = {
@@ -106,46 +107,45 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
 
-        {/* <SidebarMenu>
+        <SidebarMenu>
           <SidebarMenuItem className="flex flex-col items-center">
-            <SidebarMenuButton size="lg" asChild>
-              <Link
-                to="/"
-                activeProps={{ className: 'active' }}
-                inactiveProps={{ className: 'inactive' }}
-                onClick={handleFocusClick}
-              >
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
-                  <LucideFocus className={`size-4 ${focusedTask ? 'fill-blue-500' : ''}`} />
-                </div>
-              </Link>
+            <SidebarMenuButton size="lg" asChild disabled={!isToday}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    to={focusedTask || firstUncompletedTask ? '/tasks/$taskId' : '/'}
+                    params={
+                      focusedTask || firstUncompletedTask
+                        ? { taskId: focusedTask?.id || firstUncompletedTask?.id }
+                        : {}
+                    }
+                    activeProps={{ className: 'active' }}
+                    inactiveProps={{ className: 'inactive' }}
+                    onClick={(e) => {
+                      if (!isToday) {
+                        e.preventDefault();
+                        return;
+                      }
+                      handleDetailsClick(e);
+                    }}
+                    className={!isToday ? 'cursor-not-allowed opacity-50' : ''}
+                    aria-disabled={!isToday}
+                  >
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
+                      <LucideFocus className="size-4" />
+                    </div>
+                  </Link>
+                </TooltipTrigger>
+                {!isToday && (
+                  <TooltipContent side="right" className="z-50 text-xs">
+                    <p>Focus available only on today's tasks</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
             </SidebarMenuButton>
             <span className="mt-0.5 truncate text-xs">Focus</span>
           </SidebarMenuItem>
-        </SidebarMenu> */}
-
-        {/* <SidebarMenu>
-          <SidebarMenuItem className="flex flex-col items-center">
-            <SidebarMenuButton size="lg" asChild>
-              <Link
-                to={focusedTask || firstUncompletedTask ? '/tasks/$taskId' : '/'}
-                params={
-                  focusedTask || firstUncompletedTask
-                    ? { taskId: focusedTask?.id || firstUncompletedTask?.id }
-                    : {}
-                }
-                activeProps={{ className: 'active' }}
-                inactiveProps={{ className: 'inactive' }}
-                onClick={handleDetailsClick}
-              >
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
-                  <Calendar className="size-4" />
-                </div>
-              </Link>
-            </SidebarMenuButton>
-            <span className="mt-0.5 truncate text-xs">Details</span>
-          </SidebarMenuItem>
-        </SidebarMenu> */}
+        </SidebarMenu>
 
         <SidebarMenu>
           <SidebarMenuItem className="flex flex-col items-center">
