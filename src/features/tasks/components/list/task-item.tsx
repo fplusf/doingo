@@ -150,7 +150,6 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
           className={cn(
             'task-card border-secondary-600/50 relative flex w-full flex-col rounded-3xl bg-card p-0.5 text-current hover:bg-card/80 hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
             cardHeight,
-            task.completed && 'opacity-30',
             task.isFocused && isToday && 'bg-gradient-to-r from-red-500 to-purple-500',
           )}
           onMouseEnter={() => setIsHovered(true)}

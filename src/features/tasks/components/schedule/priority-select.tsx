@@ -1,3 +1,4 @@
+import { PRIORITY_COLORS, PRIORITY_LABELS } from '@/features/tasks/constants/priority-colors';
 import { TaskPriority } from '@/features/tasks/types';
 import { cn } from '@/lib/utils';
 import {
@@ -49,25 +50,10 @@ export function PrioritySelect({ value, onValueChange, className }: PrioritySele
           <div
             className="mr-1.5 h-full w-2.5"
             style={{
-              backgroundColor:
-                value === 'high'
-                  ? '#ef4444'
-                  : value === 'medium'
-                    ? '#eab308'
-                    : value === 'low'
-                      ? '#3b82f6'
-                      : '#64748b',
+              backgroundColor: PRIORITY_COLORS[value],
             }}
           />
-          <SelectValue>
-            {value === 'high'
-              ? 'High'
-              : value === 'medium'
-                ? 'Medium'
-                : value === 'low'
-                  ? 'Low'
-                  : 'None'}
-          </SelectValue>
+          <SelectValue>{PRIORITY_LABELS[value]}</SelectValue>
         </div>
       </SelectTrigger>
       <SelectContent align="end">
@@ -85,14 +71,7 @@ export function PrioritySelect({ value, onValueChange, className }: PrioritySele
               <div
                 className="absolute left-0 top-0 h-full w-2.5"
                 style={{
-                  backgroundColor:
-                    priority.value === 'high'
-                      ? '#ef4444'
-                      : priority.value === 'medium'
-                        ? '#eab308'
-                        : priority.value === 'low'
-                          ? '#3b82f6'
-                          : '#64748b',
+                  backgroundColor: PRIORITY_COLORS[priority.value],
                 }}
               />
 

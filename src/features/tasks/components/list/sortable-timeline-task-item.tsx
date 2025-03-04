@@ -46,7 +46,7 @@ export const SortableTimelineTaskItem = ({
       {/* Timeline Item */}
       <div className="absolute left-2 -ml-4 w-full" {...listeners}>
         <TimelineItem
-          dotColor={task.priority}
+          priority={task.priority}
           startTime={task.startTime}
           nextStartTime={task.nextStartTime}
           completed={task.completed}

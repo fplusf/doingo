@@ -1,28 +1,20 @@
 import { cn } from '@/lib/utils';
 import React from 'react';
-
-export type NodeColor = 'yellow' | 'pink' | 'green' | 'blue' | 'default';
+import { EMOJI_BG, PRIORITY_BG_CLASSES } from '../../constants/priority-colors';
+import { TaskPriority } from '../../types';
 
 interface TimelineNodeProps {
   emoji: string;
-  color?: NodeColor;
+  priority?: TaskPriority;
   className?: string;
   completed?: boolean;
   height?: string;
   onClick?: () => void;
 }
 
-export const colorMap = {
-  yellow: 'bg-yellow-400/80',
-  pink: 'bg-pink-400/80',
-  green: 'bg-green-500/80',
-  blue: 'bg-blue-400/80',
-  default: 'bg-gray-700/80',
-};
-
 export function TimelineNode({
   emoji,
-  color = 'default',
+  priority = 'none',
   className,
   completed = false,
   height,
@@ -42,8 +34,7 @@ export function TimelineNode({
       className={cn(
         'relative flex items-center justify-center',
         'w-11 rounded-3xl px-2',
-        completed ? 'opacity-85' : 'border border-white/20',
-        colorMap[color],
+        PRIORITY_BG_CLASSES[priority],
         'cursor-pointer',
         className,
       )}
@@ -64,7 +55,12 @@ export function TimelineNode({
     >
       <div className="flex h-full w-full select-none items-center justify-center py-2">
         {emoji ? (
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-500/30">
+          <div
+            className={cn(
+              'flex h-6 w-6 items-center justify-center rounded-full',
+              EMOJI_BG[priority],
+            )}
+          >
             <span className="text-xl">{emoji}</span>
           </div>
         ) : (

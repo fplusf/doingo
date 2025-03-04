@@ -1,7 +1,8 @@
 import { cn } from '@/lib/utils';
 import React, { useEffect, useRef, useState } from 'react';
+import { PRIORITY_BG_CLASSES } from '../../constants/priority-colors';
 import { ONE_HOUR_IN_MS, TaskCategory, TaskPriority } from '../../types';
-import { NodeColor, TimelineNode } from './timeline-node';
+import { TimelineNode } from './timeline-node';
 
 export const TIMELINE_CATEGORIES = {
   work: {
@@ -21,16 +22,6 @@ export const TIMELINE_CATEGORIES = {
 const DEFAULT_CATEGORY = 'work';
 const DEFAULT_COLOR = '#64748b'; // slate-500
 
-// Map TaskPriority to NodeColor
-const priorityToColorMap: Record<TaskPriority, NodeColor> = {
-  high: 'yellow',
-  medium: 'pink',
-  low: 'green',
-  none: 'blue',
-  '': 'default',
-  'not-urgent-not-important': 'default',
-};
-
 interface TimelineItemProps {
   startTime: Date;
   nextStartTime: Date;
@@ -39,7 +30,7 @@ interface TimelineItemProps {
   category?: TaskCategory;
   strikethrough?: boolean;
   isNew?: boolean;
-  dotColor?: TaskPriority;
+  priority?: TaskPriority;
   onPriorityChange?: (priority: TaskPriority) => void;
   isLastItem?: boolean;
   fixedHeight?: boolean;
@@ -57,7 +48,7 @@ export const TimelineItem = ({
   category = DEFAULT_CATEGORY,
   strikethrough = false,
   isNew = false,
-  dotColor = 'none',
+  priority = 'none',
   onPriorityChange,
   isLastItem = false,
   fixedHeight = false,
@@ -70,27 +61,8 @@ export const TimelineItem = ({
     return (nextStartTime.getTime() - startTime.getTime()) / (1000 * 60);
   }, [startTime, nextStartTime]);
 
-  const nodeColor = priorityToColorMap[dotColor];
   const [nodeHeight, setNodeHeight] = useState('0px');
   const contentRef = useRef<HTMLDivElement>(null);
-
-  // Get the background color class for connectors based on the node color
-  const getConnectorColorClass = () => {
-    switch (nodeColor) {
-      case 'yellow':
-        return 'bg-yellow-500/80';
-      case 'pink':
-        return 'bg-pink-400/80';
-      case 'green':
-        return 'bg-green-500/80';
-      case 'blue':
-        return 'bg-blue-400/80';
-      default:
-        return 'bg-gray-600/60';
-    }
-  };
-
-  const connectorColorClass = getConnectorColorClass();
 
   // Get height based on task duration
   const getHeightFromDuration = () => {
@@ -170,7 +142,7 @@ export const TimelineItem = ({
 
     if (onPriorityChange) {
       const priorities: TaskPriority[] = ['none', 'low', 'medium', 'high'];
-      const currentIndex = priorities.indexOf(dotColor);
+      const currentIndex = priorities.indexOf(priority);
       const nextIndex = (currentIndex + 1) % priorities.length;
       onPriorityChange(priorities[nextIndex]);
     }
@@ -186,9 +158,8 @@ export const TimelineItem = ({
       {!isLastItem && (
         <div
           className={cn(
-            'absolute -bottom-[20px] left-5 z-[5] h-[20px] w-[2px]',
-            connectorColorClass,
-            completed && 'opacity-90',
+            'absolute -bottom-[20px] left-5 z-[5] h-[20px] w-[3px]',
+            PRIORITY_BG_CLASSES[priority],
           )}
         />
       )}
@@ -204,7 +175,7 @@ export const TimelineItem = ({
         <TimelineNode
           completed={completed}
           emoji={emoji}
-          color={nodeColor}
+          priority={priority}
           height={nodeHeight}
           onClick={handleNodeClick}
         />
