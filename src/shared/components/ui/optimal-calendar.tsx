@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
+import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -265,12 +266,16 @@ export function OptimalCalendar({
           >
             <SelectValue placeholder={selectedTime}>{selectedTime}</SelectValue>
           </SelectTrigger>
-          <SelectContent className="max-h-[220px]">
-            {timeOptions.map((time) => (
-              <SelectItem key={time} value={time}>
-                {time}
-              </SelectItem>
-            ))}
+          <SelectContent className="p-0">
+            <ScrollArea className="h-[200px]">
+              <div className="p-1">
+                {timeOptions.map((time) => (
+                  <SelectItem key={time} value={time}>
+                    {time}
+                  </SelectItem>
+                ))}
+              </div>
+            </ScrollArea>
           </SelectContent>
         </Select>
       </div>
