@@ -124,7 +124,6 @@ export function TaskDialog({
 
   // Form state
   const [title, setTitle] = useState(initialValues?.title || '');
-  const [notes, setNotes] = useState(initialValues?.notes || '');
   const [emoji, setEmoji] = useState(initialValues?.emoji || '');
   const [startTime, setStartTime] = useState(initialValues?.startTime || '');
   const [endTime, setEndTime] = useState(initialValues?.endTime || '');
@@ -144,7 +143,6 @@ export function TaskDialog({
     if (open && initialValues) {
       // Update all form fields based on initialValues
       setTitle(initialValues.title || '');
-      setNotes(initialValues.notes || '');
       setEmoji(initialValues.emoji || '');
       setStartTime(initialValues.startTime || '');
       setEndTime(initialValues.endTime || '');
@@ -257,7 +255,6 @@ export function TaskDialog({
 
     const values: TaskFormValues = {
       title,
-      notes,
       emoji,
       startTime,
       endTime,
@@ -278,7 +275,6 @@ export function TaskDialog({
     if (title && mode === 'create') {
       const values: TaskFormValues = {
         title,
-        notes,
         emoji,
         startTime,
         endTime,

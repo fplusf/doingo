@@ -68,7 +68,6 @@ export const DayContainer = React.forwardRef<
   const [dueDate, setDueDate] = useState<Date>();
   const [newTask, setNewTask] = useState({
     title: '',
-    notes: '',
     emoji: '',
     priority: 'none' as TaskPriority,
     category: 'work' as TaskCategory,
@@ -77,7 +76,6 @@ export const DayContainer = React.forwardRef<
   const navigate = useNavigate();
   const tasksRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const initialRenderRef = useRef<boolean>(true);
 
   // Update the selected date when the URL parameter changes
   React.useEffect(() => {
@@ -90,24 +88,6 @@ export const DayContainer = React.forwardRef<
   const tasks = React.useMemo(() => {
     return getTasksByDate(selectedDate);
   }, [selectedDate, allTasks]);
-
-  React.useEffect(() => {
-    const categoryPriorityMap = {
-      work: 0,
-      passion: 1,
-      play: 2,
-    };
-
-    const sortedTasks = tasks.sort((a, b) => {
-      // Sort by category priority
-      return categoryPriorityMap[a.category] - categoryPriorityMap[b.category];
-    });
-
-    // After first render, set this to false
-    initialRenderRef.current = false;
-
-    // Don't manipulate scroll position here to allow router's scroll restoration to work
-  }, [tasks]);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -127,7 +107,6 @@ export const DayContainer = React.forwardRef<
       if (value) {
         setNewTask({
           title: '',
-          notes: '',
           emoji: '',
           priority: 'none',
           category: 'work',
@@ -203,7 +182,7 @@ export const DayContainer = React.forwardRef<
       const newTasks = arrayMove(tasks, oldIndex, newIndex);
 
       // Get all existing tasks that are not in the current filtered list
-      const otherTasks = allTasks.filter((task) => task.taskDate !== selectedDate);
+      const otherTasks = allTasks?.filter((task) => task.taskDate !== selectedDate) || [];
 
       // Update the store with both the reordered current tasks and other tasks
       tasksStore.setState((state) => ({
@@ -221,18 +200,6 @@ export const DayContainer = React.forwardRef<
     document.body.style.cursor = '';
   };
 
-  const formatDurationForDisplay = (durationMs: number) => {
-    if (!durationMs || durationMs <= 0) return '1 hr'; // Default fallback for invalid duration
-    const hours = Math.floor(durationMs / (60 * 60 * 1000));
-    const minutes = Math.floor((durationMs % (60 * 60 * 1000)) / (60 * 1000));
-    if (hours > 0) {
-      return `${hours} hr${hours > 1 ? 's' : ''}`;
-    } else if (minutes > 0) {
-      return `${minutes} min`;
-    }
-    return '1 hr'; // fallback
-  };
-
   // Update end time when start time changes
   useEffect(() => {
     if (startTime) {
@@ -247,7 +214,6 @@ export const DayContainer = React.forwardRef<
     setEditingTask(task.id);
     setNewTask({
       title: task.title,
-      notes: task.notes || '',
       emoji: task.emoji || '',
       priority: task.priority,
       category: task.category,
@@ -296,7 +262,6 @@ export const DayContainer = React.forwardRef<
               onAddTask={() => {
                 setNewTask({
                   title: '',
-                  notes: '',
                   emoji: '',
                   priority: 'none',
                   category: 'work',
@@ -318,7 +283,6 @@ export const DayContainer = React.forwardRef<
               onAddTask={() => {
                 setNewTask({
                   title: '',
-                  notes: '',
                   emoji: '',
                   priority: 'none',
                   category: 'passion',
@@ -340,7 +304,6 @@ export const DayContainer = React.forwardRef<
               onAddTask={() => {
                 setNewTask({
                   title: '',
-                  notes: '',
                   emoji: '',
                   priority: 'none',
                   category: 'play',
@@ -376,7 +339,6 @@ export const DayContainer = React.forwardRef<
         mode="create"
         initialValues={{
           title: newTask.title,
-          notes: newTask.notes,
           emoji: '',
           startTime,
           endTime,
@@ -446,7 +408,6 @@ export const DayContainer = React.forwardRef<
 
           setNewTask({
             title: '',
-            notes: '',
             emoji: '',
             priority: 'none',
             category: activeCategory,
@@ -466,7 +427,6 @@ export const DayContainer = React.forwardRef<
         mode="edit"
         initialValues={{
           title: newTask.title,
-          notes: newTask.notes || '',
           emoji: newTask.emoji || '',
           startTime: startTime || '',
           endTime: endTime || '',
@@ -527,7 +487,6 @@ export const DayContainer = React.forwardRef<
           setEditingTask(null);
           setNewTask({
             title: '',
-            notes: '',
             emoji: '',
             priority: 'none',
             category: activeCategory,

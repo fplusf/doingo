@@ -1,7 +1,7 @@
 import { useSidebar } from '@/shared/components/ui/sidebar';
 import { useEffect, useRef } from 'react';
 import { cn } from '../../../lib/utils';
-import { DayContainer } from '../components/list/day-container';
+import { DayContainer } from '../components/list/tasks-list';
 import { WeekNavigator } from '../components/weekly-calendar/week-navigator';
 
 export default function FocusPage() {
