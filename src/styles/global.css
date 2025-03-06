@@ -139,7 +139,7 @@ body {
     --secondary-foreground: 0 0% 90%;
 
     /* Muted elements remain the same */
-    --muted: 220 6% 18%;
+    --muted: 220 6% 25%;
     --muted-foreground: 220 5% 65%;
 
     /* Soften Accent to match primary */
@@ -151,7 +151,7 @@ body {
     --destructive-foreground: 0 0% 100%;
 
     /* Borders remain the same, but soften ring */
-    --border: 220 6% 20%;
+    --border: 220 6% 27%;
     --input: 220 6% 16%;
     --ring: 217 45% 55%; /* Match new primary */
 

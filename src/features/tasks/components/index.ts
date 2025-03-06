@@ -7,5 +7,4 @@ export { SortableTaskItem } from './list/sortable-task-item';
 export { TaskItem as TaskCard } from './list/task-item';
 export { TaskDialog } from './schedule/dialog';
 export { TaskScheduler } from './schedule/task-scheduler';
-export { TimeSelect } from './schedule/time-select';
 export { DayChart } from './weekly-calendar/day-chart';

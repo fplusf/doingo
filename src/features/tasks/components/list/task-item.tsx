@@ -186,14 +186,20 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
               tabIndex={0}
             >
               <TaskCheckbox
-                className="m-2"
+                className={cn('m-2')}
                 size="lg"
                 checked={task.completed}
                 onCheckedChange={() => toggleTaskCompletion(task.id)}
               />
 
               <div className="flex h-full w-full flex-col justify-between py-1">
-                <h3 className={cn(lineClamp, 'font-medium', task.completed && 'line-through')}>
+                <h3
+                  className={cn(
+                    lineClamp,
+                    'font-medium',
+                    task.completed && 'line-through opacity-20',
+                  )}
+                >
                   {task.title}
                 </h3>
 

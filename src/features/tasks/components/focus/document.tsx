@@ -123,8 +123,9 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
         </div>
         <TaskScheduler
           startTime={schedulerProps.startTime}
-          duration={schedulerProps.duration}
           startDate={schedulerProps.startDate}
+          endTime={schedulerProps.endTime}
+          endDate={schedulerProps.endDate}
           className="flex-1 text-muted-foreground"
         />
       </div>

@@ -6,6 +6,7 @@ import {
   tasksStore,
   updateTask,
 } from '@/features/tasks/store/tasks.store';
+import { ONE_HOUR_IN_MS } from '@/features/tasks/types';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import {
   DndContext,
@@ -27,9 +28,10 @@ import {
 } from '@dnd-kit/sortable';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
-import { format, isValid, parse } from 'date-fns';
+import { addMinutes, differenceInMilliseconds, format, isValid, parse } from 'date-fns';
 import React, { useEffect, useRef, useState } from 'react';
 import { TasksRoute } from '../../../../routes/routes';
+import { getNextFifteenMinuteInterval } from '../../../../shared/helpers/date/next-feefteen-minutes';
 import { OptimalTask, TaskCategory, TaskPriority } from '../../types';
 import { CategorySection } from './category-section';
 import { SortableTimelineTaskItem } from './sortable-timeline-task-item';
@@ -38,8 +40,6 @@ interface DayContainerProps {
   ref?: React.RefObject<{ setIsCreating: (value: boolean) => void }>;
 }
 
-const ONE_HOUR_IN_MS = 3600000; // 1 hour in milliseconds
-
 export const DayContainer = React.forwardRef<
   { setIsCreating: (value: boolean) => void },
   DayContainerProps
@@ -47,11 +47,23 @@ export const DayContainer = React.forwardRef<
   const allTasks = useStore(tasksStore, (state) => state.tasks);
   const selectedDate = useStore(tasksStore, (state) => state.selectedDate);
   const search = useSearch({ from: TasksRoute.fullPath });
+
+  // Helper function to get default time values
+  const getDefaultStartTime = () => {
+    const nextFifteen = getNextFifteenMinuteInterval();
+    return format(nextFifteen, 'HH:mm');
+  };
+
+  const getDefaultEndTime = () => {
+    const nextFifteen = getNextFifteenMinuteInterval();
+    return format(addMinutes(nextFifteen, 60), 'HH:mm');
+  };
+
   const [isCreating, setIsCreating] = useState(false);
   const [activeCategory, setActiveCategory] = useState<TaskCategory>('work');
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [editingTask, setEditingTask] = useState<string | null>(null);
+  const [startTime, setStartTime] = useState(getDefaultStartTime);
+  const [endTime, setEndTime] = useState(getDefaultEndTime);
   const [duration, setDuration] = useState<number>(ONE_HOUR_IN_MS);
   const [dueDate, setDueDate] = useState<Date>();
   const [newTask, setNewTask] = useState({
@@ -120,8 +132,8 @@ export const DayContainer = React.forwardRef<
           priority: 'none',
           category: 'work',
         });
-        setStartTime('');
-        setEndTime('');
+        setStartTime(getDefaultStartTime);
+        setEndTime(getDefaultEndTime);
         setDuration(ONE_HOUR_IN_MS);
         setDueDate(undefined);
         setActiveCategory('work');
@@ -232,7 +244,7 @@ export const DayContainer = React.forwardRef<
   }, [startTime, duration]);
 
   const handleStartEdit = (task: OptimalTask) => {
-    setEditingTaskId(task.id);
+    setEditingTask(task.id);
     setNewTask({
       title: task.title,
       notes: task.notes || '',
@@ -289,8 +301,8 @@ export const DayContainer = React.forwardRef<
                   priority: 'none',
                   category: 'work',
                 });
-                setStartTime('');
-                setEndTime('');
+                setStartTime(getDefaultStartTime);
+                setEndTime(getDefaultEndTime);
                 setDuration(ONE_HOUR_IN_MS);
                 setDueDate(undefined);
                 setIsCreating(true);
@@ -311,8 +323,8 @@ export const DayContainer = React.forwardRef<
                   priority: 'none',
                   category: 'passion',
                 });
-                setStartTime('');
-                setEndTime('');
+                setStartTime(getDefaultStartTime);
+                setEndTime(getDefaultEndTime);
                 setDuration(ONE_HOUR_IN_MS);
                 setDueDate(undefined);
                 setIsCreating(true);
@@ -333,8 +345,8 @@ export const DayContainer = React.forwardRef<
                   priority: 'none',
                   category: 'play',
                 });
-                setStartTime('');
-                setEndTime('');
+                setStartTime(getDefaultStartTime);
+                setEndTime(getDefaultEndTime);
                 setDuration(ONE_HOUR_IN_MS);
                 setDueDate(undefined);
                 setIsCreating(true);
@@ -357,7 +369,7 @@ export const DayContainer = React.forwardRef<
         </DndContext>
       </div>
 
-      {/* Create Task Dialog */}
+      {/* New Task Dialog */}
       <TaskDialog
         open={isCreating}
         onOpenChange={setIsCreating}
@@ -368,10 +380,7 @@ export const DayContainer = React.forwardRef<
           emoji: '',
           startTime,
           endTime,
-          duration: {
-            label: formatDurationForDisplay(duration),
-            millis: duration,
-          },
+          duration: duration,
           dueDate,
           priority: newTask.priority,
           category: activeCategory,
@@ -379,35 +388,35 @@ export const DayContainer = React.forwardRef<
         onSubmit={(values) => {
           // Create base date for today
           const baseDate = new Date();
-          let startDate, endDate, durationMs;
+          let startDate: Date, endDate: Date, durationMs: number;
 
           try {
-            startDate = values.startTime
-              ? parse(values.startTime || '09:00', 'HH:mm', baseDate)
-              : baseDate;
-
-            // Use duration if available, otherwise calculate from end time
-            if (values.duration?.millis) {
-              durationMs = values.duration.millis;
-              endDate = new Date(startDate.getTime() + durationMs);
-            } else if (values.endTime) {
-              endDate = parse(values.endTime, 'HH:mm', baseDate);
-              durationMs = endDate.getTime() - startDate.getTime();
+            // Handle start date & time properly
+            if (values.startTime) {
+              const startDateRef = values.dueDate || baseDate;
+              startDate = parse(values.startTime, 'HH:mm', startDateRef);
             } else {
-              durationMs = ONE_HOUR_IN_MS;
-              endDate = new Date(startDate.getTime() + durationMs);
+              startDate = getNextFifteenMinuteInterval();
             }
 
-            // Ensure we have valid dates
+            // Handle end date & time properly
+            const endDateBase = values.endDate || values.dueDate || baseDate;
+            if (values.endTime) {
+              endDate = parse(values.endTime, 'HH:mm', endDateBase);
+            } else {
+              endDate = addMinutes(startDate, 60);
+            }
+
+            durationMs = differenceInMilliseconds(endDate, startDate);
+
             if (!isValid(startDate)) startDate = baseDate;
-            if (!isValid(endDate)) endDate = new Date(startDate.getTime() + durationMs);
-            if (durationMs <= 0) durationMs = ONE_HOUR_IN_MS; // Ensure positive duration
+            if (!isValid(endDate)) endDate = addMinutes(startDate, 60);
+            if (durationMs <= 0) durationMs = ONE_HOUR_IN_MS;
           } catch (error) {
             console.error('Error parsing dates:', error);
-            // Fallback values
             startDate = baseDate;
             durationMs = ONE_HOUR_IN_MS;
-            endDate = new Date(startDate.getTime() + durationMs);
+            endDate = addMinutes(startDate, 60);
           }
 
           // Ensure we have a valid time string
@@ -422,6 +431,7 @@ export const DayContainer = React.forwardRef<
             emoji: values.emoji,
             time: timeString,
             startTime: startDate,
+            endTime: endDate,
             nextStartTime: endDate,
             duration: durationMs,
             dueDate: values.dueDate || new Date(),
@@ -442,109 +452,92 @@ export const DayContainer = React.forwardRef<
             category: activeCategory,
           });
 
-          setStartTime('');
-          setEndTime('');
+          setStartTime(getDefaultStartTime);
+          setEndTime(getDefaultEndTime);
           setDuration(ONE_HOUR_IN_MS);
           setDueDate(undefined);
         }}
       />
 
       {/* Edit Task Dialog */}
-      {editingTaskId && (
-        <TaskDialog
-          open={!!editingTaskId}
-          onOpenChange={(open) => {
-            if (!open) {
-              setEditingTaskId(null);
-              // Reset all form values when dialog is closed
-              setNewTask({
-                title: '',
-                notes: '',
-                emoji: '',
-                priority: 'none',
-                category: activeCategory,
-              });
-              setStartTime('');
-              setEndTime('');
-              setDuration(ONE_HOUR_IN_MS);
-              setDueDate(undefined);
-            }
-          }}
-          mode="edit"
-          initialValues={{
-            title: newTask.title,
-            notes: newTask.notes,
-            emoji: newTask.emoji,
-            startTime: startTime || '',
-            endTime: endTime || '',
-            duration: {
-              label: formatDurationForDisplay(duration),
-              millis: duration,
-            },
-            dueDate,
-            priority: newTask.priority,
-            category: newTask.category,
-          }}
-          onSubmit={(values) => {
-            // Create base date for today
-            const baseDate = new Date();
-            let startDate, endDate, durationMs;
+      <TaskDialog
+        open={!!editingTask}
+        onOpenChange={(open) => !open && setEditingTask(null)}
+        mode="edit"
+        initialValues={{
+          title: newTask.title,
+          notes: newTask.notes || '',
+          emoji: newTask.emoji || '',
+          startTime: startTime || '',
+          endTime: endTime || '',
+          duration: duration,
+          dueDate,
+          priority: newTask.priority || 'none',
+          category: newTask.category || 'work',
+        }}
+        onSubmit={(values) => {
+          // Create base date for today
+          const baseDate = new Date();
+          let startDate: Date, endDate: Date, durationMs: number;
 
-            try {
-              startDate = values.startTime ? parse(values.startTime, 'HH:mm', baseDate) : baseDate;
-              endDate = values.endTime
-                ? parse(values.endTime, 'HH:mm', baseDate)
-                : new Date(baseDate.getTime() + ONE_HOUR_IN_MS);
+          try {
+            const startDateBase = values.dueDate || baseDate;
+            startDate = values.startTime
+              ? parse(values.startTime, 'HH:mm', startDateBase)
+              : startDateBase;
 
-              // Ensure we have valid dates
-              if (!isValid(startDate)) startDate = baseDate;
-              if (!isValid(endDate)) endDate = new Date(startDate.getTime() + ONE_HOUR_IN_MS);
+            const endDateBase = values.endDate || values.dueDate || baseDate;
+            endDate = values.endTime
+              ? parse(values.endTime, 'HH:mm', endDateBase)
+              : addMinutes(startDate, 60);
 
-              // Calculate duration
-              durationMs = endDate.getTime() - startDate.getTime();
-              if (durationMs <= 0) durationMs = ONE_HOUR_IN_MS; // Ensure positive duration
-            } catch (error) {
-              console.error('Error parsing dates:', error);
-              // Fallback values
-              startDate = baseDate;
-              endDate = new Date(baseDate.getTime() + ONE_HOUR_IN_MS);
-              durationMs = ONE_HOUR_IN_MS;
-            }
+            durationMs = differenceInMilliseconds(endDate, startDate);
 
-            // Ensure we have a valid time string
-            const timeString =
-              values.startTime && values.endTime
-                ? `${values.startTime}—${values.endTime}`
-                : `${format(startDate, 'HH:mm')}—${format(endDate, 'HH:mm')}`;
+            if (!isValid(startDate)) startDate = baseDate;
+            if (!isValid(endDate)) endDate = addMinutes(startDate, 60);
+            if (durationMs <= 0) durationMs = ONE_HOUR_IN_MS;
+          } catch (error) {
+            console.error('Error parsing dates:', error);
+            startDate = baseDate;
+            durationMs = ONE_HOUR_IN_MS;
+            endDate = addMinutes(startDate, 60);
+          }
 
-            updateTask(editingTaskId, {
+          const timeString =
+            values.startTime && values.endTime
+              ? `${values.startTime}—${values.endTime}`
+              : `${format(startDate, 'HH:mm')}—${format(endDate, 'HH:mm')}`;
+
+          if (editingTask) {
+            updateTask(editingTask, {
               title: values.title,
-              notes: values.notes,
-              emoji: values.emoji,
+              notes: values.notes || '',
+              emoji: values.emoji || '',
               time: timeString,
               startTime: startDate,
+              endTime: endDate,
               nextStartTime: endDate,
               duration: durationMs,
-              dueDate: values.dueDate || new Date(),
-              priority: values.priority,
-              category: values.category,
+              dueDate: values.dueDate || baseDate,
+              priority: values.priority || 'none',
+              category: values.category || 'work',
             });
+          }
 
-            setEditingTaskId(null);
-            setNewTask({
-              title: '',
-              notes: '',
-              emoji: '',
-              priority: 'none',
-              category: activeCategory,
-            });
-            setStartTime('');
-            setEndTime('');
-            setDuration(ONE_HOUR_IN_MS);
-            setDueDate(undefined);
-          }}
-        />
-      )}
+          setEditingTask(null);
+          setNewTask({
+            title: '',
+            notes: '',
+            emoji: '',
+            priority: 'none',
+            category: activeCategory,
+          });
+          setStartTime(getDefaultStartTime);
+          setEndTime(getDefaultEndTime);
+          setDuration(ONE_HOUR_IN_MS);
+          setDueDate(undefined);
+        }}
+      />
     </ScrollArea>
   );
 });

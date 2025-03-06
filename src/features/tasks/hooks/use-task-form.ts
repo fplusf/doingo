@@ -1,6 +1,5 @@
-import { DurationOption } from '@/features/tasks/components/schedule/duration-picker';
 import { Subtask, TaskCategory, TaskPriority } from '@/features/tasks/types';
-import { addMinutes, format, parse } from 'date-fns';
+import { differenceInMilliseconds } from 'date-fns';
 import { useEffect, useState } from 'react';
 
 interface TaskFormValues {
@@ -9,8 +8,9 @@ interface TaskFormValues {
   emoji?: string;
   startTime: string;
   endTime: string;
-  duration: DurationOption;
   dueDate?: Date;
+  endDate?: Date;
+  duration: number; // Duration in milliseconds, calculated from start and end time
   priority: TaskPriority;
   category: TaskCategory;
   subtasks?: Subtask[];
@@ -21,11 +21,6 @@ interface TaskFormProps {
   initialValues?: Partial<TaskFormValues>;
   onSubmit: (values: TaskFormValues) => void;
 }
-
-const defaultDuration: DurationOption = {
-  label: '1 hr',
-  millis: 60 * 60_000,
-};
 
 const emojiMappings = {
   work: {
@@ -98,13 +93,15 @@ export function useTaskForm({ initialValues, onSubmit }: TaskFormProps) {
   const [startTime, setStartTime] = useState(initialValues?.startTime || '');
   const [endTime, setEndTime] = useState(initialValues?.endTime || '');
   const [category, setCategory] = useState<TaskCategory>(initialValues?.category || 'work');
-  const [duration, setDuration] = useState<DurationOption>(
-    initialValues?.duration || defaultDuration,
-  );
+  const [duration, setDuration] = useState<number>(initialValues?.duration || 60 * 60_000); // Default 1 hour
   const [dueDate, setDueDate] = useState<Date | undefined>(initialValues?.dueDate);
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    initialValues?.endDate || initialValues?.dueDate,
+  );
   const [priority, setPriority] = useState<TaskPriority | ''>(initialValues?.priority || '');
   const [subtasks, setSubtasks] = useState<Subtask[]>(initialValues?.subtasks || []);
   const [progress, setProgress] = useState<number>(initialValues?.progress || 0);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Auto-suggest emoji when title or category changes
   useEffect(() => {
@@ -113,16 +110,6 @@ export function useTaskForm({ initialValues, onSubmit }: TaskFormProps) {
       setEmoji(suggestedEmoji);
     }
   }, [title, category, emoji]);
-
-  // Update end time when start time or duration changes
-  useEffect(() => {
-    if (startTime && duration) {
-      const start = parse(startTime, 'HH:mm', new Date());
-      const durationInMinutes = duration.millis / 60_000;
-      const end = addMinutes(start, durationInMinutes);
-      setEndTime(format(end, 'HH:mm'));
-    }
-  }, [startTime, duration]);
 
   // Update progress when subtasks change
   useEffect(() => {
@@ -135,12 +122,44 @@ export function useTaskForm({ initialValues, onSubmit }: TaskFormProps) {
     }
   }, [subtasks]);
 
-  const handleDurationChange = (value: DurationOption) => {
-    setDuration(value);
+  // Calculate duration when start/end date/time changes
+  useEffect(() => {
+    if (startTime && endTime && dueDate && endDate) {
+      try {
+        const [startHours, startMinutes] = startTime.split(':').map(Number);
+        const [endHours, endMinutes] = endTime.split(':').map(Number);
+
+        const startDateTime = new Date(dueDate);
+        startDateTime.setHours(startHours, startMinutes, 0, 0);
+
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(endHours, endMinutes, 0, 0);
+
+        const durationMs = differenceInMilliseconds(endDateTime, startDateTime);
+
+        if (durationMs <= 0) {
+          setValidationError('End time cannot be before start time');
+        } else {
+          setValidationError(null);
+          setDuration(durationMs);
+        }
+      } catch (error) {
+        console.error('Error calculating duration:', error);
+        setValidationError('Invalid date or time format');
+      }
+    }
+  }, [startTime, endTime, dueDate, endDate]);
+
+  const handleDurationChange = (durationMs: number) => {
+    setDuration(durationMs);
   };
 
   const handleStartTimeChange = (time: string) => {
     setStartTime(time);
+  };
+
+  const handleEndTimeChange = (time: string) => {
+    setEndTime(time);
   };
 
   const handleSubtasksChange = (newSubtasks: Subtask[]) => {
@@ -159,6 +178,7 @@ export function useTaskForm({ initialValues, onSubmit }: TaskFormProps) {
       endTime,
       duration,
       dueDate,
+      endDate,
       priority,
       category,
       subtasks,
@@ -166,7 +186,9 @@ export function useTaskForm({ initialValues, onSubmit }: TaskFormProps) {
     });
   };
 
-  const isValid = Boolean(title && startTime && endTime && duration && priority);
+  const isValid = Boolean(
+    title && startTime && endTime && duration && priority && !validationError,
+  );
 
   return {
     values: {
@@ -177,6 +199,7 @@ export function useTaskForm({ initialValues, onSubmit }: TaskFormProps) {
       endTime,
       duration,
       dueDate,
+      endDate,
       priority,
       category,
       subtasks,
@@ -187,7 +210,9 @@ export function useTaskForm({ initialValues, onSubmit }: TaskFormProps) {
       setNotes,
       setEmoji,
       setStartTime,
+      setEndTime,
       setDueDate,
+      setEndDate,
       setPriority,
       setCategory,
       setSubtasks,
@@ -195,9 +220,11 @@ export function useTaskForm({ initialValues, onSubmit }: TaskFormProps) {
     handlers: {
       handleDurationChange,
       handleStartTimeChange,
+      handleEndTimeChange,
       handleSubtasksChange,
       handleSubmit,
     },
+    validationError,
     isValid,
   };
 }

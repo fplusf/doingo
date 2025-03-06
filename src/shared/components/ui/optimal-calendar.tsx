@@ -45,8 +45,6 @@ export function OptimalCalendar({
     return options;
   }, []);
 
-  console.log('timeOptions', timeOptions);
-
   const daysOfWeek = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
   const getMonthData = (year: number, month: number) => {

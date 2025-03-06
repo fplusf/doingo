@@ -1,6 +1,5 @@
-import { DurationOption } from '@/features/tasks/components/schedule/duration-picker';
 import { OptimalTask } from '@/features/tasks/types';
-import { format, isValid } from 'date-fns';
+import { addMilliseconds, format, isValid } from 'date-fns';
 
 export const convertTaskToSchedulerProps = (task: OptimalTask) => {
   // Validate startTime before formatting
@@ -12,16 +11,24 @@ export const convertTaskToSchedulerProps = (task: OptimalTask) => {
     startTimeStr = task.time.split('—')[0].trim();
   }
 
-  // Convert duration from milliseconds to DurationOption
-  const durationOption: DurationOption = {
-    label:
-      task.duration >= 3600000 ? `${task.duration / 3600000} hr` : `${task.duration / 60000} min`,
-    millis: task.duration,
-  };
+  // Calculate end time from start time and duration
+  let endTimeStr = '';
+  let endDate = null;
+
+  if (task.startTime && isValid(task.startTime) && task.duration) {
+    const endDateTime = addMilliseconds(task.startTime, task.duration);
+    endTimeStr = format(endDateTime, 'HH:mm');
+    endDate = endDateTime;
+  } else if (typeof task.time === 'string' && task.time.includes('—')) {
+    // Fallback to extracting end time from the time string if available
+    endTimeStr = task.time.split('—')[1].trim();
+  }
 
   return {
     startTime: startTimeStr,
-    duration: durationOption,
+    endTime: endTimeStr,
     startDate: task.dueDate && isValid(task.dueDate) ? task.dueDate : new Date(),
+    endDate: endDate || (task.dueDate && isValid(task.dueDate) ? task.dueDate : new Date()),
+    duration: task.duration,
   };
 };

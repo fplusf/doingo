@@ -42,6 +42,7 @@ export interface OptimalTask {
   emoji?: string;
   time: string; // Human readable format for display
   startTime: Date;
+  endTime?: Date; // End time based on start time + duration
   nextStartTime: Date;
   duration: number; // Duration in milliseconds
   completed: boolean;
