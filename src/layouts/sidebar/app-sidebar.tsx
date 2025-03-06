@@ -93,7 +93,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>
               <Link
-                to="/"
+                to="/tasks"
                 search={(prev) => ({ ...prev })}
                 activeProps={{ className: 'active' }}
                 inactiveProps={{ className: 'inactive' }}
@@ -113,7 +113,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Link
-                    to={focusedTask || firstUncompletedTask ? '/tasks/$taskId' : '/'}
+                    to={focusedTask || firstUncompletedTask ? '/tasks/$taskId' : '/tasks'}
                     params={
                       focusedTask || firstUncompletedTask
                         ? { taskId: focusedTask?.id || firstUncompletedTask?.id }
@@ -151,7 +151,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>
               <Link
-                to="/"
+                to="/tasks"
                 activeProps={{ className: 'active' }}
                 inactiveProps={{ className: 'inactive' }}
               >
@@ -168,9 +168,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>
               <Link
-                to="/"
+                to="/reminders"
                 activeProps={{ className: 'active' }}
                 inactiveProps={{ className: 'inactive' }}
+                preload="intent"
               >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
                   <Bell className="size-4" />
@@ -185,7 +186,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>
               <Link
-                to="/"
+                to="/tasks"
                 activeProps={{ className: 'active' }}
                 inactiveProps={{ className: 'inactive' }}
               >
