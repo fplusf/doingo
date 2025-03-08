@@ -1,7 +1,8 @@
-import FocusPage from '@/features/tasks/pages/today-page';
+import TodayPage from '@/features/tasks/pages/today-page';
 
-import { createRoute } from '@tanstack/react-router';
-import TaskDetailsPage from '../features/tasks/pages/focus-page';
+import { createRoute, Outlet, redirect } from '@tanstack/react-router';
+import RemindersPage from '../features/reminders/pages/reminders-page';
+import TaskDetailsPage from '../features/tasks/pages/details-page';
 import { TaskDetailHeader } from '../layouts/headers/task-details-header';
 import { RootRoute } from './__root';
 
@@ -24,35 +25,50 @@ import { RootRoute } from './__root';
 // 4. Add to routeTree: RootRoute.addChildren([HomeRoute, NewRoute, ...])
 // 5. Add Link: <Link to="/new">New Page</Link>
 
+// Index Route (redirects to tasks)
+export const IndexRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: '/',
+  beforeLoad: () => {
+    throw redirect({ to: '/tasks' });
+  },
+});
+
+// Tasks Route - Parent route for all task-related routes
 export const TasksRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: 'tasks',
-  // component: FocusPage,
-  // loader: ({ context: { queryClient } }) => queryClient.ensureQueryData(postsQueryOptions),
+  component: Outlet, // Using Outlet to render child routes
 });
 
+// Tasks Index Route - The default route when navigating to /tasks
 export const TasksIndexRoute = createRoute({
   getParentRoute: () => TasksRoute,
   path: '/',
-  component: FocusPage,
+  component: TodayPage,
 });
 
-// export const CalendarRoute = createRoute({
-//   getParentRoute: () => TasksRoute,
-//   path: 'calendar',
-//   component: CalendarPage,
-// });
-
+// Task Details Route - For viewing individual task details
 export const TaskDetailsRoute = createRoute({
   getParentRoute: () => TasksRoute,
-  errorComponent: () => <div>Task details error 🚨</div>,
   path: '$taskId',
   component: TaskDetailsPage,
+  errorComponent: () => <div>Task details error 🚨</div>,
   context: () => ({
     headerConfig: TaskDetailHeader(),
   }),
 });
 
+// Reminders Route - Parent route for reminders feature
+export const RemindersRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: 'reminders',
+  component: RemindersPage,
+});
+
+// Build the route tree with explicit parent-child relationships
 export const rootTree = RootRoute.addChildren([
+  IndexRoute,
+  RemindersRoute,
   TasksRoute.addChildren([TasksIndexRoute, TaskDetailsRoute]),
 ]);
