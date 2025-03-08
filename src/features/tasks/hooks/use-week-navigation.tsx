@@ -2,7 +2,6 @@ import { gsap } from '@/lib/gsap';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { addDays, addWeeks, format, isSameWeek, parse, startOfWeek } from 'date-fns';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { TasksRoute } from '../../../routes/routes';
 import { DATE_FORMAT } from '../../../shared/constants/date';
 
 interface WeekData {
@@ -18,8 +17,8 @@ function createWeekData(startDate: Date): WeekData {
 }
 
 export function useWeekNavigation() {
-  const navigate = useNavigate({ from: TasksRoute.fullPath });
-  const search = useSearch({ from: TasksRoute.fullPath });
+  const navigate = useNavigate({ from: '/tasks' });
+  const search = useSearch({ from: '/tasks' });
 
   // Use a ref for today to avoid recreating it on every render
   const todayRef = useRef(new Date());

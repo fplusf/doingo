@@ -6,6 +6,18 @@ import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function DefaultHeader() {
+  // TODO: Use useWeekNavigation is tied to tasks route - and throws error when used in other routes, like this component.
+  // which is rendered with the layout for all routes.
+  // Need to find a way to use the hook in this component without throwing an error.
+
+  // use native router to get current path
+  const currentPath = window.location.pathname;
+  const isTasksRoute = currentPath === '/tasks';
+
+  if (!isTasksRoute) {
+    return null;
+  }
+
   const { handleNext, handlePrev, navigateToDate } = useWeekNavigation();
   const date = new Date().toISOString().split('T')[0]; // Get from state if needed
 
