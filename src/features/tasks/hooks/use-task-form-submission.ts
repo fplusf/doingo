@@ -26,7 +26,17 @@ export const useTaskFormSubmission = (selectedDate: string) => {
         emoji: formValues.emoji || task.emoji,
         priority: formValues.priority || task.priority,
         category: formValues.category || task.category,
+        // Include subtasks in updated values
+        subtasks: formValues.subtasks || task.subtasks || [],
       };
+
+      // Calculate progress if subtasks are present
+      if (updatedValues.subtasks && updatedValues.subtasks.length > 0) {
+        const completedCount = updatedValues.subtasks.filter((s) => s.isCompleted).length;
+        updatedValues.progress = Math.round((completedCount / updatedValues.subtasks.length) * 100);
+      } else {
+        updatedValues.progress = formValues.progress || task.progress || 0;
+      }
 
       const baseDate = new Date();
       let startDate: Date, durationMs: number;
@@ -105,6 +115,17 @@ export const useTaskFormSubmission = (selectedDate: string) => {
       try {
         const updatedTask = convertFormValuesToTask(task, formValues);
 
+        // Ensure subtasks are properly included
+        if (formValues.subtasks) {
+          updatedTask.subtasks = formValues.subtasks;
+
+          // Calculate progress based on subtasks
+          if (updatedTask.subtasks.length > 0) {
+            const completedCount = updatedTask.subtasks.filter((s) => s.isCompleted).length;
+            updatedTask.progress = Math.round((completedCount / updatedTask.subtasks.length) * 100);
+          }
+        }
+
         updateTask(task.id, updatedTask);
       } catch (error) {
         console.error('Failed to edit task:', error);
@@ -144,8 +165,9 @@ export const useTaskFormSubmission = (selectedDate: string) => {
             ? `${formValues.startTime}—${formValues.dueTime}`
             : `${format(startDate, 'HH:mm')}${formValues.dueTime ? `—${formValues.dueTime}` : ''}`;
 
+        const taskId = uuidv4();
         const task: OptimalTask = {
-          id: uuidv4(),
+          id: taskId,
           title: formValues.title,
           notes: formValues.notes || '',
           emoji: formValues.emoji || '',
@@ -161,16 +183,29 @@ export const useTaskFormSubmission = (selectedDate: string) => {
           completed: false,
           isFocused: false,
           taskDate: selectedDate,
-          subtasks: [],
-          progress: 0,
+          // Use subtasks from form values instead of empty array
+          subtasks: formValues.subtasks || [],
+          // Use progress from form values or calculate it
+          progress:
+            formValues.progress ||
+            (formValues.subtasks && formValues.subtasks.length > 0
+              ? Math.round(
+                  (formValues.subtasks.filter((s) => s.isCompleted).length /
+                    formValues.subtasks.length) *
+                    100,
+                )
+              : 0),
         };
 
         addTask(task);
+        return taskId; // Return the task ID for navigation
       } catch (error) {
         console.error('Error creating task:', error);
+        return null;
       }
     } catch (error) {
       console.error('Failed to create new task:', error);
+      return null;
     }
   };
 

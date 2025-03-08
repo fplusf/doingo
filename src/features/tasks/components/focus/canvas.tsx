@@ -1,13 +1,14 @@
-import { Task } from '@/features/tasks/store/tasks.store';
+import {} from '@/features/tasks/store/tasks.store';
 import { Excalidraw } from '@excalidraw/excalidraw';
 import { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types/types';
 import { useSearch } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Suspense, useEffect, useRef, useState } from 'react';
+import { OptimalTask } from '../../types';
 
 interface TaskCanvasProps {
-  task: Task;
+  task: OptimalTask;
 }
 
 function debounce({ delay }: { delay: number }, fn: () => void) {

@@ -56,9 +56,13 @@ export function TaskFormProvider({
   children: React.ReactNode;
   initialValues?: Partial<TaskFormValues>;
 }) {
-  const [values, setValues] = useState<TaskFormValues>({
-    ...defaultValues,
-    ...initialValues,
+  const [values, setValues] = useState<TaskFormValues>(() => {
+    // Ensure subtasks are properly initialized
+    return {
+      ...defaultValues,
+      ...initialValues,
+      subtasks: initialValues?.subtasks || defaultValues.subtasks,
+    };
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -103,6 +107,8 @@ export function TaskFormProvider({
       setValues({
         ...defaultValues,
         ...initialValues,
+        // Explicitly ensure subtasks are preserved
+        subtasks: initialValues.subtasks || defaultValues.subtasks,
       });
     } else {
       resetForm();

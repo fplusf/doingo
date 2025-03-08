@@ -301,6 +301,7 @@ export const TasksList = React.forwardRef<
           dueDate: undefined,
           priority: 'none',
           category: activeCategory,
+          subtasks: [],
         }}
         onSubmit={(values) => {
           createNewTask(values, activeCategory);
@@ -314,16 +315,24 @@ export const TasksList = React.forwardRef<
           open={!!editingTask}
           onOpenChange={(open) => !open && setEditingTask(null)}
           mode="edit"
-          initialValues={{
-            title: tasks.find((t) => t.id === editingTask)?.title || '',
-            emoji: tasks.find((t) => t.id === editingTask)?.emoji || '',
-            startTime: tasks.find((t) => t.id === editingTask)?.time?.split('—')[0] || '',
-            dueTime: tasks.find((t) => t.id === editingTask)?.dueTime || '',
-            duration: tasks.find((t) => t.id === editingTask)?.duration || ONE_HOUR_IN_MS,
-            dueDate: tasks.find((t) => t.id === editingTask)?.dueDate,
-            priority: tasks.find((t) => t.id === editingTask)?.priority || 'none',
-            category: tasks.find((t) => t.id === editingTask)?.category || 'work',
-          }}
+          initialValues={(() => {
+            const task = tasks.find((t) => t.id === editingTask);
+            if (!task) return {};
+
+            return {
+              title: task.title || '',
+              emoji: task.emoji || '',
+              startTime: task.time?.split('—')[0] || '',
+              dueTime: task.dueTime || '',
+              duration: task.duration || ONE_HOUR_IN_MS,
+              dueDate: task.dueDate,
+              priority: task.priority || 'none',
+              category: task.category || 'work',
+              notes: task.notes || '',
+              subtasks: task.subtasks || [],
+              progress: task.progress || 0,
+            };
+          })()}
           onSubmit={(values) => {
             const taskToEdit = tasks.find((t) => t.id === editingTask);
             if (taskToEdit) {

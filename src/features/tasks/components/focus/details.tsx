@@ -1,13 +1,13 @@
-import { Task } from '@/features/tasks/store/tasks.store';
 import { cn } from '@/lib/utils';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import React from 'react';
+import { OptimalTask } from '../../types';
 import { TaskCanvas } from './canvas';
 import { TaskDocument } from './document';
 
 interface TaskDetailsProps {
-  task: Task;
-  onEdit: (task: Task) => void;
+  task: OptimalTask;
+  onEdit: (task: OptimalTask) => void;
 }
 
 export function TaskDetails({ task, onEdit }: TaskDetailsProps) {
