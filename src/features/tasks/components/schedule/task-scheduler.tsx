@@ -11,203 +11,50 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
-import { differenceInMilliseconds, format } from 'date-fns';
-import { Clock, Flag } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { format } from 'date-fns';
+import { Bell, Clock } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { OptimalCalendar } from '../../../../shared/components/ui/optimal-calendar';
+import { useTaskForm } from '../../context/task-form-context';
 
 export type RepetitionOption = 'once' | 'daily' | 'weekly' | 'custom';
 
 interface TaskSchedulerProps {
-  startDate?: Date;
-  endDate?: Date;
-  startTime?: string;
-  endTime?: string;
-  repetition?: RepetitionOption;
   className?: string;
-  onStartDateChange?: (date: Date) => void;
-  onEndDateChange?: (date: Date) => void;
-  onStartTimeChange?: (time: string) => void;
-  onEndTimeChange?: (time: string) => void;
-  onDurationChange?: (durationMs: number) => void;
-  onRepetitionChange?: (repetition: RepetitionOption) => void;
 }
 
-export function TaskScheduler({
-  startDate: initialStartDate,
-  endDate: initialEndDate,
-  startTime: initialStartTime,
-  endTime: initialEndTime,
-  repetition: initialRepetition = 'once',
-  className,
-  onStartDateChange,
-  onEndDateChange,
-  onStartTimeChange,
-  onEndTimeChange,
-  onDurationChange,
-  onRepetitionChange,
-}: TaskSchedulerProps) {
-  const [startDate, setStartDate] = useState<Date>(
-    initialStartDate ? new Date(initialStartDate) : new Date(),
-  );
-  const [endDate, setEndDate] = useState<Date | null>(
-    initialEndDate ? new Date(initialEndDate) : null,
-  );
-  const [startTime, setStartTime] = useState(initialStartTime || '');
-  const [endTime, setEndTime] = useState(initialEndTime || '');
-  const [repetition, setRepetition] = useState<RepetitionOption>(initialRepetition);
-  const [validationError, setValidationError] = useState<string | null>(null);
+export function TaskScheduler({ className }: TaskSchedulerProps) {
+  const {
+    values,
+    updateValue,
+    updateStartTime,
+    updateStartDate,
+    updateDueTime,
+    updateDueDate,
+    updateDuration,
+    errors,
+  } = useTaskForm();
+
+  // State for UI controls
   const [isStartDatePopoverOpen, setIsStartDatePopoverOpen] = useState(false);
-  const [isEndDatePopoverOpen, setIsEndDatePopoverOpen] = useState(false);
-  const [isDurationPopoverOpen, setIsDurationPopoverOpen] = useState(false);
+  const [isDueDatePopoverOpen, setIsDueDatePopoverOpen] = useState(false);
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [customHours, setCustomHours] = useState('');
   const [customMinutes, setCustomMinutes] = useState('');
   const [selectedDuration, setSelectedDuration] = useState<string>('');
   const [customDurationSet, setCustomDurationSet] = useState(false);
-  const [isSelectOpen, setIsSelectOpen] = useState(false);
   const selectTriggerRef = useRef<HTMLButtonElement>(null);
   const [customDurationMinutes, setCustomDurationMinutes] = useState<number | null>(null);
 
-  // Calculate initial duration from props when component mounts
-  useEffect(() => {
-    if (initialStartDate && initialEndDate && initialStartTime && initialEndTime) {
-      try {
-        // Create full date objects with time
-        const [startHours, startMinutes] = initialStartTime.split(':').map(Number);
-        const [endHours, endMinutes] = initialEndTime.split(':').map(Number);
-
-        const startDateTime = new Date(initialStartDate);
-        startDateTime.setHours(startHours, startMinutes, 0, 0);
-
-        const endDateTime = new Date(initialEndDate);
-        endDateTime.setHours(endHours, endMinutes, 0, 0);
-
-        // Log initial values
-        console.log('Initial End Time (Due Time):', initialEndTime);
-
-        // Calculate duration in minutes
-        const durationMs = differenceInMilliseconds(endDateTime, startDateTime);
-        const durationMinutes = Math.round(durationMs / (60 * 1000));
-
-        if (durationMinutes > 0) {
-          // Set the custom duration minutes for potential editing
-          setCustomDurationMinutes(durationMinutes);
-
-          // Check if the duration matches one of our predefined options
-          const predefinedDurations = Array.from({ length: 32 }, (_, i) => (i + 1) * 15);
-          const isPredefined = predefinedDurations.includes(durationMinutes);
-
-          if (isPredefined) {
-            setSelectedDuration(durationMinutes.toString());
-            setCustomDurationSet(false);
-          } else {
-            setSelectedDuration(`custom:${durationMinutes}`);
-            setCustomDurationSet(true);
-          }
-        }
-      } catch (error) {
-        console.error('Error calculating initial duration:', error);
-      }
-    }
-  }, [initialStartDate, initialEndDate, initialStartTime, initialEndTime]);
-
-  // Pre-fill custom duration inputs when select opens and there's a custom duration
-  useEffect(() => {
-    if (isSelectOpen && customDurationSet && customDurationMinutes) {
-      const hours = Math.floor(customDurationMinutes / 60);
-      const minutes = customDurationMinutes % 60;
-
-      setCustomHours(hours > 0 ? hours.toString() : '');
-      setCustomMinutes(minutes > 0 ? minutes.toString() : '');
-    }
-  }, [isSelectOpen, customDurationSet, customDurationMinutes]);
-
-  // Calculate duration when start or end time/date changes
-  useEffect(() => {
-    if (startDate && endDate && startTime && endTime) {
-      try {
-        // Create full date objects with time
-        const [startHours, startMinutes] = startTime.split(':').map(Number);
-        const [endHours, endMinutes] = endTime.split(':').map(Number);
-
-        const startDateTime = new Date(startDate);
-        startDateTime.setHours(startHours, startMinutes, 0, 0);
-
-        const endDateTime = new Date(endDate);
-        endDateTime.setHours(endHours, endMinutes, 0, 0);
-
-        // Log the due date values (endDate and endTime)
-        console.log('Due Date:', endDate);
-        console.log('Due Time:', endTime);
-
-        // Calculate duration in milliseconds
-        const durationMs = differenceInMilliseconds(endDateTime, startDateTime);
-
-        // Check if end date/time is before start date/time
-        if (durationMs <= 0) {
-          setValidationError('End time cannot be before start time');
-        } else {
-          setValidationError(null);
-          onDurationChange?.(durationMs);
-        }
-      } catch (error) {
-        console.error('Error calculating duration:', error);
-        setValidationError('Invalid date or time format');
-      }
-    }
-  }, [startDate, endDate, startTime, endTime, onDurationChange]);
-
-  const handleStartTimeChange = (time: string) => {
-    setStartTime(time);
-    onStartTimeChange?.(time);
-    console.log('Start Time:', time);
-  };
-
-  const handleEndTimeChange = (time: string) => {
-    setEndTime(time);
-    // Log the selected due time
-    console.log('Due Time:', time);
-    onEndTimeChange?.(time);
-  };
-
-  const handleStartDateChange = (date: Date) => {
-    setStartDate(date);
-    onStartDateChange?.(date);
-    console.log('Start Date:', date);
-  };
-
-  const handleEndDateChange = (date: Date) => {
-    setEndDate(date);
-    // Log the selected due date
-    console.log('Due Date:', date);
-    onEndDateChange?.(date);
-  };
-
+  // Removed callback invocations, using context directly
   const handleRepetitionChange = (value: RepetitionOption) => {
-    setRepetition(value);
-    onRepetitionChange?.(value);
-  };
-
-  const handleDurationChange = (durationMinutes: number) => {
-    // Simply notify parent about the duration change
-    // No relationship with start/end dates
-    console.log('Duration (minutes):', durationMinutes);
-    onDurationChange?.(durationMinutes * 60 * 1000);
-
-    // Close popover
-    setIsDurationPopoverOpen(false);
-  };
-
-  const formatDurationDisplay = (minutes: number): string => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return hours ? `${hours}h${mins ? ` ${mins}m` : ''}` : `${mins}m`;
+    updateValue('repetition', value);
   };
 
   const handleDurationSelectChange = (value: string) => {
     const minutes = parseInt(value, 10);
     if (!isNaN(minutes)) {
-      handleDurationChange(minutes);
+      updateDuration(minutes * 60 * 1000);
       setSelectedDuration(value);
       setCustomDurationSet(false);
     }
@@ -219,20 +66,22 @@ export function TaskScheduler({
     const totalMinutes = hours * 60 + minutes;
 
     if (totalMinutes > 0) {
-      handleDurationChange(totalMinutes);
-      // Store total minutes for future editing
+      updateDuration(totalMinutes * 60 * 1000);
       setCustomDurationMinutes(totalMinutes);
-      // Store total minutes as a special format to identify custom values
       setSelectedDuration(`custom:${totalMinutes}`);
       setCustomDurationSet(true);
-
-      // Close the select menu
       setIsSelectOpen(false);
-      // Unfocus any active element to ensure the select closes
+
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
     }
+  };
+
+  const formatDurationDisplay = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hours ? `${hours}h${mins ? ` ${mins}m` : ''}` : `${mins}m`;
   };
 
   const handleCustomHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -252,10 +101,19 @@ export function TaskScheduler({
     }
   };
 
+  const durationMinutes = Math.round(values.duration / (60 * 1000));
+
+  // Add a handler for due date selection with console logging
+  const handleDueDateSelection = (date: Date, time: string) => {
+    console.log('Due date selected:', { date, time });
+    updateDueDate(date);
+    updateDueTime(time);
+    setIsDueDatePopoverOpen(false);
+  };
+
   return (
     <div className="flex flex-col gap-1">
       <div className={cn('flex items-center gap-1.5', className)}>
-        {/* Start Date and Time */}
         <Popover open={isStartDatePopoverOpen} onOpenChange={setIsStartDatePopoverOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -263,12 +121,13 @@ export function TaskScheduler({
               size="sm"
               className="h-8 gap-1.5 px-2 text-sm text-muted-foreground"
             >
-              {startDate ? (
+              {values.startDate ? (
                 <>
-                  {format(startDate, 'MMM d')} at {startTime || format(new Date(), 'HH:mm')}
+                  {format(values.startDate, 'MMM d')}{' '}
+                  {values.startTime || format(new Date(), 'HH:mm')}
                 </>
               ) : (
-                format(new Date(), 'MMM d')
+                format(new Date(), 'MMM d') + ' ' + format(new Date(), 'HH:mm')
               )}
             </Button>
           </PopoverTrigger>
@@ -278,144 +137,107 @@ export function TaskScheduler({
             side="bottom"
             sideOffset={4}
           >
-            <div className="flex flex-col gap-0 p-0">
-              <OptimalCalendar
-                size="sm"
-                onSelect={(date, time) => {
-                  handleStartDateChange(date);
-                  handleStartTimeChange(time);
-                  setIsStartDatePopoverOpen(false);
-                }}
-                selected={{ date: startDate, time: startTime }}
-              />
-            </div>
+            <OptimalCalendar
+              size="sm"
+              onSelect={(date, time) => {
+                updateStartDate(date);
+                updateStartTime(time);
+                setIsStartDatePopoverOpen(false);
+              }}
+              selected={{ date: values.startDate || new Date(), time: values.startTime }}
+            />
           </PopoverContent>
         </Popover>
 
         {/* Duration Selection */}
-        <div className="flex flex-col gap-1">
-          <Select
-            value={selectedDuration}
-            onValueChange={handleDurationSelectChange}
-            open={isSelectOpen}
-            onOpenChange={setIsSelectOpen}
-          >
-            <SelectTrigger ref={selectTriggerRef} className="h-8 min-w-[120px]">
-              <div className="flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5" />
-                <SelectValue placeholder="Duration">
-                  {selectedDuration && (
-                    <>
-                      {customDurationSet
-                        ? formatDurationDisplay(parseInt(selectedDuration.split(':')[1], 10))
-                        : formatDurationDisplay(parseInt(selectedDuration, 10))}
-                    </>
-                  )}
-                </SelectValue>
+        <Select
+          value={selectedDuration || durationMinutes.toString()}
+          onValueChange={handleDurationSelectChange}
+          open={isSelectOpen}
+          onOpenChange={setIsSelectOpen}
+        >
+          <SelectTrigger ref={selectTriggerRef} className="h-8 min-w-[120px]">
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5" />
+              <SelectValue placeholder="Duration">
+                {customDurationSet
+                  ? formatDurationDisplay(parseInt(selectedDuration.split(':')[1], 10))
+                  : formatDurationDisplay(durationMinutes)}
+              </SelectValue>
+            </div>
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            {/* Custom duration input */}
+            <div className="border-b border-border p-2">
+              <div className="mb-1 text-xs text-muted-foreground">Custom duration (h:m):</div>
+              <div className="flex items-center gap-1">
+                <Input
+                  className="h-8 w-12 text-center text-xs"
+                  placeholder="0"
+                  value={customHours}
+                  onChange={handleCustomHoursChange}
+                  type="text"
+                  inputMode="numeric"
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') handleCustomDurationSubmit();
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <span className="text-sm">h</span>
+                <span className="mx-1 text-sm">:</span>
+                <Input
+                  className="h-8 w-12 text-center text-xs"
+                  placeholder="0"
+                  value={customMinutes}
+                  onChange={handleCustomMinutesChange}
+                  type="text"
+                  inputMode="numeric"
+                  min="0"
+                  max="59"
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') handleCustomDurationSubmit();
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <span className="text-sm">m</span>
+                <Button size="sm" className="ml-2 h-8 px-2" onClick={handleCustomDurationSubmit}>
+                  Set
+                </Button>
               </div>
-            </SelectTrigger>
-            <SelectContent className="max-h-[300px]">
-              {/* Custom duration input at the top */}
-              <div className="border-b border-border p-2">
-                <div className="mb-1 text-xs text-muted-foreground">Custom duration (h:m):</div>
-                <div className="flex items-center gap-1">
-                  <div className="flex items-center gap-0.5">
-                    <Input
-                      className="h-8 w-12 text-center text-xs"
-                      placeholder="0"
-                      value={customHours}
-                      onChange={handleCustomHoursChange}
-                      type="text"
-                      inputMode="numeric"
-                      onKeyDown={(e) => {
-                        // Stop propagation to prevent select from handling the key events
-                        e.stopPropagation();
-                        if (e.key === 'Enter') {
-                          handleCustomDurationSubmit();
-                        }
-                      }}
-                      // Prevent select search/filtering behavior when typing
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <span className="text-sm">h</span>
-                  </div>
-                  <span className="mx-1 text-sm">:</span>
-                  <div className="flex items-center gap-0.5">
-                    <Input
-                      className="h-8 w-12 text-center text-xs"
-                      placeholder="0"
-                      value={customMinutes}
-                      onChange={handleCustomMinutesChange}
-                      type="text"
-                      inputMode="numeric"
-                      min="0"
-                      max="59"
-                      onKeyDown={(e) => {
-                        // Stop propagation to prevent select from handling the key events
-                        e.stopPropagation();
-                        if (e.key === 'Enter') {
-                          handleCustomDurationSubmit();
-                        }
-                      }}
-                      // Prevent select search/filtering behavior when typing
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <span className="text-sm">m</span>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="ml-2 h-8 px-2"
-                    onClick={(e) => {
-                      // Stop propagation to prevent the select from closing
-                      e.stopPropagation();
-                      handleCustomDurationSubmit();
-                    }}
-                  >
-                    Set
-                  </Button>
-                </div>
-              </div>
+            </div>
 
-              <ScrollArea className="h-[220px]">
-                <SelectGroup>
-                  {Array.from({ length: 32 }, (_, i) => (i + 1) * 15).map((minutes) => {
-                    const hours = Math.floor(minutes / 60);
-                    const mins = minutes % 60;
-                    const durationText = hours ? `${hours}h${mins ? ` ${mins}m` : ''}` : `${mins}m`;
+            <ScrollArea className="h-[220px]">
+              <SelectGroup>
+                {Array.from({ length: 32 }, (_, i) => (i + 1) * 15).map((minutes) => {
+                  return (
+                    <SelectItem key={minutes} value={minutes.toString()}>
+                      {formatDurationDisplay(minutes)}
+                    </SelectItem>
+                  );
+                })}
+              </SelectGroup>
+            </ScrollArea>
+          </SelectContent>
+        </Select>
 
-                    return (
-                      <SelectItem key={minutes} value={minutes.toString()}>
-                        {durationText}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectGroup>
-              </ScrollArea>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* End Date and Time */}
-        <Popover open={isEndDatePopoverOpen} onOpenChange={setIsEndDatePopoverOpen}>
+        <Popover open={isDueDatePopoverOpen} onOpenChange={setIsDueDatePopoverOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
               size="sm"
-              className={cn(
-                'h-8 min-w-[100px] gap-1.5 px-2 text-sm',
-                validationError ? 'border-red-500 text-red-500' : 'text-muted-foreground',
-              )}
-              title={validationError || ''}
+              className="h-8 gap-1.5 px-2 text-sm text-muted-foreground"
             >
-              {endDate ? (
+              {values.dueDate && values.dueTime ? (
                 <>
-                  {format(endDate, 'MMM d')} at {endTime || format(new Date(), 'HH:mm')}
+                  {format(values.dueDate, 'MMM d')} {values.dueTime}
                 </>
               ) : (
-                <span className="flex items-center justify-items-start gap-1 text-muted-foreground">
-                  <Flag className="h-3.5 w-3.5" />
-                  Due
-                </span>
+                <>
+                  <Bell className="h-3.5 w-3.5" />
+                  <span>Due</span>
+                </>
               )}
             </Button>
           </PopoverTrigger>
@@ -428,20 +250,26 @@ export function TaskScheduler({
             <div className="flex flex-col gap-0 p-0">
               <OptimalCalendar
                 size="sm"
-                onSelect={(date, time) => {
-                  handleEndDateChange(date);
-                  handleEndTimeChange(time);
-                  setIsEndDatePopoverOpen(false);
-                }}
-                selected={{ date: endDate || new Date(), time: endTime }}
+                onSelect={handleDueDateSelection}
+                selected={
+                  values.dueDate
+                    ? {
+                        date: values.dueDate,
+                        time: values.dueTime,
+                      }
+                    : undefined
+                }
               />
             </div>
           </PopoverContent>
         </Popover>
 
-        <Select value={repetition} onValueChange={handleRepetitionChange}>
+        <Select value={values.repetition || 'once'} onValueChange={handleRepetitionChange}>
           <SelectTrigger className="h-8 w-[100px] px-2 text-sm">
-            <SelectValue>{repetition.charAt(0).toUpperCase() + repetition.slice(1)}</SelectValue>
+            <SelectValue>
+              {(values.repetition || 'once').charAt(0).toUpperCase() +
+                (values.repetition || 'once').slice(1)}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="once">Once</SelectItem>

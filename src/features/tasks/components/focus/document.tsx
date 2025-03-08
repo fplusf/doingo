@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import React from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
+import { TaskFormProvider } from '../../context/task-form-context';
+import { TaskFormValues } from '../schedule/dialog';
 import { TaskScheduler } from '../schedule/task-scheduler';
 import TaskNotes from './notes';
 import { SubtaskList } from './subtasks';
@@ -114,6 +116,67 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
     [task, onEdit],
   );
 
+  // New function to handle scheduler changes
+  const handleSchedulerChange = React.useCallback(
+    (updatedValues: Partial<TaskFormValues>) => {
+      const updates: Partial<OptimalTask> = {};
+
+      if (updatedValues.startTime) {
+        updates.time =
+          updatedValues.startTime + (task.time?.includes('—') ? '—' + task.time.split('—')[1] : '');
+      }
+
+      if (updatedValues.dueTime) {
+        updates.time = (task.time?.split('—')[0] || '') + '—' + updatedValues.dueTime;
+      }
+
+      if (updatedValues.dueDate) {
+        updates.dueDate = updatedValues.dueDate;
+      }
+
+      // Update dueTime if provided
+      if (updatedValues.dueTime) {
+        // Calculate duration if we have both startTime and dueTime
+        if (task.startTime && updatedValues.dueTime) {
+          try {
+            // Create Date objects for start and due times
+            const [startHours, startMinutes] = task.time
+              ?.split('—')[0]
+              .trim()
+              .split(':')
+              .map(Number) || [0, 0];
+            const [dueHours, dueMinutes] = updatedValues.dueTime.split(':').map(Number);
+
+            const startDate = new Date(updatedValues.dueDate || task.dueDate || new Date());
+            startDate.setHours(startHours, startMinutes, 0, 0);
+
+            const dueDate = new Date(updatedValues.dueDate || task.dueDate || new Date());
+            dueDate.setHours(dueHours, dueMinutes, 0, 0);
+
+            // Calculate duration in milliseconds
+            const durationMs = dueDate.getTime() - startDate.getTime();
+            if (durationMs > 0) {
+              updates.duration = durationMs;
+            }
+          } catch (error) {
+            console.error('Error calculating duration from times:', error);
+          }
+        }
+
+        updates.dueTime = updatedValues.dueTime;
+      }
+
+      if (updatedValues.duration) {
+        updates.duration = updatedValues.duration;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        onEdit({ ...task, ...updates });
+      }
+    },
+    [task, onEdit],
+  );
+
   return (
     <div className={cn(className, 'flex h-full flex-col')}>
       {/* Schedule Information - Sticky Header */}
@@ -121,13 +184,28 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
         <div className="flex-1">
           <EmojiPicker emoji={task.emoji} onEmojiSelect={handleEmojiSelect} className="text-3xl" />
         </div>
-        <TaskScheduler
-          startTime={schedulerProps.startTime}
-          startDate={schedulerProps.startDate}
-          endTime={schedulerProps.endTime}
-          endDate={schedulerProps.endDate}
-          className="flex-1 text-muted-foreground"
-        />
+        <TaskFormProvider
+          initialValues={{
+            title: task.title,
+            emoji: task.emoji || '',
+            startTime: schedulerProps.startTime || '',
+            dueTime: schedulerProps.dueTime || '',
+            duration: task.duration || 0,
+            dueDate: schedulerProps.dueDate || new Date(),
+            priority: task.priority || 'medium',
+            category: task.category || 'work',
+            repetition: 'once',
+          }}
+        >
+          <TaskScheduler
+            className="flex-1 text-muted-foreground"
+            onStartTimeChange={(time) => handleSchedulerChange({ startTime: time })}
+            onDueTimeChange={(time) => handleSchedulerChange({ dueTime: time })}
+            onStartDateChange={(date) => handleSchedulerChange({ dueDate: date })}
+            onDueDateChange={(date) => handleSchedulerChange({ dueDate: date })}
+            onDurationChange={(duration) => handleSchedulerChange({ duration })}
+          />
+        </TaskFormProvider>
       </div>
 
       <ScrollArea

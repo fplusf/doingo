@@ -1,10 +1,10 @@
 import { useSidebar } from '@/shared/components/ui/sidebar';
 import { useEffect, useRef } from 'react';
 import { cn } from '../../../lib/utils';
-import { DayContainer } from '../components/list/tasks-list';
+import { TasksList } from '../components/list/tasks-list';
 import { WeekNavigator } from '../components/weekly-calendar/week-navigator';
 
-export default function FocusPage() {
+export default function TodayPage() {
   const sidebar = useSidebar();
   const dayContentRef = useRef<{ setIsCreating: (value: boolean) => void } | null>(null);
 
@@ -44,7 +44,7 @@ export default function FocusPage() {
       </div>
       {/* Day Content */}
       <div className="h-full bg-background pb-4 shadow-[0_4px_10px_-4px_rgba(0,0,0,0.1)]">
-        <DayContainer ref={dayContentRef} />
+        <TasksList ref={dayContentRef} />
       </div>
     </div>
   );

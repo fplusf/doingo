@@ -151,6 +151,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>
               <Link
+                to="/reminders"
+                activeProps={{ className: 'active' }}
+                inactiveProps={{ className: 'inactive' }}
+                preload="intent"
+              >
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
+                  <Bell className="size-4" />
+                </div>
+              </Link>
+            </SidebarMenuButton>
+            <span className="mt-0.5 truncate text-[11px]">Reminders</span>
+          </SidebarMenuItem>
+        </SidebarMenu>
+
+        <SidebarMenu>
+          <SidebarMenuItem className="flex flex-col items-center">
+            <SidebarMenuButton size="lg" asChild>
+              <Link
                 to="/tasks"
                 activeProps={{ className: 'active' }}
                 inactiveProps={{ className: 'inactive' }}
@@ -168,24 +186,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>
               <Link
-                to="/reminders"
-                activeProps={{ className: 'active' }}
-                inactiveProps={{ className: 'inactive' }}
-                preload="intent"
-              >
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
-                  <Bell className="size-4" />
-                </div>
-              </Link>
-            </SidebarMenuButton>
-            <span className="mt-0.5 truncate text-xs">Reminders</span>
-          </SidebarMenuItem>
-        </SidebarMenu>
-
-        <SidebarMenu>
-          <SidebarMenuItem className="flex flex-col items-center">
-            <SidebarMenuButton size="lg" asChild>
-              <Link
                 to="/tasks"
                 activeProps={{ className: 'active' }}
                 inactiveProps={{ className: 'inactive' }}
@@ -195,7 +195,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
               </Link>
             </SidebarMenuButton>
-            <span className="mt-0.5 truncate text-xs">Analytics</span>
+            <span className="mt-0.5 truncate text-xs">Stats</span>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

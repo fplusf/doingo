@@ -1,6 +1,4 @@
-import { TaskDialog } from '@/features/tasks/components/schedule/dialog';
 import {
-  addTask,
   getTasksByDate,
   setSelectedDate,
   tasksStore,
@@ -28,11 +26,12 @@ import {
 } from '@dnd-kit/sortable';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
-import { addMinutes, differenceInMilliseconds, format, isValid, parse } from 'date-fns';
+import { format, parse } from 'date-fns';
 import React, { useEffect, useRef, useState } from 'react';
 import { TasksRoute } from '../../../../routes/routes';
-import { getNextFifteenMinuteInterval } from '../../../../shared/helpers/date/next-feefteen-minutes';
+import { useTaskFormSubmission } from '../../hooks/use-task-form-submission';
 import { OptimalTask, TaskCategory, TaskPriority } from '../../types';
+import { TaskDialog } from '../schedule/dialog';
 import { CategorySection } from './category-section';
 import { SortableTimelineTaskItem } from './sortable-timeline-task-item';
 
@@ -40,24 +39,15 @@ interface DayContainerProps {
   ref?: React.RefObject<{ setIsCreating: (value: boolean) => void }>;
 }
 
-export const DayContainer = React.forwardRef<
+export const TasksList = React.forwardRef<
   { setIsCreating: (value: boolean) => void },
-  DayContainerProps
+  Omit<DayContainerProps, 'ref'>
 >((props, ref) => {
   const allTasks = useStore(tasksStore, (state) => state.tasks);
   const selectedDate = useStore(tasksStore, (state) => state.selectedDate);
   const search = useSearch({ from: TasksRoute.fullPath });
-
-  // Helper function to get default time values
-  const getDefaultStartTime = () => {
-    const nextFifteen = getNextFifteenMinuteInterval();
-    return format(nextFifteen, 'HH:mm');
-  };
-
-  const getDefaultEndTime = () => {
-    const nextFifteen = getNextFifteenMinuteInterval();
-    return format(addMinutes(nextFifteen, 60), 'HH:mm');
-  };
+  const { createNewTask, editTask, getDefaultStartTime, getDefaultEndTime } =
+    useTaskFormSubmission(selectedDate);
 
   const [isCreating, setIsCreating] = useState(false);
   const [activeCategory, setActiveCategory] = useState<TaskCategory>('work');
@@ -212,30 +202,7 @@ export const DayContainer = React.forwardRef<
 
   const handleStartEdit = (task: OptimalTask) => {
     setEditingTask(task.id);
-    setNewTask({
-      title: task.title,
-      emoji: task.emoji || '',
-      priority: task.priority,
-      category: task.category,
-    });
-    if (task.time) {
-      const [start, end] = task.time.split('—');
-      setStartTime(start);
-      setEndTime(end);
-      // Calculate duration from start and end time
-      const startDate = parse(start, 'HH:mm', new Date());
-      const endDate = parse(end, 'HH:mm', new Date());
-      const durationMs = task.duration || endDate.getTime() - startDate.getTime();
-      setDuration(durationMs);
-    } else {
-      setDuration(ONE_HOUR_IN_MS);
-      if (startTime) {
-        const start = parse(startTime, 'HH:mm', new Date());
-        const end = new Date(start.getTime() + ONE_HOUR_IN_MS);
-        setEndTime(format(end, 'HH:mm'));
-      }
-    }
-    setDueDate(task.dueDate);
+    // No need to set all state manually, this will now be handled by the TaskFormProvider
   };
 
   const activeTask = activeId ? tasks.find((task) => task.id === activeId) : null;
@@ -338,165 +305,47 @@ export const DayContainer = React.forwardRef<
         onOpenChange={setIsCreating}
         mode="create"
         initialValues={{
-          title: newTask.title,
+          title: '',
+          notes: '',
           emoji: '',
-          startTime,
-          endTime,
-          duration: duration,
-          dueDate,
-          priority: newTask.priority,
+          startTime: getDefaultStartTime(),
+          dueTime: '',
+          duration: ONE_HOUR_IN_MS,
+          dueDate: undefined,
+          priority: 'none',
           category: activeCategory,
         }}
         onSubmit={(values) => {
-          // Create base date for today
-          const baseDate = new Date();
-          let startDate: Date, endDate: Date, durationMs: number;
-
-          try {
-            // Handle start date & time properly
-            if (values.startTime) {
-              const startDateRef = values.dueDate || baseDate;
-              startDate = parse(values.startTime, 'HH:mm', startDateRef);
-            } else {
-              startDate = getNextFifteenMinuteInterval();
-            }
-
-            // Handle end date & time properly
-            const endDateBase = values.endDate || values.dueDate || baseDate;
-            if (values.endTime) {
-              endDate = parse(values.endTime, 'HH:mm', endDateBase);
-            } else {
-              endDate = addMinutes(startDate, 60);
-            }
-
-            durationMs = differenceInMilliseconds(endDate, startDate);
-
-            if (!isValid(startDate)) startDate = baseDate;
-            if (!isValid(endDate)) endDate = addMinutes(startDate, 60);
-            if (durationMs <= 0) durationMs = ONE_HOUR_IN_MS;
-          } catch (error) {
-            console.error('Error parsing dates:', error);
-            startDate = baseDate;
-            durationMs = ONE_HOUR_IN_MS;
-            endDate = addMinutes(startDate, 60);
-          }
-
-          // Ensure we have a valid time string
-          const timeString =
-            values.startTime && values.endTime
-              ? `${values.startTime}—${values.endTime}`
-              : `${format(startDate, 'HH:mm')}—${format(endDate, 'HH:mm')}`;
-
-          const task = {
-            title: values.title,
-            notes: values.notes,
-            emoji: values.emoji,
-            time: timeString,
-            startTime: startDate,
-            endTime: endDate,
-            nextStartTime: endDate,
-            duration: durationMs,
-            dueDate: values.dueDate || new Date(),
-            priority: values.priority || 'none',
-            category: values.category || 'work',
-            completed: false,
-            isFocused: false,
-            taskDate: selectedDate, // Set the task date to the selected date
-          };
-
-          addTask(task);
-
-          setNewTask({
-            title: '',
-            emoji: '',
-            priority: 'none',
-            category: activeCategory,
-          });
-
-          setStartTime(getDefaultStartTime);
-          setEndTime(getDefaultEndTime);
-          setDuration(ONE_HOUR_IN_MS);
-          setDueDate(undefined);
+          createNewTask(values, activeCategory);
+          setIsCreating(false);
         }}
       />
 
       {/* Edit Task Dialog */}
-      <TaskDialog
-        open={!!editingTask}
-        onOpenChange={(open) => !open && setEditingTask(null)}
-        mode="edit"
-        initialValues={{
-          title: newTask.title,
-          emoji: newTask.emoji || '',
-          startTime: startTime || '',
-          endTime: endTime || '',
-          duration: duration,
-          dueDate,
-          priority: newTask.priority || 'none',
-          category: newTask.category || 'work',
-        }}
-        onSubmit={(values) => {
-          // Create base date for today
-          const baseDate = new Date();
-          let startDate: Date, endDate: Date, durationMs: number;
-
-          try {
-            const startDateBase = values.dueDate || baseDate;
-            startDate = values.startTime
-              ? parse(values.startTime, 'HH:mm', startDateBase)
-              : startDateBase;
-
-            const endDateBase = values.endDate || values.dueDate || baseDate;
-            endDate = values.endTime
-              ? parse(values.endTime, 'HH:mm', endDateBase)
-              : addMinutes(startDate, 60);
-
-            durationMs = differenceInMilliseconds(endDate, startDate);
-
-            if (!isValid(startDate)) startDate = baseDate;
-            if (!isValid(endDate)) endDate = addMinutes(startDate, 60);
-            if (durationMs <= 0) durationMs = ONE_HOUR_IN_MS;
-          } catch (error) {
-            console.error('Error parsing dates:', error);
-            startDate = baseDate;
-            durationMs = ONE_HOUR_IN_MS;
-            endDate = addMinutes(startDate, 60);
-          }
-
-          const timeString =
-            values.startTime && values.endTime
-              ? `${values.startTime}—${values.endTime}`
-              : `${format(startDate, 'HH:mm')}—${format(endDate, 'HH:mm')}`;
-
-          if (editingTask) {
-            updateTask(editingTask, {
-              title: values.title,
-              notes: values.notes || '',
-              emoji: values.emoji || '',
-              time: timeString,
-              startTime: startDate,
-              endTime: endDate,
-              nextStartTime: endDate,
-              duration: durationMs,
-              dueDate: values.dueDate || baseDate,
-              priority: values.priority || 'none',
-              category: values.category || 'work',
-            });
-          }
-
-          setEditingTask(null);
-          setNewTask({
-            title: '',
-            emoji: '',
-            priority: 'none',
-            category: activeCategory,
-          });
-          setStartTime(getDefaultStartTime);
-          setEndTime(getDefaultEndTime);
-          setDuration(ONE_HOUR_IN_MS);
-          setDueDate(undefined);
-        }}
-      />
+      {editingTask && (
+        <TaskDialog
+          open={!!editingTask}
+          onOpenChange={(open) => !open && setEditingTask(null)}
+          mode="edit"
+          initialValues={{
+            title: tasks.find((t) => t.id === editingTask)?.title || '',
+            emoji: tasks.find((t) => t.id === editingTask)?.emoji || '',
+            startTime: tasks.find((t) => t.id === editingTask)?.time?.split('—')[0] || '',
+            dueTime: tasks.find((t) => t.id === editingTask)?.dueTime || '',
+            duration: tasks.find((t) => t.id === editingTask)?.duration || ONE_HOUR_IN_MS,
+            dueDate: tasks.find((t) => t.id === editingTask)?.dueDate,
+            priority: tasks.find((t) => t.id === editingTask)?.priority || 'none',
+            category: tasks.find((t) => t.id === editingTask)?.category || 'work',
+          }}
+          onSubmit={(values) => {
+            const taskToEdit = tasks.find((t) => t.id === editingTask);
+            if (taskToEdit) {
+              editTask(taskToEdit, values);
+            }
+            setEditingTask(null);
+          }}
+        />
+      )}
     </ScrollArea>
   );
 });

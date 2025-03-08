@@ -42,13 +42,14 @@ export interface OptimalTask {
   emoji?: string;
   time: string; // Human readable format for display
   startTime: Date;
-  endTime?: Date; // End time based on start time + duration
+  // endTime?: Date; // End time based on start time + duration
   nextStartTime: Date;
   duration: number; // Duration in milliseconds
   completed: boolean;
   priority: TaskPriority;
   category: TaskCategory;
   dueDate?: Date;
+  dueTime?: string; // Due time in HH:mm format
   isFocused: boolean;
   taskDate: string; // ISO format date string (YYYY-MM-DD) for filtering tasks by day
   subtasks?: Subtask[];

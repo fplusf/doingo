@@ -5,6 +5,9 @@ import { StorageAdapter } from './storage-adapter';
 const TASKS_STORAGE_KEY = 'optimal-adhd-tasks';
 
 export class LocalStorageAdapter implements StorageAdapter {
+  constructor(private prefix: string = 'optimal-adhd') {}
+
+  // Tasks specific methods
   getTasks(): OptimalTask[] {
     try {
       const tasksJson = localStorage.getItem(TASKS_STORAGE_KEY);
@@ -64,6 +67,35 @@ export class LocalStorageAdapter implements StorageAdapter {
       localStorage.removeItem(TASKS_STORAGE_KEY);
     } catch (error) {
       console.error('Error clearing tasks from localStorage:', error);
+    }
+  }
+
+  // Generic methods for other features to use
+  getItem<T>(key: string): T | null {
+    try {
+      const itemJson = localStorage.getItem(`${this.prefix}-${key}`);
+      return itemJson ? JSON.parse(itemJson) : null;
+    } catch (error) {
+      console.error(`Error reading ${key} from localStorage:`, error);
+      return null;
+    }
+  }
+
+  saveItem<T>(key: string, data: T): void {
+    try {
+      localStorage.setItem(`${this.prefix}-${key}`, JSON.stringify(data));
+    } catch (error) {
+      console.error(`Error saving ${key} to localStorage:`, error);
+    }
+  }
+
+  clearItems(keys: string[]): void {
+    try {
+      keys.forEach((key) => {
+        localStorage.removeItem(`${this.prefix}-${key}`);
+      });
+    } catch (error) {
+      console.error('Error clearing items from localStorage:', error);
     }
   }
 }

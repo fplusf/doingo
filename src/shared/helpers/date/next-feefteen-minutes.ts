@@ -16,6 +16,5 @@ export const getNextFifteenMinuteInterval = (): Date => {
     result.setMinutes(0);
   }
 
-  console.log('result: ', result);
   return result;
 };

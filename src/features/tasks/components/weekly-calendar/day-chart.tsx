@@ -59,7 +59,7 @@ export function DayChart({ date, progress, isSelected, isToday }: DayChartProps)
             textAnchor="middle"
             dominantBaseline="middle"
             className={cn(
-              'fill-gray-400 text-xs',
+              'fill-gray-400 text-sm',
               isSelected && 'fill-white font-semibold',
               isToday && 'font-semibold',
             )}

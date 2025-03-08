@@ -8,6 +8,7 @@ import { router } from './routes/router';
 import { updateAppLanguage } from './shared/helpers/language_helpers';
 import { syncThemeWithLocal } from './shared/helpers/theme_helpers';
 
+// Create a new QueryClient instance
 const queryClient = new QueryClient();
 
 export default function App() {
