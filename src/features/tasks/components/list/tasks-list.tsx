@@ -122,19 +122,6 @@ export const TasksList = React.forwardRef<
       grouped[task.category || 'work'].push(task);
     });
 
-    // Sort tasks within each category - but don't move completed tasks to the top
-    Object.keys(grouped).forEach((category) => {
-      grouped[category as TaskCategory].sort((a, b) => {
-        // We no longer sort completed tasks to the top
-        // if (a.completed !== b.completed) {
-        //   return a.completed ? -1 : 1;
-        // }
-
-        // For uncompleted tasks, we maintain their original position
-        return 0;
-      });
-    });
-
     return grouped;
   }, [tasks]);
 

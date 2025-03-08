@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { useGesture } from '@use-gesture/react';
 import { format, isSameDay } from 'date-fns';
 import * as React from 'react';
+import { useTasksProgress } from '../../hooks/use-tasks-progress';
 import { DayChart } from './day-chart';
 
 let isTransitioning = false;
@@ -10,6 +11,7 @@ let isTransitioning = false;
 export function WeekNavigator({ className }: { className?: string }) {
   const { selectedDate, weeks, handleDateSelect, handleNext, handlePrev } = useWeekNavigation();
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const { getProgressForDate } = useTasksProgress();
 
   useGesture(
     {
@@ -37,7 +39,7 @@ export function WeekNavigator({ className }: { className?: string }) {
     <div
       ref={containerRef}
       className={cn(
-        'relative mx-auto h-[90px] w-full overflow-hidden bg-background pt-2 text-white xl:h-[104px]',
+        'relative mx-auto h-[90px] w-full overflow-hidden bg-background pt-2 text-white',
         className,
       )}
     >
@@ -51,7 +53,7 @@ export function WeekNavigator({ className }: { className?: string }) {
                     date={format(date, 'yyyy-MM-dd')}
                     isSelected={isSameDay(date, selectedDate)}
                     isToday={isSameDay(date, new Date())}
-                    progress={isSameDay(date, selectedDate) ? 65 : 0}
+                    progress={getProgressForDate(format(date, 'yyyy-MM-dd'))}
                   />
                 </div>
               ))}

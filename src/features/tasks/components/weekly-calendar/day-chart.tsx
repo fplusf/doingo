@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { ChartConfig, ChartContainer } from '@/shared/components/ui/chart';
 import { format } from 'date-fns';
-import { PolarAngleAxis, RadialBar, RadialBarChart } from 'recharts';
+import { PolarAngleAxis, PolarGrid, RadialBar, RadialBarChart } from 'recharts';
 
 export type DayChartProps = {
   progress: number;
@@ -13,7 +13,7 @@ export type DayChartProps = {
 const chartConfig = {
   desktop: {
     label: 'Desktop',
-    color: '#red',
+    color: '#60a5fa',
   },
   mobile: {
     label: 'Mobile',
@@ -35,7 +35,7 @@ export function DayChart({ date, progress, isSelected, isToday }: DayChartProps)
       >
         {format(new Date(date), 'EEE')}
       </div>
-      <ChartContainer config={chartConfig} className={'h-16 w-full xl:h-20'}>
+      <ChartContainer config={chartConfig} className={'h-16 w-full'}>
         <RadialBarChart
           width={100}
           height={100}
@@ -45,6 +45,15 @@ export function DayChart({ date, progress, isSelected, isToday }: DayChartProps)
           startAngle={90}
           endAngle={-270}
         >
+          {isSelected && (
+            <PolarGrid
+              gridType="circle"
+              radialLines={false}
+              stroke="none"
+              className="first:fill-muted last:fill-background"
+              polarRadius={[20, 0]}
+            />
+          )}
           <RadialBar
             background
             dataKey="value"
@@ -53,6 +62,7 @@ export function DayChart({ date, progress, isSelected, isToday }: DayChartProps)
             fill="hsl(var(--ring))"
           />
           <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+          <div className="absolute inset-0 z-30 flex items-center justify-center rounded-full bg-red-600" />
           <text
             x="50%"
             y="50%"
