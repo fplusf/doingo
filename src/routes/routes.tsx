@@ -1,3 +1,4 @@
+import CalendarPage from '@/features/calendar/pages/calendar-page';
 import TodayPage from '@/features/tasks/pages/today-page';
 
 import { createRoute, Outlet, redirect } from '@tanstack/react-router';
@@ -66,9 +67,17 @@ export const RemindersRoute = createRoute({
   component: RemindersPage,
 });
 
+// Calendar Route - For the calendar feature
+export const CalendarRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: 'calendar',
+  component: CalendarPage,
+});
+
 // Build the route tree with explicit parent-child relationships
 export const rootTree = RootRoute.addChildren([
   IndexRoute,
   RemindersRoute,
+  CalendarRoute,
   TasksRoute.addChildren([TasksIndexRoute, TaskDetailsRoute]),
 ]);
