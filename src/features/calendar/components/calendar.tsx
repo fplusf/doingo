@@ -37,10 +37,19 @@ export default function Calendar() {
   const [isDragging, setIsDragging] = useState(false);
   const [draggedEvent, setDraggedEvent] = useState<Event | null>(null);
   const dragStartPosition = useRef({ x: 0, y: 0 });
+  const [isResizing, setIsResizing] = useState(false);
 
   useEffect(() => {
     // Load sample events on initial render
     setEvents(generateSampleEvents(new Date()));
+
+    // Update current time indicator every minute
+    const interval = setInterval(() => {
+      // Force re-render to update current time indicator
+      setCurrentDate((prev) => new Date(prev.getTime()));
+    }, 60000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handlePrevious = () => {
@@ -129,6 +138,20 @@ export default function Calendar() {
     setDraggedEvent(null);
   };
 
+  const handleEventResize = (event: Event, newDuration: number) => {
+    setEvents((prev) =>
+      prev.map((e) => {
+        if (e.id === event.id) {
+          return {
+            ...e,
+            end: addMinutes(e.start, newDuration),
+          };
+        }
+        return e;
+      }),
+    );
+  };
+
   return (
     <div className="flex h-screen flex-col">
       <header className="flex h-16 items-center border-b border-[#3c4043] px-4">
@@ -199,6 +222,11 @@ export default function Calendar() {
             <Button
               variant="outline"
               className="border-[#5f6368] bg-transparent p-2 hover:bg-[#3c4043]"
+              onClick={() => {
+                setSelectedSlot(new Date());
+                setSelectedEvent(null);
+                setIsEventModalOpen(true);
+              }}
             >
               <Plus className="h-5 w-5" />
             </Button>
@@ -224,6 +252,7 @@ export default function Calendar() {
           onDragEnd={handleDragEnd}
           isDragging={isDragging}
           draggedEvent={draggedEvent}
+          onEventResize={handleEventResize}
         />
       </div>
 

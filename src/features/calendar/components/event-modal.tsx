@@ -1,30 +1,30 @@
-import { cn } from '@/lib/utils';
+import { addMinutes, format } from 'date-fns';
+import { X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import type { Event } from '@/lib/types';
 import { Button } from '@/shared/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/shared/components/ui/radio-group';
 import { Textarea } from '@/shared/components/ui/textarea';
-import { format } from 'date-fns';
-import { Trash2, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
 
 interface EventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (event: Event) => void;
-  onDelete: (eventId: string) => void;
-  event: Event | null;
-  initialDate: Date | null;
+  onDelete?: (eventId: string) => void;
+  event?: Event | null;
+  initialDate?: Date | null;
 }
+
+const colorOptions = [
+  { value: 'blue', label: 'Blue', class: 'bg-blue-500' },
+  { value: 'red', label: 'Red', class: 'bg-red-500' },
+  { value: 'green', label: 'Green', class: 'bg-green-500' },
+  { value: 'purple', label: 'Purple', class: 'bg-purple-500' },
+  { value: 'yellow', label: 'Yellow', class: 'bg-yellow-500' },
+];
 
 export default function EventModal({
   isOpen,
@@ -34,207 +34,145 @@ export default function EventModal({
   event,
   initialDate,
 }: EventModalProps) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [color, setColor] = useState('bg-[#1a73e8] text-white');
-  const [completed, setCompleted] = useState(false);
+  const [title, setTitle] = useState(event?.title || '');
+  const [description, setDescription] = useState(event?.description || '');
+  const [startDate, setStartDate] = useState(event?.start || initialDate || new Date());
+  const [endDate, setEndDate] = useState(
+    event?.end || (initialDate ? addMinutes(initialDate, 30) : addMinutes(new Date(), 30)),
+  );
+  const [color, setColor] = useState(event?.color || 'blue');
 
   useEffect(() => {
-    if (event) {
-      setTitle(event.title);
-      setDescription(event.description || '');
-      setStartDate(format(event.start, 'yyyy-MM-dd'));
-      setStartTime(format(event.start, 'HH:mm'));
-      setEndDate(format(event.end, 'yyyy-MM-dd'));
-      setEndTime(format(event.end, 'HH:mm'));
-      setColor(event.color || 'bg-[#1a73e8] text-white');
-      setCompleted(event.completed || false);
-    } else if (initialDate) {
-      const endDateTime = new Date(initialDate);
-      endDateTime.setHours(endDateTime.getHours() + 1);
-
-      setTitle('');
-      setDescription('');
-      setStartDate(format(initialDate, 'yyyy-MM-dd'));
-      setStartTime(format(initialDate, 'HH:mm'));
-      setEndDate(format(endDateTime, 'yyyy-MM-dd'));
-      setEndTime(format(endDateTime, 'HH:mm'));
-      setColor('bg-[#1a73e8] text-white');
-      setCompleted(false);
+    if (isOpen) {
+      setTitle(event?.title || '');
+      setDescription(event?.description || '');
+      setStartDate(event?.start || initialDate || new Date());
+      setEndDate(
+        event?.end || (initialDate ? addMinutes(initialDate, 30) : addMinutes(new Date(), 30)),
+      );
+      setColor(event?.color || 'blue');
     }
-  }, [event, initialDate]);
+  }, [isOpen, event, initialDate]);
 
-  const handleSave = () => {
-    const start = new Date(`${startDate}T${startTime}`);
-    const end = new Date(`${endDate}T${endTime}`);
-
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     onSave({
-      id: event?.id || crypto.randomUUID(),
+      id: event?.id || '',
       title,
       description,
-      start,
-      end,
+      start: startDate,
+      end: endDate,
       color,
-      completed,
+      completed: event?.completed || false,
     });
   };
 
-  const colorOptions = [
-    { value: 'bg-[#1a73e8] text-white', label: 'Blue' },
-    { value: 'bg-[#d06102] text-white', label: 'Orange' },
-    { value: 'bg-[#0b8043] text-white', label: 'Green' },
-    { value: 'bg-[#8e24aa] text-white', label: 'Purple' },
-    { value: 'bg-[#e67c73] text-white', label: 'Red' },
-  ];
+  if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md border-[#5f6368] bg-[#2d2e30] text-white">
-        <DialogHeader>
-          <DialogTitle className="text-white">{event ? 'Edit Event' : 'Create Event'}</DialogTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-4 top-4 text-[#9aa0a6] hover:text-white"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
+    <>
+      <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose} />
+      <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-[#3c4043] bg-[#202124] p-6 shadow-xl">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">{event ? 'Edit Event' : 'Create Event'}</h2>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-5 w-5" />
           </Button>
-        </DialogHeader>
+        </div>
 
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="title">Title</Label>
             <Input
-              placeholder="Add title"
+              id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="border-[#5f6368] bg-[#202124] text-white focus-visible:ring-[#8ab4f8]"
+              className="border-[#3c4043] bg-[#2d2e30] text-white"
+              required
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="start-date">Start date</Label>
-              <Input
-                id="start-date"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="border-[#5f6368] bg-[#202124] text-white focus-visible:ring-[#8ab4f8]"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="start-time">Start time</Label>
-              <Input
-                id="start-time"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="border-[#5f6368] bg-[#202124] text-white focus-visible:ring-[#8ab4f8]"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="end-date">End date</Label>
-              <Input
-                id="end-date"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="border-[#5f6368] bg-[#202124] text-white focus-visible:ring-[#8ab4f8]"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="end-time">End time</Label>
-              <Input
-                id="end-time"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="border-[#5f6368] bg-[#202124] text-white focus-visible:ring-[#8ab4f8]"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="color">Color</Label>
-            <Select value={color} onValueChange={setColor}>
-              <SelectTrigger className="border-[#5f6368] bg-[#202124] text-white focus-visible:ring-[#8ab4f8]">
-                <SelectValue placeholder="Select a color" />
-              </SelectTrigger>
-              <SelectContent className="border-[#5f6368] bg-[#2d2e30] text-white">
-                {colorOptions.map((option) => (
-                  <SelectItem
-                    key={option.value}
-                    value={option.value}
-                    className={cn('my-1 rounded', option.value)}
-                  >
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-2">
+          <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
-              placeholder="Add description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="border-[#5f6368] bg-[#202124] text-white focus-visible:ring-[#8ab4f8]"
+              className="border-[#3c4043] bg-[#2d2e30] text-white"
+              rows={3}
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="completed"
-              checked={completed}
-              onChange={(e) => setCompleted(e.target.checked)}
-              className="h-4 w-4"
-            />
-            <Label htmlFor="completed">Mark as completed</Label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="start-date">Start</Label>
+              <Input
+                id="start-date"
+                type="datetime-local"
+                value={format(startDate, "yyyy-MM-dd'T'HH:mm")}
+                onChange={(e) => setStartDate(new Date(e.target.value))}
+                className="border-[#3c4043] bg-[#2d2e30] text-white"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="end-date">End</Label>
+              <Input
+                id="end-date"
+                type="datetime-local"
+                value={format(endDate, "yyyy-MM-dd'T'HH:mm")}
+                onChange={(e) => setEndDate(new Date(e.target.value))}
+                className="border-[#3c4043] bg-[#2d2e30] text-white"
+                required
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="flex justify-between">
-          {event && (
-            <Button
-              variant="destructive"
-              onClick={() => onDelete(event.id)}
-              className="bg-[#ea4335] hover:bg-[#d93025]"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </Button>
-          )}
+          <div className="space-y-2">
+            <Label>Color</Label>
+            <RadioGroup value={color} onValueChange={setColor} className="flex gap-4">
+              {colorOptions.map((option) => (
+                <div key={option.value} className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value={option.value}
+                    id={option.value}
+                    className="border-2 border-white/20"
+                  />
+                  <Label htmlFor={option.value} className="flex cursor-pointer items-center gap-2">
+                    <div className={`h-4 w-4 rounded-full ${option.class}`} />
+                    <span>{option.label}</span>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
 
-          <div className="ml-auto flex gap-2">
+          <div className="flex justify-end gap-2 pt-4">
+            {event && onDelete && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => onDelete(event.id)}
+                className="bg-red-500/10 text-red-500 hover:bg-red-500/20"
+              >
+                Delete
+              </Button>
+            )}
             <Button
+              type="button"
               variant="outline"
               onClick={onClose}
               className="border-[#5f6368] bg-transparent text-white hover:bg-[#3c4043]"
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleSave}
-              className="bg-[#8ab4f8] text-[#202124] hover:bg-[#669df6]"
-              disabled={!title}
-            >
-              Save
+            <Button type="submit" className="bg-[#8ab4f8] text-[#202124] hover:bg-[#8ab4f8]/90">
+              {event ? 'Save' : 'Create'}
             </Button>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </form>
+      </div>
+    </>
   );
 }

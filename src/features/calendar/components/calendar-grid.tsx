@@ -28,6 +28,7 @@ interface CalendarGridProps {
   onDragEnd: (e: React.MouseEvent, date?: Date) => void;
   isDragging: boolean;
   draggedEvent: Event | null;
+  onEventResize: (event: Event, newDuration: number) => void;
 }
 
 export default function CalendarGrid({
@@ -40,6 +41,7 @@ export default function CalendarGrid({
   onDragEnd,
   isDragging,
   draggedEvent,
+  onEventResize,
 }: CalendarGridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [hoveredTime, setHoveredTime] = useState<Date | null>(null);
@@ -110,15 +112,25 @@ export default function CalendarGrid({
 
           <div className="ml-16">
             {hours.map((hour) => (
-              <div
-                key={hour}
-                className="relative h-12 border-t border-[#3c4043]"
-                onClick={() => {
-                  const date = new Date(currentDate);
-                  date.setHours(hour, 0, 0, 0);
-                  onTimeSlotClick(date);
-                }}
-              >
+              <div key={hour} className="group relative h-12">
+                {/* Hour border */}
+                <div className="absolute inset-x-0 top-0 border-t border-[#3c4043]" />
+
+                {/* Quarter-hour lines */}
+                <div className="absolute inset-x-0 top-3 border-t border-dashed border-[#3c4043] opacity-50" />
+                <div className="absolute inset-x-0 top-6 border-t border-dashed border-[#3c4043] opacity-50" />
+                <div className="absolute inset-x-0 top-9 border-t border-dashed border-[#3c4043] opacity-50" />
+
+                {/* Click target with hover effect */}
+                <div
+                  className="absolute inset-0 cursor-pointer transition-colors hover:bg-[#3c4043]/30"
+                  onClick={() => {
+                    const date = new Date(currentDate);
+                    date.setHours(hour, 0, 0, 0);
+                    onTimeSlotClick(date);
+                  }}
+                />
+
                 {/* Events that fall within this hour */}
                 {events
                   .filter((event) => {
@@ -132,6 +144,7 @@ export default function CalendarGrid({
                       onClick={() => onEventClick(event)}
                       onDragStart={(e) => onDragStart(event, e)}
                       isDragging={isDragging && draggedEvent?.id === event.id}
+                      onResize={(newDuration) => onEventResize(event, newDuration)}
                     />
                   ))}
               </div>
@@ -140,12 +153,13 @@ export default function CalendarGrid({
 
           {/* Current time indicator */}
           <div
-            className="absolute left-0 right-0 z-20 border-t border-red-500"
+            className="absolute left-0 right-0 z-20 flex items-center"
             style={{
-              top: `${new Date().getHours() * 48 + new Date().getMinutes() * 0.8}px`,
+              top: `${new Date().getHours() * 48 + (new Date().getMinutes() / 60) * 48}px`,
             }}
           >
-            <div className="-ml-1 -mt-1.5 h-2.5 w-2.5 rounded-full bg-red-500"></div>
+            <div className="h-[1px] flex-1 bg-red-500" />
+            <div className="-ml-1 h-2.5 w-2.5 rounded-full bg-red-500" />
           </div>
         </div>
       </div>
@@ -166,29 +180,41 @@ export default function CalendarGrid({
         onMouseUp={handleMouseUp}
       >
         <div className="relative grid min-h-[1152px] grid-cols-7">
-          <div className="absolute left-0 top-0 z-10 h-full w-16 border-r border-[#3c4043]">
+          {/* Time column */}
+          <div className="absolute left-0 top-0 z-10 h-full w-[60px] border-r border-[#3c4043] bg-[#202124]">
             {hours.map((hour) => (
-              <div key={hour} className="-mt-2.5 h-12 pr-2 text-right text-xs text-[#e8eaed]">
-                {hour === 0
-                  ? ''
-                  : `${hour % 12 === 0 ? 12 : hour % 12} ${hour >= 12 ? 'PM' : 'AM'}`}
+              <div key={hour} className="-mt-[10px] h-[48px] pr-2 text-right">
+                <span className="text-xs text-[#e8eaed]">
+                  {hour === 0
+                    ? ''
+                    : `${hour % 12 === 0 ? '12' : hour % 12} ${hour >= 12 ? 'PM' : 'AM'}`}
+                </span>
               </div>
             ))}
           </div>
 
-          <div className="col-span-7 ml-16 grid grid-cols-7">
+          {/* Grid */}
+          <div className="col-span-7 ml-[60px] grid grid-cols-7">
             {days.map((day, dayIndex) => (
               <div key={dayIndex} className="border-l border-[#3c4043] first:border-l-0">
                 {hours.map((hour) => (
-                  <div
-                    key={`${dayIndex}-${hour}`}
-                    className="relative h-12 border-t border-[#3c4043]"
-                    onClick={() => {
-                      const date = new Date(day);
-                      date.setHours(hour, 0, 0, 0);
-                      onTimeSlotClick(date);
-                    }}
-                  >
+                  <div key={`${dayIndex}-${hour}`} className="group relative h-[48px]">
+                    {/* Hour border */}
+                    <div className="absolute inset-x-0 top-0 border-t border-[#3c4043]" />
+
+                    {/* Half-hour line */}
+                    <div className="absolute inset-x-0 top-6 border-t border-dashed border-[#3c4043] opacity-50" />
+
+                    {/* Click target with hover effect */}
+                    <div
+                      className="absolute inset-0 cursor-pointer transition-colors hover:bg-[#3c4043]/30"
+                      onClick={() => {
+                        const date = new Date(day);
+                        date.setHours(hour, 0, 0, 0);
+                        onTimeSlotClick(date);
+                      }}
+                    />
+
                     {/* Events that fall within this hour and day */}
                     {events
                       .filter((event) => {
@@ -202,6 +228,7 @@ export default function CalendarGrid({
                           onClick={() => onEventClick(event)}
                           onDragStart={(e) => onDragStart(event, e)}
                           isDragging={isDragging && draggedEvent?.id === event.id}
+                          onResize={(newDuration) => onEventResize(event, newDuration)}
                         />
                       ))}
                   </div>
@@ -210,20 +237,21 @@ export default function CalendarGrid({
             ))}
           </div>
 
-          {/* Current time indicator (only show for current day) */}
+          {/* Current time indicator */}
           {days.map(
             (day, dayIndex) =>
               isSameDay(day, new Date()) && (
                 <div
                   key={`time-${dayIndex}`}
-                  className="absolute z-20 border-t border-red-500"
+                  className="absolute z-20 flex items-center"
                   style={{
-                    top: `${new Date().getHours() * 48 + new Date().getMinutes() * 0.8}px`,
-                    left: `${(dayIndex / 7) * 100 + 64}px`,
+                    top: `${new Date().getHours() * 48 + (new Date().getMinutes() / 60) * 48}px`,
+                    left: `${(dayIndex / 7) * 100 + 60}px`,
                     width: `${100 / 7}%`,
                   }}
                 >
-                  <div className="-ml-1 -mt-1.5 h-2.5 w-2.5 rounded-full bg-red-500"></div>
+                  <div className="h-[2px] flex-1 bg-red-500" />
+                  <div className="-ml-1 h-2.5 w-2.5 rounded-full bg-red-500" />
                 </div>
               ),
           )}
