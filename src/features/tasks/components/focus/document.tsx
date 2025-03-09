@@ -20,7 +20,6 @@ interface TaskDocumentProps {
 export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
   const [notes, setNotes] = React.useState(task.notes || '');
   const schedulerProps = React.useMemo(() => convertTaskToSchedulerProps(task), [task]);
-  // Store previous subtask states to restore when uncompleting a task
   const previousSubtaskStatesRef = React.useRef<Subtask[] | null>(null);
 
   const handleNotesChange = React.useCallback(
@@ -197,14 +196,7 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
             repetition: 'once',
           }}
         >
-          <TaskScheduler
-            className="flex-1 text-muted-foreground"
-            onStartTimeChange={(time) => handleSchedulerChange({ startTime: time })}
-            onDueTimeChange={(time) => handleSchedulerChange({ dueTime: time })}
-            onStartDateChange={(date) => handleSchedulerChange({ dueDate: date })}
-            onDueDateChange={(date) => handleSchedulerChange({ dueDate: date })}
-            onDurationChange={(duration) => handleSchedulerChange({ duration })}
-          />
+          <TaskScheduler className="flex-1 text-muted-foreground" />
         </TaskFormProvider>
       </div>
 

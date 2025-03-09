@@ -46,6 +46,9 @@ export const useTaskFormSubmission = (selectedDate: string) => {
         if (formValues.startTime) {
           const startDateRef = formValues.dueDate || task.dueDate || baseDate;
           startDate = parse(formValues.startTime, 'HH:mm', startDateRef);
+          if (!isValid(startDate)) {
+            startDate = baseDate;
+          }
         } else if (task.startTime && isValid(task.startTime)) {
           startDate = task.startTime;
         } else {
@@ -76,11 +79,10 @@ export const useTaskFormSubmission = (selectedDate: string) => {
         const nextStartTime = addMilliseconds(startDate, durationMs);
 
         // Ensure we have a valid time string - only include due time if it exists
-        const timeString =
-          (formValues.startTime || format(startDate, 'HH:mm')) +
-          (updatedValues.dueTime || task.dueTime
-            ? `—${updatedValues.dueTime || task.dueTime}`
-            : '');
+        const timeString = formValues.startTime
+          ? formValues.startTime + (updatedValues.dueTime ? `—${updatedValues.dueTime}` : '')
+          : (task.time || format(startDate, 'HH:mm')) +
+            (updatedValues.dueTime ? `—${updatedValues.dueTime}` : '');
 
         return {
           ...task,
@@ -89,6 +91,7 @@ export const useTaskFormSubmission = (selectedDate: string) => {
           startTime: startDate,
           nextStartTime,
           duration: durationMs,
+          taskDate: task.taskDate, // Ensure taskDate is preserved
         };
       } catch (error) {
         console.error('Error parsing dates:', error);
@@ -101,6 +104,7 @@ export const useTaskFormSubmission = (selectedDate: string) => {
           startTime: startDate,
           nextStartTime,
           duration: durationMs,
+          taskDate: task.taskDate, // Ensure taskDate is preserved
         };
       }
     } catch (error) {
@@ -115,18 +119,25 @@ export const useTaskFormSubmission = (selectedDate: string) => {
       try {
         const updatedTask = convertFormValuesToTask(task, formValues);
 
+        // Ensure all task properties are preserved
+        const finalTask: OptimalTask = {
+          ...task, // Preserve all existing task properties
+          ...updatedTask, // Apply updates from form values
+          taskDate: task.taskDate, // Ensure taskDate is preserved
+        };
+
         // Ensure subtasks are properly included
         if (formValues.subtasks) {
-          updatedTask.subtasks = formValues.subtasks;
+          finalTask.subtasks = formValues.subtasks;
 
           // Calculate progress based on subtasks
-          if (updatedTask.subtasks.length > 0) {
-            const completedCount = updatedTask.subtasks.filter((s) => s.isCompleted).length;
-            updatedTask.progress = Math.round((completedCount / updatedTask.subtasks.length) * 100);
+          if (finalTask.subtasks.length > 0) {
+            const completedCount = finalTask.subtasks.filter((s) => s.isCompleted).length;
+            finalTask.progress = Math.round((completedCount / finalTask.subtasks.length) * 100);
           }
         }
 
-        updateTask(task.id, updatedTask);
+        updateTask(task.id, finalTask);
       } catch (error) {
         console.error('Failed to edit task:', error);
       }

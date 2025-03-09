@@ -38,7 +38,7 @@ const priorities: { value: TaskPriority; label: string; description: string }[] 
   },
 ];
 
-export function PrioritySelect({ value, onValueChange, className }: PrioritySelectProps) {
+export function PriorityPicker({ value, onValueChange, className }: PrioritySelectProps) {
   const handlePriorityChange = (newValue: TaskPriority) => {
     onValueChange(newValue);
   };

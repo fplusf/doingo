@@ -26,7 +26,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { TaskFormProvider, useTaskForm } from '../../context/task-form-context';
 import { useTaskFormSubmission } from '../../hooks/use-task-form-submission';
-import { PrioritySelect } from './priority-select';
+import { PriorityPicker } from './priority-picker';
 import { TaskScheduler } from './task-scheduler';
 
 export interface TaskFormValues {
@@ -124,11 +124,13 @@ function TaskDialogContent({
   mode = 'create',
   className,
   onOpenChange,
+  open,
 }: {
   onSubmit: (values: TaskFormValues) => void;
   mode?: 'create' | 'edit';
   className?: string;
   onOpenChange: (open: boolean) => void;
+  open: boolean;
 }) {
   const { values, updateValue, isValid } = useTaskForm();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -167,12 +169,20 @@ function TaskDialogContent({
     adjustTextareaHeight();
   }, [values.title]);
 
+  // Position cursor at the end when dialog opens in edit mode
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.setSelectionRange(values.title?.length || 0, values.title?.length || 0);
+    if (open && mode === 'edit' && textareaRef.current && values.title) {
+      // Use requestAnimationFrame to ensure dialog is fully rendered
+      const frameId = requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(values.title.length, values.title.length);
+        }
+      });
+
+      return () => cancelAnimationFrame(frameId);
     }
-  }, []);
+  }, [open, mode, values.title]);
 
   // Initialize subtasks array if it doesn't exist
   useEffect(() => {
@@ -361,11 +371,12 @@ function TaskDialogContent({
       onInteractOutside={handleClose}
       onEscapeKeyDown={handleClose}
       className={cn(
-        'fixed left-1/2 top-[50%] z-50 w-full max-w-full -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-card p-6 text-zinc-400 shadow-[0_0_30px_rgba(0,0,0,0.8)] duration-75 dark:shadow-[0_0_30px_rgba(0,0,0,0.8)] sm:max-w-2xl',
+        'fixed left-1/2 top-[50%] z-50 grid max-h-[80vh] w-full max-w-full -translate-x-1/2 -translate-y-1/2 grid-rows-[auto_1fr_auto] rounded-lg border bg-card text-zinc-400 shadow-[0_0_30px_rgba(0,0,0,0.8)] duration-75 dark:shadow-[0_0_30px_rgba(0,0,0,0.8)] sm:max-w-2xl',
         className,
       )}
     >
-      <DialogHeader className="absolute -top-10 rounded-md border border-gray-700 bg-card p-2 text-sm">
+      {/* Dialog title outside the main content */}
+      <DialogHeader className="absolute -left-0.5 -top-10 rounded-md bg-card p-2 text-sm">
         <DialogTitle className="text-xs">
           {mode === 'create' ? 'Add task' : 'Edit task'}
         </DialogTitle>
@@ -374,203 +385,221 @@ function TaskDialogContent({
         </DialogDescription>
       </DialogHeader>
 
-      {/* Action buttons in the top right */}
-      <div className="absolute right-6 top-6 z-50 flex items-center space-x-2">
-        {showActionButtons && (
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleAddSubtask}
-              className={cn(
-                'h-8 w-8 p-0 text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                (showSubtasks || isAddingSubtask) && 'bg-accent text-accent-foreground',
-              )}
-              aria-label="Add subtask"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
-            >
-              <ListPlus className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleFullScreen}
-              className="h-8 w-8 p-0 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              aria-label="Open full screen"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && handleFullScreen()}
-            >
-              <Maximize2 className="h-4 w-4" />
-            </Button>
-          </>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleClose}
-          className="h-8 w-8 p-0 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-          aria-label="Close dialog"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && handleClose()}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+      {/* Fixed header with action buttons */}
+      <div className="flex h-10 items-center justify-between px-4">
+        {/* Emoji picker on the left */}
+        <div className="flex items-center">
+          <EmojiPicker
+            emoji={values.emoji || ''}
+            onEmojiSelect={(newEmoji) => updateValue('emoji', newEmoji)}
+          />
+        </div>
+
+        {/* Action buttons on the right */}
+        <div className="flex items-center">
+          {showActionButtons && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleAddSubtask}
+                className={cn(
+                  'h-8 w-8 p-0 text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                  (showSubtasks || isAddingSubtask) && 'bg-accent text-accent-foreground',
+                )}
+                aria-label="Add subtask"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+              >
+                <ListPlus className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleFullScreen}
+                className="ml-2 h-8 w-8 p-0 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                aria-label="Open full screen"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && handleFullScreen()}
+              >
+                <Maximize2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClose}
+            className="ml-2 h-8 w-8 p-0 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            aria-label="Close dialog"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && handleClose()}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
-      <div className="w-full rounded-lg bg-card text-card-foreground">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <ScrollArea className="h-[150px]">
-            <div className="flex items-start gap-2">
-              <EmojiPicker
-                emoji={values.emoji || ''}
-                onEmojiSelect={(newEmoji) => updateValue('emoji', newEmoji)}
+      {/* Main content area with native scrolling */}
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        <ScrollArea className="flex-1 px-4">
+          <div className="space-y-4">
+            <div className="relative flex items-baseline gap-2">
+              <TaskCheckbox
+                checked={values.progress === 100}
+                onCheckedChange={(checked) => updateValue('progress', checked ? 100 : 0)}
+                size="lg"
+                className="mt-1"
+                ariaLabel="Mark task as completed"
               />
-              <Textarea
-                ref={textareaRef}
-                value={values.title || ''}
-                onChange={(e) => updateValue('title', e.target.value)}
-                onKeyDown={handleKeyDown}
-                rows={3}
-                placeholder="Task description"
-                className="resize-none border-none bg-transparent px-3 text-xl font-semibold outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-            </div>
-          </ScrollArea>
-
-          {/* Subtasks section */}
-          {showSubtasks && (
-            <div className="mb-4 px-4">
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-medium text-muted-foreground">Subtasks</h3>
-                {values.subtasks && values.subtasks.length > 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    {values.subtasks.filter((s) => s.isCompleted).length}/{values.subtasks.length}{' '}
-                    completed
-                  </span>
-                )}
+              <div className="flex-1">
+                <Textarea
+                  ref={textareaRef}
+                  value={values.title || ''}
+                  onChange={(e) => updateValue('title', e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  rows={3}
+                  placeholder="Task description"
+                  className="resize-none border-none bg-transparent px-2 text-xl font-semibold text-foreground outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  autoFocus={mode === 'create'}
+                />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                {/* Show subtasks if they exist */}
-                {values.subtasks &&
-                  values.subtasks.length > 0 &&
-                  values.subtasks.map((subtask) => (
-                    <div key={subtask.id} className="group flex items-start gap-2">
-                      <TaskCheckbox
-                        checked={subtask.isCompleted}
-                        onCheckedChange={(checked) => handleToggleSubtask(subtask.id, checked)}
-                        size="sm"
-                        className="mt-0.5"
-                        ariaLabel={`Toggle subtask: ${subtask.title}`}
-                      />
-                      <div className="flex-1">
+            {/* Subtasks section */}
+            {showSubtasks && (
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-muted-foreground">Subtasks</h3>
+                  {values.subtasks && values.subtasks.length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {values.subtasks.filter((s) => s.isCompleted).length}/{values.subtasks.length}{' '}
+                      completed
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  {/* Show subtasks if they exist */}
+                  {values.subtasks &&
+                    values.subtasks.length > 0 &&
+                    values.subtasks.map((subtask) => (
+                      <div key={subtask.id} className="group flex items-baseline gap-2">
+                        <TaskCheckbox
+                          checked={subtask.isCompleted}
+                          onCheckedChange={(checked) => handleToggleSubtask(subtask.id, checked)}
+                          size="sm"
+                          className="mt-0.5"
+                          ariaLabel={`Toggle subtask: ${subtask.title}`}
+                        />
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            value={subtask.title}
+                            onChange={(e) => handleEditSubtask(subtask.id, e.target.value)}
+                            className={`w-full bg-transparent text-sm font-medium focus:outline-none ${
+                              subtask.isCompleted ? 'text-muted-foreground line-through' : ''
+                            }`}
+                          />
+                        </div>
+                        <button
+                          onClick={() => handleDeleteSubtask(subtask.id)}
+                          className="invisible text-xs text-muted-foreground opacity-0 transition-opacity group-hover:visible group-hover:opacity-100"
+                          aria-label="Delete subtask"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+
+                  {isAddingSubtask ? (
+                    <div className="flex items-center gap-2">
+                      <div className="ml-6 flex-1">
                         <input
+                          ref={subtaskInputRef}
                           type="text"
-                          value={subtask.title}
-                          onChange={(e) => handleEditSubtask(subtask.id, e.target.value)}
-                          className={`w-full bg-transparent text-sm font-medium focus:outline-none ${
-                            subtask.isCompleted ? 'text-muted-foreground line-through' : ''
-                          }`}
+                          value={newSubtaskTitle}
+                          onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                          onKeyDown={handleSubtaskKeyDown}
+                          onBlur={() => {
+                            // Create subtask if there's text, but don't hide the input field
+                            if (newSubtaskTitle.trim()) {
+                              handleCreateSubtask();
+                            }
+                          }}
+                          placeholder="New subtask..."
+                          className="w-full bg-transparent text-sm font-medium focus:outline-none"
                         />
                       </div>
-                      <button
-                        onClick={() => handleDeleteSubtask(subtask.id)}
-                        className="invisible text-xs text-muted-foreground opacity-0 transition-opacity group-hover:visible group-hover:opacity-100"
-                        aria-label="Delete subtask"
-                      >
-                        ×
-                      </button>
                     </div>
-                  ))}
-
-                {isAddingSubtask ? (
-                  <div className="flex items-center gap-2">
-                    <div className="ml-6 flex-1">
-                      <input
-                        ref={subtaskInputRef}
-                        type="text"
-                        value={newSubtaskTitle}
-                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                        onKeyDown={handleSubtaskKeyDown}
-                        onBlur={() => {
-                          // Create subtask if there's text, but don't hide the input field
-                          if (newSubtaskTitle.trim()) {
-                            handleCreateSubtask();
-                          }
-                        }}
-                        placeholder="New subtask..."
-                        className="w-full bg-transparent text-sm font-medium focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={startAddingSubtask}
-                    className="mt-1 flex w-full items-center justify-start gap-1 px-2 text-xs text-muted-foreground"
-                  >
-                    <Plus className="h-3 w-3" />
-                    Add subtask
-                  </Button>
-                )}
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={startAddingSubtask}
+                      className="mt-1 flex w-full items-center justify-start gap-1 px-2 text-xs text-muted-foreground"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add subtask
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-
-          <div className="flex flex-col gap-2 border-t border-border pt-4">
-            <TaskScheduler className="text-muted-foreground" />
-
-            <div className="flex items-center gap-1">
-              <Select
-                value={values.category || 'work'}
-                onValueChange={(value: TaskCategory) => updateValue('category', value)}
-              >
-                <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
-                  <div className="flex items-center">
-                    {values.category === 'work' && <Hash className="mr-1 h-3.5 w-3.5" />}
-                    {(values.category === 'passion' || values.category === 'play') && (
-                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                    )}
-                    <SelectValue>
-                      {values.category === 'work'
-                        ? 'Work'
-                        : values.category === 'passion'
-                          ? 'Passion'
-                          : 'Play'}
-                    </SelectValue>
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="work">
-                    <div className="flex items-center">
-                      <Hash className="mr-1 h-3.5 w-3.5" />
-                      Work
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="passion">
-                    <div className="flex items-center">
-                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                      Passion
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="play">
-                    <div className="flex items-center">
-                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                      Play
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              <PrioritySelect
-                value={values.priority || 'medium'}
-                onValueChange={(priority) => updateValue('priority', priority)}
-              />
-            </div>
+            )}
           </div>
-        </form>
+        </ScrollArea>
+      </form>
+
+      {/* Fixed footer */}
+      <div className="border-t border-border bg-card p-4">
+        <TaskScheduler className="text-muted-foreground" />
+        <div className="mt-2 flex items-center gap-1">
+          <Select
+            value={values.category || 'work'}
+            onValueChange={(value: TaskCategory) => updateValue('category', value)}
+          >
+            <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
+              <div className="flex items-center">
+                {values.category === 'work' && <Hash className="mr-1 h-3.5 w-3.5" />}
+                {(values.category === 'passion' || values.category === 'play') && (
+                  <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                )}
+                <SelectValue>
+                  {values.category === 'work'
+                    ? 'Work'
+                    : values.category === 'passion'
+                      ? 'Passion'
+                      : 'Play'}
+                </SelectValue>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="work">
+                <div className="flex items-center">
+                  <Hash className="mr-1 h-3.5 w-3.5" />
+                  Work
+                </div>
+              </SelectItem>
+              <SelectItem value="passion">
+                <div className="flex items-center">
+                  <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                  Passion
+                </div>
+              </SelectItem>
+              <SelectItem value="play">
+                <div className="flex items-center">
+                  <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                  Play
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          <PriorityPicker
+            value={values.priority || 'medium'}
+            onValueChange={(priority) => updateValue('priority', priority)}
+          />
+        </div>
       </div>
     </DialogContent>
   );
@@ -603,6 +632,7 @@ export function TaskDialog({
           mode={mode}
           className={className}
           onOpenChange={onOpenChange}
+          open={open}
         />
       </TaskFormProvider>
     </Dialog>
