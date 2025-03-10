@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import EventItem from '../event-item';
+import EventItem from '../components/event-item';
 
 describe('EventItem', () => {
   const mockEvent = {

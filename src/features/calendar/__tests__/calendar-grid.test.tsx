@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import CalendarGrid from '../calendar-grid';
+import CalendarGrid from '../components/calendar-grid';
 
 describe('CalendarGrid', () => {
   const mockEvents = [
