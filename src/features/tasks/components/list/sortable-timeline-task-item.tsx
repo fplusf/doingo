@@ -1,6 +1,8 @@
 import { toggleTaskCompletion, updateTask } from '@/features/tasks/store/tasks.store';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Blend } from 'lucide-react';
 import React from 'react';
 import { OptimalTask } from '../../types';
 import { TimelineItem } from '../timeline/timeline';
@@ -12,6 +14,7 @@ interface SortableTimelineTaskItemProps {
   onEdit: (task: OptimalTask) => void;
   isLastItem?: boolean;
   nextTask?: OptimalTask;
+  overlapsWithNext?: boolean;
 }
 
 export const SortableTimelineTaskItem = ({
@@ -19,6 +22,7 @@ export const SortableTimelineTaskItem = ({
   onEdit,
   isLastItem = false,
   nextTask,
+  overlapsWithNext = false,
 }: SortableTimelineTaskItemProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -66,8 +70,21 @@ export const SortableTimelineTaskItem = ({
       </div>
 
       {/* Task Card */}
-      <div className="ml-16 w-full" {...listeners}>
+      <div className="ml-16 w-full cursor-auto" {...listeners}>
         <TaskItem task={task} onEdit={onEdit} />
+        {/* Overlap indicator */}
+        {overlapsWithNext && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="absolute -bottom-[18px] right-10 z-10 flex items-center gap-1 text-xs text-yellow-500">
+                <Blend className="h-4 w-4" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="px-1.5 py-1">
+              <span className="text-[10px]">Time overlap</span>
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
       {/* Drag Handle (optional) */}

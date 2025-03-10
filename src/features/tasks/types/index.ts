@@ -20,6 +20,7 @@ export interface CategorySectionProps {
   tasks: OptimalTask[];
   onAddTask: () => void;
   onEditTask: (task: OptimalTask) => void;
+  overlaps: Map<string, boolean>;
 }
 
 export interface DayContentProps {

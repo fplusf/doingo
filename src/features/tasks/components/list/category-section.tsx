@@ -10,6 +10,7 @@ export const CategorySection = ({
   tasks,
   onAddTask,
   onEditTask,
+  overlaps,
 }: CategorySectionProps) => {
   return (
     <div className="relative mb-16 min-h-8" id={`category-${category}`}>
@@ -29,6 +30,7 @@ export const CategorySection = ({
               onEdit={onEditTask}
               isLastItem={index === tasks.length - 1}
               nextTask={index < tasks.length - 1 ? tasks[index + 1] : undefined}
+              overlapsWithNext={overlaps.get(task.id) || false}
             />
           ))}
           <Button

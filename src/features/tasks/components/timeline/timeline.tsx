@@ -37,8 +37,8 @@ interface TimelineItemProps {
   emoji?: string;
   onEditTask?: () => void;
   taskId?: string;
-  duration?: number; // Add duration prop
-  nextTaskPriority?: TaskPriority; // Add nextTaskPriority prop for gradient effect
+  duration?: number;
+  nextTaskPriority?: TaskPriority;
 }
 
 export const TimelineItem = ({
@@ -56,8 +56,8 @@ export const TimelineItem = ({
   emoji = '',
   onEditTask,
   taskId,
-  duration = 0, // Default to 0 if not provided
-  nextTaskPriority = 'none', // Default to none if not provided
+  duration = ONE_HOUR_IN_MS,
+  nextTaskPriority = 'none',
 }: TimelineItemProps) => {
   const timeDiffMinutes = React.useMemo(() => {
     return (nextStartTime.getTime() - startTime.getTime()) / (1000 * 60);
@@ -132,9 +132,7 @@ export const TimelineItem = ({
   // Handle node click to open task modal
   const handleNodeClick = () => {
     if (onEditTask) {
-      // Explicitly call the edit task function
       onEditTask();
-      console.log('Opening edit dialog for task:', taskId);
     }
   };
 
@@ -158,7 +156,7 @@ export const TimelineItem = ({
     <div
       ref={contentRef}
       className={cn('group relative flex w-full', dynamicHeight)}
-      onClick={handleNodeClick} // Add click handler to the entire row
+      onClick={handleNodeClick}
     >
       {/* Add connector extension that goes beyond the current item for visual continuity */}
       {!isLastItem && (
@@ -182,6 +180,8 @@ export const TimelineItem = ({
           priority={priority}
           height={nodeHeight}
           onClick={handleNodeClick}
+          startTime={startTime}
+          duration={duration}
         />
       </div>
     </div>

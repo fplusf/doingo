@@ -40,6 +40,44 @@ interface DayContainerProps {
   ref?: React.RefObject<{ setIsCreating: (value: boolean) => void }>;
 }
 
+// Helper function to check if two time ranges overlap
+const hasTimeOverlap = (task1: OptimalTask, task2: OptimalTask) => {
+  if (!task1.time || !task2.time) return false;
+
+  const [start1] = task1.time.split('—');
+  const [start2] = task2.time.split('—');
+
+  const [hours1, minutes1] = start1.split(':').map(Number);
+  const [hours2, minutes2] = start2.split(':').map(Number);
+
+  const startTime1 = hours1 * 60 + minutes1;
+  const startTime2 = hours2 * 60 + minutes2;
+
+  const duration1 = task1.duration || ONE_HOUR_IN_MS;
+  const duration2 = task2.duration || ONE_HOUR_IN_MS;
+
+  const endTime1 = startTime1 + duration1 / (60 * 1000); // Convert ms to minutes
+  const endTime2 = startTime2 + duration2 / (60 * 1000);
+
+  return startTime1 < endTime2 && endTime1 > startTime2;
+};
+
+// Sort tasks within each category by start time
+const sortByStartTime = (tasks: OptimalTask[]) => {
+  return tasks.sort((a, b) => {
+    const aTime = a.time?.split('—')[0] || '00:00';
+    const bTime = b.time?.split('—')[0] || '00:00';
+    const [aHours, aMinutes] = aTime.split(':').map(Number);
+    const [bHours, bMinutes] = bTime.split(':').map(Number);
+
+    // Convert to minutes for easier comparison
+    const aInMinutes = aHours * 60 + aMinutes;
+    const bInMinutes = bHours * 60 + bMinutes;
+
+    return aInMinutes - bInMinutes;
+  });
+};
+
 export const TasksList = React.forwardRef<
   { setIsCreating: (value: boolean) => void },
   Omit<DayContainerProps, 'ref'>
@@ -111,7 +149,7 @@ export const TasksList = React.forwardRef<
     },
   }));
 
-  // Group tasks by category
+  // Group tasks by category and sort by start time, adding overlap information
   const tasksByCategory = React.useMemo(() => {
     const grouped = {
       work: [] as OptimalTask[],
@@ -119,11 +157,29 @@ export const TasksList = React.forwardRef<
       play: [] as OptimalTask[],
     };
 
+    // First group tasks by category
     tasks.forEach((task) => {
       grouped[task.category || 'work'].push(task);
     });
 
-    return grouped;
+    // Track overlaps in a Map
+    const overlaps = new Map<string, boolean>();
+
+    // Sort tasks and check for overlaps in each category
+    Object.keys(grouped).forEach((category) => {
+      const sortedTasks = sortByStartTime(grouped[category as TaskCategory]);
+
+      // Check for overlaps
+      sortedTasks.forEach((task: OptimalTask, index: number) => {
+        if (index < sortedTasks.length - 1) {
+          overlaps.set(task.id, hasTimeOverlap(task, sortedTasks[index + 1]));
+        }
+      });
+
+      grouped[category as TaskCategory] = sortedTasks;
+    });
+
+    return { tasks: grouped, overlaps };
   }, [tasks]);
 
   const sensors = useSensors(
@@ -197,7 +253,7 @@ export const TasksList = React.forwardRef<
 
   return (
     <ScrollArea viewportRef={viewportRef} className="relative h-full w-full">
-      <div ref={tasksRef} className="mx-auto w-full max-w-[900px] px-10 pb-16">
+      <div ref={tasksRef} className="relative mx-auto w-full max-w-[900px] px-10 pb-16">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -209,68 +265,30 @@ export const TasksList = React.forwardRef<
             items={tasks.map((task) => task.id)}
             strategy={verticalListSortingStrategy}
           >
-            {/* Work Category */}
-            <CategorySection
-              category="work"
-              tasks={tasksByCategory.work}
-              onEditTask={handleStartEdit}
-              onAddTask={() => {
-                setNewTask({
-                  title: '',
-                  emoji: '',
-                  priority: 'none',
-                  category: 'work',
-                });
-                setStartTime(getDefaultStartTime);
-                setEndTime(getDefaultEndTime);
-                setDuration(ONE_HOUR_IN_MS);
-                setDueDate(undefined);
-                setIsCreating(true);
-                setActiveCategory('work');
-              }}
-            />
-
-            {/* Passion Category */}
-            <CategorySection
-              category="passion"
-              tasks={tasksByCategory.passion}
-              onEditTask={handleStartEdit}
-              onAddTask={() => {
-                setNewTask({
-                  title: '',
-                  emoji: '',
-                  priority: 'none',
-                  category: 'passion',
-                });
-                setStartTime(getDefaultStartTime);
-                setEndTime(getDefaultEndTime);
-                setDuration(ONE_HOUR_IN_MS);
-                setDueDate(undefined);
-                setIsCreating(true);
-                setActiveCategory('passion');
-              }}
-            />
-
-            {/* Play Category */}
-            <CategorySection
-              category="play"
-              tasks={tasksByCategory.play}
-              onEditTask={handleStartEdit}
-              onAddTask={() => {
-                setNewTask({
-                  title: '',
-                  emoji: '',
-                  priority: 'none',
-                  category: 'play',
-                });
-                setStartTime(getDefaultStartTime);
-                setEndTime(getDefaultEndTime);
-                setDuration(ONE_HOUR_IN_MS);
-                setDueDate(undefined);
-                setIsCreating(true);
-                setActiveCategory('play');
-              }}
-            />
+            {Object.entries(tasksByCategory.tasks).map(([category, tasks]) => (
+              <div key={category} className="relative">
+                <CategorySection
+                  category={category as TaskCategory}
+                  tasks={tasks}
+                  onEditTask={handleStartEdit}
+                  onAddTask={() => {
+                    setNewTask({
+                      title: '',
+                      emoji: '',
+                      priority: 'none',
+                      category: category as TaskCategory,
+                    });
+                    setStartTime(getDefaultStartTime);
+                    setEndTime(getDefaultEndTime);
+                    setDuration(ONE_HOUR_IN_MS);
+                    setDueDate(undefined);
+                    setIsCreating(true);
+                    setActiveCategory(category as TaskCategory);
+                  }}
+                  overlaps={tasksByCategory.overlaps}
+                />
+              </div>
+            ))}
           </SortableContext>
 
           <DragOverlay

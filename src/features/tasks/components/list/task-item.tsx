@@ -15,7 +15,7 @@ import {
 } from '@/shared/components/ui/tooltip';
 import { toast } from '@/shared/hooks/use-toast';
 import { useNavigate } from '@tanstack/react-router';
-import { format } from 'date-fns';
+import { addMilliseconds, format } from 'date-fns';
 import { ArrowRight, LucideFocus, Trash2 } from 'lucide-react';
 import React from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
@@ -68,21 +68,18 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
 
   function formatDurationForDisplay(duration: number): string {
     const minutes = duration / 60_000;
-    if (minutes < 0) {
-      // If duration is negative, it means the task crosses midnight
-      // Add 24 hours (1440 minutes) to get the correct duration
-      const adjustedMinutes = minutes + 1440;
-      if (adjustedMinutes >= 60) {
-        const hours = adjustedMinutes / 60;
-        return `${Math.floor(hours)} hr${hours > 1 ? 's' : ''}`;
-      }
-      return `${Math.floor(adjustedMinutes)} min`;
-    }
-    if (minutes >= 60) {
-      const hours = minutes / 60;
-      return `${Math.floor(hours)} hr${hours > 1 ? 's' : ''}`;
-    }
-    return `${Math.floor(minutes)} min`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = Math.floor(minutes % 60);
+    return remainingMinutes === 0 ? `${hours} hr` : `${hours} hr, ${remainingMinutes} min`;
+  }
+
+  function formatTimeRange(startTimeStr: string, duration: number): string {
+    const [hours, minutes] = startTimeStr.split(':').map(Number);
+    const startDate = new Date();
+    startDate.setHours(hours, minutes, 0, 0);
+    const endDate = addMilliseconds(startDate, duration);
+
+    return `${format(startDate, 'HH:mm')} - ${format(endDate, 'HH:mm')} (${formatDurationForDisplay(duration)})`;
   }
 
   const handleFocusClick = (e: React.MouseEvent) => {
@@ -205,19 +202,10 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
 
                 <section className="mt-auto flex items-center justify-between">
                   <div className="text-xs opacity-50 xl:text-sm">
-                    <span className="mr-2">
-                      {task.startTime && !isNaN(task.startTime.getTime())
-                        ? format(task.startTime, 'MMM dd yyyy')
-                        : ''}
-                    </span>
-                    {task.startTime &&
-                    task.nextStartTime &&
-                    !isNaN(task.startTime.getTime()) &&
-                    !isNaN(task.nextStartTime.getTime()) ? (
-                      <>
-                        {format(task.startTime, 'HH:mm')} - {format(task.nextStartTime, 'HH:mm')} (
-                        {formatDurationForDisplay(task.duration)})
-                      </>
+                    {task.time ? (
+                      <span className="whitespace-nowrap">
+                        {formatTimeRange(task.time.split('—')[0], task.duration || ONE_HOUR_IN_MS)}
+                      </span>
                     ) : null}
                   </div>
 
