@@ -186,7 +186,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>
               <Link
-                to="/tasks"
+                to="/stats"
                 activeProps={{ className: 'active' }}
                 inactiveProps={{ className: 'inactive' }}
               >
