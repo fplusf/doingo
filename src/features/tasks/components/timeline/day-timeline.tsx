@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { useState } from 'react';
 
 type TimelineHourItem = {
   type: 'hour';
@@ -34,6 +35,9 @@ export function DayTimeline({
   hourHeight = 60,
   lineWidth = 40,
 }: TimelineProps) {
+  const [hoveredLines, setHoveredLines] = useState<Set<string>>(new Set());
+  const [clickedLines, setClickedLines] = useState<Set<string>>(new Set());
+
   // Parse start and end times
   const parseTime = (timeStr: string): { hours: number; minutes: number } => {
     const [hours, minutes] = timeStr.split(':').map(Number);
@@ -99,15 +103,36 @@ export function DayTimeline({
     return items;
   };
 
+  const handleLineMouseEnter = (id: string) => {
+    setHoveredLines((prev) => {
+      const newSet = new Set(prev);
+      newSet.add(id);
+      return newSet;
+    });
+  };
+
+  const handleLineMouseLeave = (id: string) => {
+    setHoveredLines((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(id);
+      return newSet;
+    });
+  };
+
   const timelineItems = generateTimelineItems();
 
   return (
     <div
-      className={cn('w-100 relative flex flex-col text-gray-300', className)}
+      className={cn('w-100 relative z-50 flex flex-col text-gray-300', className)}
       style={{ minHeight: `${hourHeight * Math.ceil((endMinutes - startMinutes) / 60)}px` }}
     >
       {timelineItems.map((item, index) => {
         if (item.type === 'hour') {
+          const lineId = `hour-${index}`;
+          const isHovered = hoveredLines.has(lineId);
+          const isClicked = clickedLines.has(lineId);
+          const expandedWidth = isClicked || isHovered ? '80px' : `${lineWidth}px`;
+
           return (
             <div
               key={index}
@@ -115,8 +140,24 @@ export function DayTimeline({
               style={{ height: `${hourHeight}px` }}
             >
               <div className="flex items-center">
-                <div className="h-px bg-gray-600" style={{ width: `${lineWidth}px` }}></div>
-                <span className="ml-2 text-sm font-medium">{item.time}</span>
+                <button
+                  className="relative border-0 bg-transparent p-0 outline-none"
+                  onMouseEnter={() => handleLineMouseEnter(lineId)}
+                  onMouseLeave={() => handleLineMouseLeave(lineId)}
+                  aria-label={`Toggle time line ${item.time}`}
+                  style={{ paddingTop: '12px', paddingBottom: '12px' }}
+                >
+                  <div
+                    className={cn('h-px bg-gray-600 transition-all duration-300 ease-in-out', {
+                      'bg-red-400': index === 0,
+                      'bg-blue-400': index === timelineItems.length - 1,
+                    })}
+                    style={{
+                      width: expandedWidth,
+                    }}
+                  ></div>
+                </button>
+                <span className="ml-2 text-xs font-medium text-gray-500">{item.time}</span>
               </div>
             </div>
           );
@@ -133,11 +174,33 @@ export function DayTimeline({
             >
               <div className="flex items-center">
                 <div className="flex flex-col gap-3">
-                  {[...Array(numberOfLines)].map((_, i) => (
-                    <div key={i} className="h-px w-8 bg-gray-700"></div>
-                  ))}
+                  {[...Array(numberOfLines)].map((_, i) => {
+                    const skipLineId = `skip-${index}-${i}`;
+                    const isHovered = hoveredLines.has(skipLineId);
+                    const isClicked = clickedLines.has(skipLineId);
+                    const expandedWidth = isClicked || isHovered ? '70px' : '32px';
+
+                    return (
+                      <button
+                        key={i}
+                        className="relative border-0 bg-transparent p-0 outline-none"
+                        aria-label={`Toggle skip line ${i + 1}`}
+                        onMouseEnter={() => handleLineMouseEnter(skipLineId)}
+                        onMouseLeave={() => handleLineMouseLeave(skipLineId)}
+                      >
+                        <div
+                          className="h-px bg-gray-700 transition-all duration-300 ease-in-out"
+                          style={{
+                            width: expandedWidth,
+                          }}
+                        ></div>
+                      </button>
+                    );
+                  })}
                 </div>
-                <span className="ml-2 text-[10px] font-medium text-gray-600">Free Slot</span>
+                <span className="ml-2 text-[10px] font-medium text-gray-600">
+                  Free Slot{numberOfLines > 1 ? 's' : ''}
+                </span>
               </div>
             </div>
           );
