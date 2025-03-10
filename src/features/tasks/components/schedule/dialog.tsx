@@ -19,6 +19,7 @@ import {
 } from '@/shared/components/ui/select';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { useNavigate } from '@tanstack/react-router';
+import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
 import { ClipboardList, Hash, ListPlus, Maximize2, Plus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -26,6 +27,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { TaskFormProvider, useTaskForm } from '../../context/task-form-context';
 import { useTaskFormSubmission } from '../../hooks/use-task-form-submission';
+import { setEditingTaskId, tasksStore } from '../../store/tasks.store';
 import { PriorityPicker } from './priority-picker';
 import { TaskScheduler } from './task-scheduler';
 
@@ -137,6 +139,7 @@ function TaskDialogContent({
   const subtaskInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const showActionButtons = values.title && values.title.length >= 3;
+  const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
 
   // Show subtasks section automatically if there are existing subtasks
   const [showSubtasks, setShowSubtasks] = useState(
@@ -255,6 +258,7 @@ function TaskDialogContent({
       onSubmit(values);
     }
     onOpenChange(false);
+    setEditingTaskId(null);
   };
 
   const handleFullScreen = () => {
@@ -266,19 +270,28 @@ function TaskDialogContent({
         updateValue('progress', progress);
       }
 
-      // Create the task and get the ID
-      const taskId = createNewTask(values, values.category || 'work');
+      let taskId: string | null = null;
+
+      if (mode === 'edit' && editingTaskId) {
+        // For edit mode, submit changes and use existing task ID
+        onSubmit(values);
+        taskId = editingTaskId;
+      } else {
+        // For create mode, create the task directly
+        taskId = createNewTask(values, values.category || 'work');
+      }
 
       if (taskId) {
         // Navigate to the task details page
         navigate({ to: `/tasks/${taskId}`, params: { taskId } });
       } else {
-        // Fallback if task creation fails
+        // Fallback if task creation fails or taskId not found
         navigate({ to: '/tasks' });
       }
 
-      // Close the dialog
+      // Close the dialog and clear the editing state
       onOpenChange(false);
+      setEditingTaskId(null);
     }
   };
 

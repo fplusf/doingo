@@ -1,5 +1,6 @@
 import {
   getTasksByDate,
+  setEditingTaskId,
   setSelectedDate,
   tasksStore,
   updateTask,
@@ -189,7 +190,7 @@ export const TasksList = React.forwardRef<
 
   const handleStartEdit = (task: OptimalTask) => {
     setEditingTask(task.id);
-    // No need to set all state manually, this will now be handled by the TaskFormProvider
+    setEditingTaskId(task.id);
   };
 
   const activeTask = activeId ? tasks.find((task) => task.id === activeId) : null;

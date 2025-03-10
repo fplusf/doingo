@@ -60,4 +60,6 @@ export interface OptimalTask {
 export interface TasksState {
   tasks: OptimalTask[];
   selectedDate: string; // ISO format date string (YYYY-MM-DD)
+  focusedTaskId: string | null; // ID of the currently focused task
+  editingTaskId: string | null; // ID of the task being edited in the dialog
 }

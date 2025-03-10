@@ -18,6 +18,8 @@ export const tasksStore = new Store<TasksState>({
     taskDate: task.taskDate || today, // Ensure all tasks have a taskDate, defaulting to today
   })),
   selectedDate: today,
+  focusedTaskId: null,
+  editingTaskId: null,
 });
 
 // Helper function to update state and storage
@@ -77,6 +79,20 @@ export const deleteTask = (id: string) => {
   }));
 };
 
+export const setFocusedTaskId = (taskId: string | null) => {
+  tasksStore.setState((state) => ({
+    ...state,
+    focusedTaskId: taskId,
+  }));
+};
+
+export const setEditingTaskId = (taskId: string | null) => {
+  tasksStore.setState((state) => ({
+    ...state,
+    editingTaskId: taskId,
+  }));
+};
+
 export const setFocused = (id: string, isFocused: boolean) => {
   const today = format(new Date(), 'yyyy-MM-dd');
 
@@ -91,6 +107,7 @@ export const setFocused = (id: string, isFocused: boolean) => {
 
     return {
       ...state,
+      focusedTaskId: isFocused ? id : null,
       tasks: state.tasks.map((task) => {
         if (task.id === id) {
           return { ...task, isFocused };
@@ -124,5 +141,7 @@ export const clearTasks = () => {
   tasksStore.setState(() => ({
     tasks: [],
     selectedDate: today,
+    focusedTaskId: null,
+    editingTaskId: null,
   }));
 };
