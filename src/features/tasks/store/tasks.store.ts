@@ -61,10 +61,37 @@ export const addTask = (task: Omit<OptimalTask, 'id'>) => {
 };
 
 export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
-  updateStateAndStorage((state) => ({
-    ...state,
-    tasks: state.tasks.map((task) => (task.id === id ? { ...task, ...updates } : task)),
-  }));
+  updateStateAndStorage((state) => {
+    const task = state.tasks.find((t) => t.id === id);
+    if (!task) return state;
+
+    // If time is being updated, extract the date from the start time
+    if (updates.time && typeof updates.time === 'string') {
+      try {
+        const timeComponents = updates.time.split(/[—-]/); // Handle both em dash and regular dash
+        if (timeComponents.length > 0) {
+          const startTime = timeComponents[0].trim();
+          const [hours, minutes] = startTime.split(':').map(Number);
+
+          if (!isNaN(hours) && !isNaN(minutes)) {
+            // Create date from the current task date and new time
+            const currentDate = new Date(task.taskDate + 'T00:00:00');
+            currentDate.setHours(hours, minutes);
+
+            // Update taskDate to match the start time's date
+            updates.taskDate = format(currentDate, 'yyyy-MM-dd');
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing time:', error);
+      }
+    }
+
+    return {
+      ...state,
+      tasks: state.tasks.map((task) => (task.id === id ? { ...task, ...updates } : task)),
+    };
+  });
 };
 
 export const deleteTask = (id: string) => {

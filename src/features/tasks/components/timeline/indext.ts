@@ -1,3 +1,3 @@
 export * from './category-badge';
-export * from './connector';
+export * from './day-timeline';
 export * from './timeline';

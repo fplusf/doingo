@@ -33,6 +33,7 @@ import { TasksRoute } from '../../../../routes/routes';
 import { useTaskFormSubmission } from '../../hooks/use-task-form-submission';
 import { OptimalTask, TaskCategory, TaskPriority } from '../../types';
 import { TaskDialog } from '../schedule/dialog';
+import { DayTimeline } from '../timeline/day-timeline';
 import { CategorySection } from './category-section';
 import { SortableTimelineTaskItem } from './sortable-timeline-task-item';
 
@@ -254,6 +255,20 @@ export const TasksList = React.forwardRef<
   return (
     <ScrollArea viewportRef={viewportRef} className="relative h-full w-full">
       <div ref={tasksRef} className="relative mx-auto w-full max-w-[900px] px-10 pb-16">
+        <DayTimeline
+          className="absolute -left-96 top-10"
+          skipRanges={[
+            {
+              start: '12:00',
+              end: '13:00',
+            },
+            {
+              start: '14:00',
+              end: '20:00',
+            },
+          ]}
+        />
+
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}

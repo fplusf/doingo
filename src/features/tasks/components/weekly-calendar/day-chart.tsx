@@ -78,6 +78,7 @@ export function DayChart({ date, progress, isSelected, isToday }: DayChartProps)
               className={showAnimation ? 'animate-pulse' : ''}
             />
             <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+            {isSelected && <circle cx="50%" cy="50%" r="14" className="fill-blue-500" />}
             <text
               x="50%"
               y="50%"
