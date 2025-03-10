@@ -15,7 +15,7 @@ export const CategorySection = ({
   return (
     <div className="relative mb-16 min-h-8" id={`category-${category}`}>
       <CategoryBadge
-        id={`category-${category}`}
+        category={category}
         label={TIMELINE_CATEGORIES[category].label}
         color={TIMELINE_CATEGORIES[category].color}
         isSticky

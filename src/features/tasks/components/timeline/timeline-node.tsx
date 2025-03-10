@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { addMilliseconds, format } from 'date-fns';
+import { addMilliseconds } from 'date-fns';
 import React from 'react';
 import { PRIORITY_BG_CLASSES } from '../../constants/priority-colors';
 import { TaskPriority } from '../../types';
@@ -57,8 +57,8 @@ export function TimelineNode({
 
   return (
     <div className="relative">
-      {/* Time labels */}
-      {startTime && (
+      {/* Time labels - Commented on purpose for now */}
+      {/* {startTime && (
         <div className="absolute -left-16 top-0 text-xs text-gray-400">
           {format(startTime, 'h:mm a')}
         </div>
@@ -67,7 +67,7 @@ export function TimelineNode({
         <div className="absolute -left-16 bottom-0 text-xs text-gray-400">
           {format(endTime, 'h:mm a')}
         </div>
-      )}
+      )} */}
 
       {/* Node */}
       <div

@@ -256,7 +256,7 @@ export const TasksList = React.forwardRef<
     <ScrollArea viewportRef={viewportRef} className="relative h-full w-full">
       <div ref={tasksRef} className="relative mx-auto w-full max-w-[900px] px-10 pb-16">
         <DayTimeline
-          className="absolute -left-96 top-10"
+          className="pointer-events-auto absolute -left-80 top-10 z-50"
           skipRanges={[
             {
               start: '12:00',

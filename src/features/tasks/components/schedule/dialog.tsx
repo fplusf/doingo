@@ -471,9 +471,9 @@ function TaskDialogContent({
                   value={values.title || ''}
                   onChange={(e) => updateValue('title', e.target.value)}
                   onKeyDown={handleKeyDown}
-                  rows={3}
+                  rows={1}
                   placeholder="Task description"
-                  className="resize-none border-none bg-transparent px-2 text-xl font-semibold text-foreground outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="min-h-[1.5rem] resize-none border-none bg-transparent px-2 text-xl font-semibold text-foreground outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
                   autoFocus={mode === 'create'}
                 />
               </div>
