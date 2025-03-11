@@ -1,5 +1,5 @@
-import TaskManagementApp from '../components/task-management-app';
+import InboxManagementApp from '../components/inbox-management-app';
 
 export default function InboxPage() {
-  return <TaskManagementApp />;
+  return <InboxManagementApp />;
 }

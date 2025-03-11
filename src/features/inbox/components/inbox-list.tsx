@@ -1,4 +1,4 @@
-import type { Task } from '@/features/inbox/components/task-management-app';
+import type { Task } from '@/features/inbox/components/inbox-management-app';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -7,13 +7,17 @@ import { Input } from '@/shared/components/ui/input';
 import { MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
 
-interface TaskListProps {
+interface InboxListProps {
   tasks: Task[];
   toggleTaskCompletion: (taskId: string) => void;
   updateTaskTitle: (taskId: string, newTitle: string) => void;
 }
 
-export default function TaskList({ tasks, toggleTaskCompletion, updateTaskTitle }: TaskListProps) {
+export default function InboxkList({
+  tasks,
+  toggleTaskCompletion,
+  updateTaskTitle,
+}: InboxListProps) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
 

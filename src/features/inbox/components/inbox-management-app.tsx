@@ -16,7 +16,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import TaskList from './task-list';
+import InboxkList from './inbox-list';
 
 export type Task = {
   id: string;
@@ -36,7 +36,7 @@ export type List = {
   color?: string;
 };
 
-export default function TaskManagementApp() {
+export default function InboxManagementApp() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [selectedView, setSelectedView] = useState('today');
@@ -417,7 +417,7 @@ export default function TaskManagementApp() {
                 </div>
 
                 {expandedSections.overdue && (
-                  <TaskList
+                  <InboxkList
                     tasks={getOverdueTasks()}
                     toggleTaskCompletion={toggleTaskCompletion}
                     updateTaskTitle={updateTaskTitle}
@@ -443,7 +443,7 @@ export default function TaskManagementApp() {
                 </div>
 
                 {expandedSections.today && (
-                  <TaskList
+                  <InboxkList
                     tasks={getTodayTasks()}
                     toggleTaskCompletion={toggleTaskCompletion}
                     updateTaskTitle={updateTaskTitle}
@@ -469,7 +469,7 @@ export default function TaskManagementApp() {
                 </div>
 
                 {expandedSections.habit && (
-                  <TaskList
+                  <InboxkList
                     tasks={getHabitTasks()}
                     toggleTaskCompletion={toggleTaskCompletion}
                     updateTaskTitle={updateTaskTitle}
@@ -485,7 +485,7 @@ export default function TaskManagementApp() {
                 !getTodayTasks().includes(task) &&
                 !getHabitTasks().includes(task),
             ).length > 0 && (
-              <TaskList
+              <InboxkList
                 tasks={getFilteredTasks().filter(
                   (task) =>
                     !getOverdueTasks().includes(task) &&
