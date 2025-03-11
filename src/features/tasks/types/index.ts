@@ -64,4 +64,5 @@ export interface TasksState {
   selectedDate: string; // ISO format date string (YYYY-MM-DD)
   focusedTaskId: string | null; // ID of the currently focused task
   editingTaskId: string | null; // ID of the task being edited in the dialog
+  draftTask: Partial<OptimalTask> | null; // Draft task for creating new tasks
 }

@@ -1,8 +1,13 @@
 import { cn } from '@/lib/utils';
 import { useStore } from '@tanstack/react-store';
+import { useEffect } from 'react';
 import {
   getTaskSchedulingInfo,
   tasksStore,
+  updateDraftTaskDueDateTime,
+  updateDraftTaskDuration,
+  updateDraftTaskRepetition,
+  updateDraftTaskStartDateTime,
   updateTaskDueDateTime,
   updateTaskDuration,
   updateTaskRepetition,
@@ -16,21 +21,35 @@ export type RepetitionOption = 'once' | 'daily' | 'weekly' | 'custom';
 
 interface TaskSchedulerProps {
   className?: string;
-  taskId?: string; // ID of the task being edited, null for new tasks
+  taskId?: string; // ID of the task being edited, or "draft" for new tasks
+  isDraft?: boolean; // Whether we're working with a draft task
 }
 
-export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
+export function TaskScheduler({ className, taskId, isDraft = false }: TaskSchedulerProps) {
+  // Determine the appropriate taskId to use
+  const effectiveTaskId = isDraft ? 'draft' : taskId;
+
+  // Add debug logging of the full draft task
+  useEffect(() => {
+    if (isDraft) {
+      const draftTask = tasksStore.state.draftTask;
+      console.log('Current draft task in TaskScheduler:', draftTask);
+    }
+  }, [isDraft, tasksStore.state.draftTask]);
+
   // Use store for getting task data - avoid conditional hook calls
   const taskData = useStore(tasksStore, (state) => {
-    if (!taskId) return null;
-    return getTaskSchedulingInfo(taskId);
+    // If no taskId and not a draft, return null
+    if (!effectiveTaskId) return null;
+
+    return getTaskSchedulingInfo(effectiveTaskId);
   });
 
-  // Get the editingTaskId from the store
+  // Get the editingTaskId from the store (used as fallback if no taskId provided)
   const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
 
-  // Determine the active task ID (either the provided taskId or the one being edited)
-  const activeTaskId = taskId || editingTaskId;
+  // Determine the active task ID (either the provided taskId, draft, or the one being edited)
+  const activeTaskId = effectiveTaskId || editingTaskId;
 
   // If no task data and not editing a task, we'll use default values
   const defaultStartTime = new Date();
@@ -45,25 +64,53 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
   const repetition = taskData?.repetition || 'once';
 
   const handleRepetitionChange = (value: RepetitionOption) => {
-    if (activeTaskId) {
+    if (!activeTaskId) return;
+
+    if (isDraft || activeTaskId === 'draft') {
+      updateDraftTaskRepetition(value);
+    } else if (typeof activeTaskId === 'string') {
       updateTaskRepetition(activeTaskId, value);
     }
   };
 
   const handleStartDateSelection = (date: Date, time: string) => {
-    if (activeTaskId) {
+    if (!activeTaskId) return;
+
+    if (isDraft || activeTaskId === 'draft') {
+      updateDraftTaskStartDateTime(date, time);
+    } else if (typeof activeTaskId === 'string') {
       updateTaskStartDateTime(activeTaskId, date, time);
     }
   };
 
   const handleDueDateSelection = (date: Date, time: string) => {
-    if (activeTaskId) {
+    if (!activeTaskId) return;
+
+    console.log('handleDueDateSelection called with:', { date, time, isDraft, activeTaskId });
+
+    if (isDraft || activeTaskId === 'draft') {
+      updateDraftTaskDueDateTime(date, time);
+      // Verify the update worked
+      setTimeout(() => {
+        console.log('Draft after due date update:', tasksStore.state.draftTask);
+      }, 100);
+    } else if (typeof activeTaskId === 'string') {
       updateTaskDueDateTime(activeTaskId, date, time);
     }
   };
 
   const handleDurationChange = (durationMs: number) => {
-    if (activeTaskId) {
+    if (!activeTaskId) return;
+
+    console.log('handleDurationChange called with:', { durationMs, isDraft, activeTaskId });
+
+    if (isDraft || activeTaskId === 'draft') {
+      updateDraftTaskDuration(durationMs);
+      // Verify the update worked
+      setTimeout(() => {
+        console.log('Draft after duration update:', tasksStore.state.draftTask);
+      }, 100);
+    } else if (typeof activeTaskId === 'string') {
       updateTaskDuration(activeTaskId, durationMs);
     }
   };

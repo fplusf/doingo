@@ -28,9 +28,15 @@ import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { TaskFormProvider, useTaskForm } from '../../context/task-form-context';
 import { useTaskFormSubmission } from '../../hooks/use-task-form-submission';
 import {
+  clearDraftTask,
+  createDraftTask,
+  createTaskFromDraft,
   getTaskCategoryAndPriority,
   setEditingTaskId,
   tasksStore,
+  updateDraftTaskCategory,
+  updateDraftTaskField,
+  updateDraftTaskPriority,
   updateTaskCategory,
   updateTaskPriority,
 } from '../../store/tasks.store';
@@ -146,12 +152,21 @@ function TaskDialogContent({
   const navigate = useNavigate();
   const showActionButtons = values.title && values.title.length >= 3;
   const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
+  const hasDraftTask = useStore(tasksStore, (state) => Boolean(state.draftTask));
 
   // Get category and priority data from store if we're editing a task
   const categoryData = useStore(tasksStore, (state) => {
-    if (!editingTaskId)
-      return { category: 'work' as TaskCategory, priority: 'medium' as TaskPriority };
-    return getTaskCategoryAndPriority(editingTaskId);
+    // If editing an existing task
+    if (editingTaskId) return getTaskCategoryAndPriority(editingTaskId);
+
+    // If creating a new task with draft
+    if (mode === 'create' && hasDraftTask) return getTaskCategoryAndPriority('draft');
+
+    // Fallback for compatibility
+    return {
+      category: values.category || ('work' as TaskCategory),
+      priority: values.priority || ('medium' as TaskPriority),
+    };
   });
 
   // Show subtasks section automatically if there are existing subtasks
@@ -172,6 +187,32 @@ function TaskDialogContent({
       updateValue('emoji', suggestedEmoji);
     }
   }, [values.title, values.category]);
+
+  // Add effect to sync title changes
+  useEffect(() => {
+    if (mode === 'create' && hasDraftTask) {
+      if (values.title) {
+        updateDraftTaskField('title', values.title);
+      }
+      if (values.notes) {
+        updateDraftTaskField('notes', values.notes);
+      }
+      if (values.emoji) {
+        updateDraftTaskField('emoji', values.emoji);
+      }
+    }
+  }, [mode, hasDraftTask, values.title, values.notes, values.emoji]);
+
+  // Update form element handlers to sync with draft task
+  const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newTitle = e.target.value;
+    updateValue('title', newTitle);
+
+    // Also update draft task if we're creating a new task
+    if (mode === 'create' && hasDraftTask) {
+      updateDraftTaskField('title', newTitle);
+    }
+  };
 
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
@@ -232,6 +273,36 @@ function TaskDialogContent({
     }
   }, [newSubtaskTitle, isAddingSubtask]);
 
+  // Initialize draft task for new tasks
+  useEffect(() => {
+    console.log(
+      'Dialog initialization effect - mode:',
+      mode,
+      'open:',
+      open,
+      'hasDraftTask:',
+      hasDraftTask,
+    );
+
+    if (mode === 'create' && open && !hasDraftTask) {
+      console.log('Creating new draft task');
+      createDraftTask();
+
+      // Verify the draft was created
+      setTimeout(() => {
+        console.log('Draft after creation:', tasksStore.state.draftTask);
+      }, 100);
+    }
+
+    // Clean up draft task when dialog is closed
+    return () => {
+      if (mode === 'create' && !open && hasDraftTask) {
+        console.log('Cleaning up draft task on dialog close');
+        clearDraftTask();
+      }
+    };
+  }, [mode, open, hasDraftTask]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -240,36 +311,63 @@ function TaskDialogContent({
   };
 
   const handleSubmit = (e?: React.FormEvent) => {
-    e?.preventDefault();
+    if (e) e.preventDefault();
+
+    // Make sure we have a title
     if (!values.title) return;
 
-    if (isValid) {
-      // Calculate progress for subtasks before submission
+    console.log('handleSubmit called - mode:', mode, 'hasDraftTask:', hasDraftTask);
+    console.log('Current draft task:', tasksStore.state.draftTask);
+
+    // For create mode, convert draft to real task
+    if (mode === 'create' && hasDraftTask) {
+      // Make sure all data is synced to the draft task
+      updateDraftTaskField('title', values.title);
+      if (values.notes) updateDraftTaskField('notes', values.notes);
+      if (values.emoji) updateDraftTaskField('emoji', values.emoji);
+      if (values.subtasks && values.subtasks.length > 0) {
+        updateDraftTaskField('subtasks', values.subtasks);
+
+        // Calculate progress for subtasks
+        const completedCount = values.subtasks.filter((subtask) => subtask.isCompleted).length;
+        const progress = Math.round((completedCount / values.subtasks.length) * 100);
+        updateDraftTaskField('progress', progress);
+      }
+
+      console.log('Updated draft task before creation:', tasksStore.state.draftTask);
+
+      // Create the task from the draft
+      const newTaskId = createTaskFromDraft();
+
+      console.log('Created new task with ID:', newTaskId);
+
+      // Call onSubmit with the values for backward compatibility
+      onSubmit(values);
+    } else if (mode === 'edit') {
+      // Make sure to include progress calculation for edit mode too
       if (values.subtasks && values.subtasks.length > 0) {
         const completedCount = values.subtasks.filter((subtask) => subtask.isCompleted).length;
         const progress = Math.round((completedCount / values.subtasks.length) * 100);
         updateValue('progress', progress);
       }
 
+      // Normal submit for edit mode
       onSubmit(values);
-      onOpenChange(false);
+    } else {
+      // Fallback for any other case
+      onSubmit(values);
     }
+
+    onOpenChange(false);
   };
 
   const handleClose = () => {
-    if (values.title && mode === 'create') {
-      // Calculate progress for subtasks before submission
-      if (values.subtasks && values.subtasks.length > 0) {
-        const completedCount = values.subtasks.filter((subtask) => subtask.isCompleted).length;
-        const progress = Math.round((completedCount / values.subtasks.length) * 100);
-        updateValue('progress', progress);
-      }
-
-      onSubmit(values);
-    } else if (values.title && mode === 'edit') {
-      // For edit mode, make sure to save changes even when closing
-      onSubmit(values);
+    // If creating a new task, clear the draft when closing without saving
+    if (mode === 'create' && hasDraftTask) {
+      console.log('Clearing draft task on manual close');
+      clearDraftTask();
     }
+
     onOpenChange(false);
     setEditingTaskId(null);
   };
@@ -482,7 +580,7 @@ function TaskDialogContent({
                 <Textarea
                   ref={textareaRef}
                   value={values.title || ''}
-                  onChange={(e) => updateValue('title', e.target.value)}
+                  onChange={handleTitleChange}
                   onKeyDown={handleKeyDown}
                   rows={1}
                   placeholder="Task description"
@@ -578,9 +676,14 @@ function TaskDialogContent({
 
       {/* Fixed footer */}
       <div className="border-t border-border bg-card p-4">
-        <TaskScheduler className="text-muted-foreground" taskId={editingTaskId || undefined} />
+        <TaskScheduler
+          className="text-muted-foreground"
+          taskId={editingTaskId || undefined}
+          isDraft={mode === 'create' && hasDraftTask}
+        />
         <div className="mt-2 flex items-center gap-1">
           {editingTaskId ? (
+            // Editing an existing task
             <>
               <Select
                 value={categoryData.category}
@@ -629,52 +732,108 @@ function TaskDialogContent({
               />
             </>
           ) : (
+            // Creating a new task
             <>
-              <Select
-                value={values.category || 'work'}
-                onValueChange={(value: TaskCategory) => updateValue('category', value)}
-              >
-                <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
-                  <div className="flex items-center">
-                    {values.category === 'work' && <Hash className="mr-1 h-3.5 w-3.5" />}
-                    {(values.category === 'passion' || values.category === 'play') && (
-                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                    )}
-                    <SelectValue>
-                      {values.category === 'work'
-                        ? 'Work'
-                        : values.category === 'passion'
-                          ? 'Passion'
-                          : 'Play'}
-                    </SelectValue>
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="work">
-                    <div className="flex items-center">
-                      <Hash className="mr-1 h-3.5 w-3.5" />
-                      Work
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="passion">
-                    <div className="flex items-center">
-                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                      Passion
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="play">
-                    <div className="flex items-center">
-                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                      Play
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              {hasDraftTask ? (
+                // Use the draft task data
+                <>
+                  <Select
+                    value={categoryData.category}
+                    onValueChange={(value: TaskCategory) => updateDraftTaskCategory(value)}
+                  >
+                    <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
+                      <div className="flex items-center">
+                        {categoryData.category === 'work' && <Hash className="mr-1 h-3.5 w-3.5" />}
+                        {(categoryData.category === 'passion' ||
+                          categoryData.category === 'play') && (
+                          <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                        )}
+                        <SelectValue>
+                          {categoryData.category === 'work'
+                            ? 'Work'
+                            : categoryData.category === 'passion'
+                              ? 'Passion'
+                              : 'Play'}
+                        </SelectValue>
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="work">
+                        <div className="flex items-center">
+                          <Hash className="mr-1 h-3.5 w-3.5" />
+                          Work
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="passion">
+                        <div className="flex items-center">
+                          <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                          Passion
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="play">
+                        <div className="flex items-center">
+                          <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                          Play
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
 
-              <PriorityPicker
-                value={values.priority || 'medium'}
-                onValueChange={(priority) => updateValue('priority', priority)}
-              />
+                  <PriorityPicker
+                    value={categoryData.priority}
+                    onValueChange={(priority) => updateDraftTaskPriority(priority)}
+                  />
+                </>
+              ) : (
+                // Fall back to form context for compatibility
+                <>
+                  <Select
+                    value={values.category || 'work'}
+                    onValueChange={(value: TaskCategory) => updateValue('category', value)}
+                  >
+                    <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
+                      <div className="flex items-center">
+                        {values.category === 'work' && <Hash className="mr-1 h-3.5 w-3.5" />}
+                        {(values.category === 'passion' || values.category === 'play') && (
+                          <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                        )}
+                        <SelectValue>
+                          {values.category === 'work'
+                            ? 'Work'
+                            : values.category === 'passion'
+                              ? 'Passion'
+                              : 'Play'}
+                        </SelectValue>
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="work">
+                        <div className="flex items-center">
+                          <Hash className="mr-1 h-3.5 w-3.5" />
+                          Work
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="passion">
+                        <div className="flex items-center">
+                          <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                          Passion
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="play">
+                        <div className="flex items-center">
+                          <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                          Play
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <PriorityPicker
+                    value={values.priority || 'medium'}
+                    onValueChange={(priority) => updateValue('priority', priority)}
+                  />
+                </>
+              )}
             </>
           )}
         </div>

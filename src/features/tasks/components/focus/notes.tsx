@@ -14,16 +14,16 @@ import { debounce } from 'radash';
 import React, { memo } from 'react';
 
 interface TaskNotesProps {
-  notes: string;
-  onNotesChange: (notes: string) => void;
+  initialContent: string;
+  onContentChange: (content: string) => void;
 }
 
-function TaskNotes({ notes, onNotesChange }: TaskNotesProps) {
-  const debouncedNotesChange = React.useCallback(
+function TaskNotes({ initialContent, onContentChange }: TaskNotesProps) {
+  const debouncedContentChange = React.useCallback(
     debounce({ delay: 1000 }, (content: string) => {
-      onNotesChange(content);
+      onContentChange(content);
     }),
-    [onNotesChange],
+    [onContentChange],
   );
 
   const editor = useEditor({
@@ -79,10 +79,10 @@ function TaskNotes({ notes, onNotesChange }: TaskNotesProps) {
         emptyEditorClass: 'is-editor-empty',
       }),
     ],
-    content: notes,
+    content: initialContent,
     onUpdate: ({ editor }) => {
       const content = editor.getHTML();
-      debouncedNotesChange(content);
+      debouncedContentChange(content);
     },
   });
 

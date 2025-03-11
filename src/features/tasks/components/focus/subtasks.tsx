@@ -1,16 +1,24 @@
 import { Subtask } from '@/features/tasks/types';
 import { Button } from '@/shared/components/ui/button';
 import { PlusIcon } from 'lucide-react';
-import { nanoid } from 'nanoid';
 import React, { useCallback, useState } from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 
 interface SubtaskListProps {
   subtasks: Subtask[];
-  onSubtasksChange: (subtasks: Subtask[]) => void;
+  onToggle: (subtaskId: string, isCompleted: boolean) => void;
+  onEdit: (subtaskId: string, title: string) => void;
+  onDelete: (subtaskId: string) => void;
+  onAdd: (title: string) => void;
 }
 
-export function SubtaskList({ subtasks = [], onSubtasksChange }: SubtaskListProps) {
+export function SubtaskList({
+  subtasks = [],
+  onToggle,
+  onEdit,
+  onDelete,
+  onAdd,
+}: SubtaskListProps) {
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
   const newSubtaskInputRef = React.useRef<HTMLInputElement>(null);
@@ -25,16 +33,11 @@ export function SubtaskList({ subtasks = [], onSubtasksChange }: SubtaskListProp
 
   const handleCreateSubtask = useCallback(() => {
     if (newSubtaskTitle.trim()) {
-      const newSubtask: Subtask = {
-        id: nanoid(),
-        title: newSubtaskTitle.trim(),
-        isCompleted: false,
-      };
-      onSubtasksChange([...subtasks, newSubtask]);
+      onAdd(newSubtaskTitle.trim());
       setNewSubtaskTitle('');
     }
     setIsAddingSubtask(false);
-  }, [newSubtaskTitle, subtasks, onSubtasksChange]);
+  }, [newSubtaskTitle, onAdd]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -46,34 +49,6 @@ export function SubtaskList({ subtasks = [], onSubtasksChange }: SubtaskListProp
       }
     },
     [handleCreateSubtask],
-  );
-
-  const handleToggleSubtask = useCallback(
-    (id: string, isCompleted: boolean) => {
-      const updatedSubtasks = subtasks.map((subtask) =>
-        subtask.id === id ? { ...subtask, isCompleted } : subtask,
-      );
-      onSubtasksChange(updatedSubtasks);
-    },
-    [subtasks, onSubtasksChange],
-  );
-
-  const handleDeleteSubtask = useCallback(
-    (id: string) => {
-      const updatedSubtasks = subtasks.filter((subtask) => subtask.id !== id);
-      onSubtasksChange(updatedSubtasks);
-    },
-    [subtasks, onSubtasksChange],
-  );
-
-  const handleEditSubtask = useCallback(
-    (id: string, title: string) => {
-      const updatedSubtasks = subtasks.map((subtask) =>
-        subtask.id === id ? { ...subtask, title } : subtask,
-      );
-      onSubtasksChange(updatedSubtasks);
-    },
-    [subtasks, onSubtasksChange],
   );
 
   return (
@@ -89,10 +64,10 @@ export function SubtaskList({ subtasks = [], onSubtasksChange }: SubtaskListProp
 
       <div className="space-y-2">
         {subtasks.map((subtask) => (
-          <div key={subtask.id} className="group flex items-start gap-2">
+          <div key={subtask.id} className="group flex items-baseline gap-2">
             <TaskCheckbox
               checked={subtask.isCompleted}
-              onCheckedChange={(checked) => handleToggleSubtask(subtask.id, checked)}
+              onCheckedChange={(checked) => onToggle(subtask.id, checked)}
               size="sm"
               className="mt-0.5"
               ariaLabel={`Toggle subtask: ${subtask.title}`}
@@ -101,14 +76,14 @@ export function SubtaskList({ subtasks = [], onSubtasksChange }: SubtaskListProp
               <input
                 type="text"
                 value={subtask.title}
-                onChange={(e) => handleEditSubtask(subtask.id, e.target.value)}
+                onChange={(e) => onEdit(subtask.id, e.target.value)}
                 className={`w-full bg-transparent text-sm font-medium focus:outline-none ${
                   subtask.isCompleted ? 'text-muted-foreground line-through' : ''
                 }`}
               />
             </div>
             <button
-              onClick={() => handleDeleteSubtask(subtask.id)}
+              onClick={() => onDelete(subtask.id)}
               className="invisible text-xs text-muted-foreground opacity-0 transition-opacity group-hover:visible group-hover:opacity-100"
               aria-label="Delete subtask"
             >

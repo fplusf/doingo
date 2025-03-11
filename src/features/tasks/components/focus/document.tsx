@@ -1,179 +1,95 @@
 import { EmojiPicker } from '@/features/tasks/components/schedule/emoji-picker';
 import { OptimalTask, Subtask } from '@/features/tasks/types';
-import { convertTaskToSchedulerProps } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
-import React from 'react';
+import React, { useCallback } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
-import { TaskFormProvider } from '../../context/task-form-context';
-import { TaskFormValues } from '../schedule/dialog';
+import { toggleTaskCompletion, updateTask } from '../../store/tasks.store';
 import { TaskScheduler } from '../schedule/task-scheduler';
 import TaskNotes from './notes';
 import { SubtaskList } from './subtasks';
 
 interface TaskDocumentProps {
   task: OptimalTask;
-  onEdit: (task: OptimalTask) => void;
+  onEdit?: (task: OptimalTask) => void; // Keep for backward compatibility
   className?: string;
 }
 
 export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
-  const [notes, setNotes] = React.useState(task.notes || '');
-  const schedulerProps = React.useMemo(() => convertTaskToSchedulerProps(task), [task]);
-  const previousSubtaskStatesRef = React.useRef<Subtask[] | null>(null);
+  // Extract task ID for all update operations
+  const taskId = task.id;
 
-  const handleNotesChange = React.useCallback(
-    (content: string) => {
-      setNotes(content);
-      onEdit({ ...task, notes: content });
-    },
-    [task, onEdit],
-  );
-
-  const handleTitleChange = React.useCallback(
+  // Handler for updating the task title
+  const handleTitleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      onEdit({ ...task, title: e.target.value });
+      const newTitle = e.target.value;
+      updateTask(taskId, { title: newTitle });
+      // Call onEdit for backward compatibility if provided
+      if (onEdit) onEdit({ ...task, title: newTitle });
     },
-    [task, onEdit],
+    [taskId, task, onEdit],
   );
 
-  const handleEmojiSelect = React.useCallback(
+  // Handler for updating the task emoji
+  const handleEmojiSelect = useCallback(
     (emoji: string) => {
-      onEdit({ ...task, emoji });
+      updateTask(taskId, { emoji });
+      // Call onEdit for backward compatibility if provided
+      if (onEdit) onEdit({ ...task, emoji });
     },
-    [task, onEdit],
+    [taskId, task, onEdit],
   );
 
-  const handleTaskCompletedChange = React.useCallback(
+  // Handler for toggling task completion
+  const handleTaskCompletedChange = useCallback(
     (completed: boolean) => {
-      // If there are no subtasks, just update the main task
-      if (!task.subtasks || task.subtasks.length === 0) {
-        onEdit({ ...task, completed });
-        return;
-      }
-
-      if (completed) {
-        // Store current subtask states before completing all
-        previousSubtaskStatesRef.current = [...(task.subtasks || [])];
-
-        // Complete all subtasks
-        const updatedSubtasks = task.subtasks.map((subtask) => ({
-          ...subtask,
-          isCompleted: true,
-        }));
-
-        // Calculate progress (should be 100% since all are completed)
-        const progress = 100;
-
-        // Update the task with completed subtasks
-        onEdit({
-          ...task,
-          completed,
-          subtasks: updatedSubtasks,
-          progress,
-        });
-      } else {
-        // Restore previous subtask states if available
-        if (previousSubtaskStatesRef.current) {
-          // Calculate progress percentage based on restored states
-          const completedCount = previousSubtaskStatesRef.current.filter(
-            (subtask) => subtask.isCompleted,
-          ).length;
-          const progress =
-            previousSubtaskStatesRef.current.length > 0
-              ? Math.round((completedCount / previousSubtaskStatesRef.current.length) * 100)
-              : 0;
-
-          // Update the task with restored subtask states
-          onEdit({
-            ...task,
-            completed,
-            subtasks: previousSubtaskStatesRef.current,
-            progress,
-          });
-
-          // Clear the reference after restoring
-          previousSubtaskStatesRef.current = null;
-        } else {
-          // If no previous states are stored (edge case), just update completion status
-          onEdit({ ...task, completed });
-        }
-      }
+      toggleTaskCompletion(taskId);
+      // Call onEdit for backward compatibility if provided
+      if (onEdit) onEdit({ ...task, completed: !task.completed });
     },
-    [task, onEdit],
+    [taskId, task, onEdit],
   );
 
-  const handleSubtasksChange = React.useCallback(
-    (subtasks: Subtask[]) => {
-      // Calculate progress percentage
-      const completedCount = subtasks.filter((subtask) => subtask.isCompleted).length;
+  // Handler for updating task notes
+  const handleNotesChange = useCallback(
+    (content: string) => {
+      updateTask(taskId, { notes: content });
+      // Call onEdit for backward compatibility if provided
+      if (onEdit) onEdit({ ...task, notes: content });
+    },
+    [taskId, task, onEdit],
+  );
+
+  // Handler for adding a subtask
+  const handleAddSubtask = useCallback(
+    (title: string) => {
+      const newSubtask: Subtask = {
+        id: uuidv4(),
+        title,
+        isCompleted: false,
+      };
+
+      // Get current subtasks and add the new one
+      const updatedSubtasks = [...(task.subtasks || []), newSubtask];
+
+      // Calculate new progress
+      const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
       const progress =
-        subtasks.length > 0 ? Math.round((completedCount / subtasks.length) * 100) : 0;
+        updatedSubtasks.length > 0
+          ? Math.round((completedCount / updatedSubtasks.length) * 100)
+          : 0;
 
-      onEdit({ ...task, subtasks, progress });
+      // Update the task
+      updateTask(taskId, {
+        subtasks: updatedSubtasks,
+        progress,
+      });
+
+      // Call onEdit for backward compatibility if provided
+      if (onEdit) onEdit({ ...task, subtasks: updatedSubtasks, progress });
     },
-    [task, onEdit],
-  );
-
-  // New function to handle scheduler changes
-  const handleSchedulerChange = React.useCallback(
-    (updatedValues: Partial<TaskFormValues>) => {
-      const updates: Partial<OptimalTask> = {};
-
-      if (updatedValues.startTime) {
-        updates.time =
-          updatedValues.startTime + (task.time?.includes('—') ? '—' + task.time.split('—')[1] : '');
-      }
-
-      if (updatedValues.dueTime) {
-        updates.time = (task.time?.split('—')[0] || '') + '—' + updatedValues.dueTime;
-      }
-
-      if (updatedValues.dueDate) {
-        updates.dueDate = updatedValues.dueDate;
-      }
-
-      // Update dueTime if provided
-      if (updatedValues.dueTime) {
-        // Calculate duration if we have both startTime and dueTime
-        if (task.startTime && updatedValues.dueTime) {
-          try {
-            // Create Date objects for start and due times
-            const [startHours, startMinutes] = task.time
-              ?.split('—')[0]
-              .trim()
-              .split(':')
-              .map(Number) || [0, 0];
-            const [dueHours, dueMinutes] = updatedValues.dueTime.split(':').map(Number);
-
-            const startDate = new Date(updatedValues.dueDate || task.dueDate || new Date());
-            startDate.setHours(startHours, startMinutes, 0, 0);
-
-            const dueDate = new Date(updatedValues.dueDate || task.dueDate || new Date());
-            dueDate.setHours(dueHours, dueMinutes, 0, 0);
-
-            // Calculate duration in milliseconds
-            const durationMs = dueDate.getTime() - startDate.getTime();
-            if (durationMs > 0) {
-              updates.duration = durationMs;
-            }
-          } catch (error) {
-            console.error('Error calculating duration from times:', error);
-          }
-        }
-
-        updates.dueTime = updatedValues.dueTime;
-      }
-
-      if (updatedValues.duration) {
-        updates.duration = updatedValues.duration;
-      }
-
-      if (Object.keys(updates).length > 0) {
-        onEdit({ ...task, ...updates });
-      }
-    },
-    [task, onEdit],
+    [taskId, task, onEdit],
   );
 
   return (
@@ -183,28 +99,14 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
         <div className="flex-1">
           <EmojiPicker emoji={task.emoji} onEmojiSelect={handleEmojiSelect} className="text-3xl" />
         </div>
-        <TaskFormProvider
-          initialValues={{
-            title: task.title,
-            emoji: task.emoji || '',
-            startTime: schedulerProps.startTime || '',
-            dueTime: schedulerProps.dueTime || '',
-            duration: task.duration || 0,
-            dueDate: schedulerProps.dueDate || new Date(),
-            priority: task.priority || 'medium',
-            category: task.category || 'work',
-            repetition: 'once',
-          }}
-        >
-          <TaskScheduler className="flex-1 text-muted-foreground" />
-        </TaskFormProvider>
+        <TaskScheduler className="flex-1 text-muted-foreground" taskId={taskId} isDraft={false} />
       </div>
 
       <ScrollArea
         className="flex flex-1 items-start will-change-scroll"
         preserveScrollPosition={true}
       >
-        <section className="mb-2 flex items-center justify-between border-b border-gray-700/40 pb-2">
+        <section className="mb-2 flex items-baseline justify-between border-b border-gray-700/40 pb-2">
           <TaskCheckbox
             checked={task.completed}
             onCheckedChange={handleTaskCompletedChange}
@@ -216,45 +118,50 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
             value={task.title}
             onChange={handleTitleChange}
             className="w-full resize-none overflow-hidden whitespace-pre-wrap break-words bg-transparent px-4 text-2xl font-semibold tracking-tight focus:outline-none"
-            rows={3}
-            style={{
-              height: 'auto',
-              minHeight: '2.5rem',
-              overflowWrap: 'break-word',
-              wordWrap: 'break-word',
-            }}
-            ref={(textareaRef) => {
-              if (textareaRef) {
-                const scrollContainer = textareaRef.closest('.scroll-area-viewport');
-                const scrollTop = scrollContainer?.scrollTop;
-
-                // Reset height first to get accurate scrollHeight
-                textareaRef.style.height = '2.5rem';
-                const scrollHeight = textareaRef.scrollHeight;
-
-                // Only update if scrollHeight is reasonable (prevent excessive growth)
-                if (scrollHeight <= 300) {
-                  textareaRef.style.height = `${scrollHeight}px`;
-                } else {
-                  textareaRef.style.height = '300px';
-                  textareaRef.style.overflowY = 'auto';
-                }
-
-                // Restore scroll position
-                // if (scrollContainer && scrollTop) {
-                //   scrollContainer.scrollTop = scrollTop;
-                // }
-              }
-            }}
           />
         </section>
 
-        {/* Subtasks Section */}
-        <section className="mb-2 border-b border-gray-700/40 pb-2">
-          <SubtaskList subtasks={task.subtasks || []} onSubtasksChange={handleSubtasksChange} />
-        </section>
+        <TaskNotes initialContent={task.notes || ''} onContentChange={handleNotesChange} />
 
-        <TaskNotes notes={notes} onNotesChange={handleNotesChange} />
+        <SubtaskList
+          subtasks={task.subtasks || []}
+          onToggle={(subtaskId, isCompleted) => {
+            const updatedSubtasks = (task.subtasks || []).map((subtask) =>
+              subtask.id === subtaskId ? { ...subtask, isCompleted } : subtask,
+            );
+
+            const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
+            const progress =
+              updatedSubtasks.length > 0
+                ? Math.round((completedCount / updatedSubtasks.length) * 100)
+                : 0;
+
+            updateTask(taskId, { subtasks: updatedSubtasks, progress });
+            if (onEdit) onEdit({ ...task, subtasks: updatedSubtasks, progress });
+          }}
+          onEdit={(subtaskId, title) => {
+            const updatedSubtasks = (task.subtasks || []).map((subtask) =>
+              subtask.id === subtaskId ? { ...subtask, title } : subtask,
+            );
+            updateTask(taskId, { subtasks: updatedSubtasks });
+            if (onEdit) onEdit({ ...task, subtasks: updatedSubtasks });
+          }}
+          onDelete={(subtaskId) => {
+            const updatedSubtasks = (task.subtasks || []).filter(
+              (subtask) => subtask.id !== subtaskId,
+            );
+
+            const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
+            const progress =
+              updatedSubtasks.length > 0
+                ? Math.round((completedCount / updatedSubtasks.length) * 100)
+                : 0;
+
+            updateTask(taskId, { subtasks: updatedSubtasks, progress });
+            if (onEdit) onEdit({ ...task, subtasks: updatedSubtasks, progress });
+          }}
+          onAdd={handleAddSubtask}
+        />
       </ScrollArea>
     </div>
   );
