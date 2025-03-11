@@ -1,4 +1,8 @@
 import {
+  createNewTask,
+  editExistingTask,
+  getDefaultEndTime,
+  getDefaultStartTime,
   getTasksByDate,
   setEditingTaskId,
   setSelectedDate,
@@ -30,7 +34,6 @@ import { useStore } from '@tanstack/react-store';
 import { format, parse } from 'date-fns';
 import React, { useEffect, useRef, useState } from 'react';
 import { TasksRoute } from '../../../../routes/routes';
-import { useTaskFormSubmission } from '../../hooks/use-task-form-submission';
 import { OptimalTask, TaskCategory, TaskPriority } from '../../types';
 import { TaskDialog } from '../schedule/dialog';
 import { DayTimeline } from '../timeline/day-timeline';
@@ -86,14 +89,12 @@ export const TasksList = React.forwardRef<
   const allTasks = useStore(tasksStore, (state) => state.tasks);
   const selectedDate = useStore(tasksStore, (state) => state.selectedDate);
   const search = useSearch({ from: TasksRoute.fullPath });
-  const { createNewTask, editTask, getDefaultStartTime, getDefaultEndTime } =
-    useTaskFormSubmission(selectedDate);
 
   const [isCreating, setIsCreating] = useState(false);
   const [activeCategory, setActiveCategory] = useState<TaskCategory>('work');
   const [editingTask, setEditingTask] = useState<string | null>(null);
-  const [startTime, setStartTime] = useState(getDefaultStartTime);
-  const [endTime, setEndTime] = useState(getDefaultEndTime);
+  const [startTime, setStartTime] = useState(getDefaultStartTime());
+  const [endTime, setEndTime] = useState(getDefaultEndTime());
   const [duration, setDuration] = useState<number>(ONE_HOUR_IN_MS);
   const [dueDate, setDueDate] = useState<Date>();
   const [newTask, setNewTask] = useState({
@@ -141,8 +142,8 @@ export const TasksList = React.forwardRef<
           priority: 'none',
           category: 'work',
         });
-        setStartTime(getDefaultStartTime);
-        setEndTime(getDefaultEndTime);
+        setStartTime(getDefaultStartTime());
+        setEndTime(getDefaultEndTime());
         setDuration(ONE_HOUR_IN_MS);
         setDueDate(undefined);
         setActiveCategory('work');
@@ -240,7 +241,6 @@ export const TasksList = React.forwardRef<
     if (startTime) {
       const start = parse(startTime, 'HH:mm', new Date());
       const end = new Date(start.getTime() + duration);
-      console.log('end', end);
       setEndTime(format(end, 'HH:mm'));
     }
   }, [startTime, duration]);
@@ -293,8 +293,8 @@ export const TasksList = React.forwardRef<
                       priority: 'none',
                       category: category as TaskCategory,
                     });
-                    setStartTime(getDefaultStartTime);
-                    setEndTime(getDefaultEndTime);
+                    setStartTime(getDefaultStartTime());
+                    setEndTime(getDefaultEndTime());
                     setDuration(ONE_HOUR_IN_MS);
                     setDueDate(undefined);
                     setIsCreating(true);
@@ -370,7 +370,7 @@ export const TasksList = React.forwardRef<
           onSubmit={(values) => {
             const taskToEdit = tasks.find((t) => t.id === editingTask);
             if (taskToEdit) {
-              editTask(taskToEdit, values);
+              editExistingTask(taskToEdit, values);
             }
             setEditingTask(null);
           }}

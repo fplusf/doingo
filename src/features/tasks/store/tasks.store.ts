@@ -1,10 +1,11 @@
+import { getNextFifteenMinuteInterval } from '@/shared/helpers/date/next-feefteen-minutes';
 import { LocalStorageAdapter } from '@/shared/store/adapters/local-storage-adapter';
 import { StorageAdapter } from '@/shared/store/adapters/storage-adapter';
 import { Store } from '@tanstack/react-store';
-import { addMilliseconds, format, parse, startOfDay } from 'date-fns';
+import { addMilliseconds, format, parse, parseISO, startOfDay } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { RepetitionOption } from '../components/schedule/task-scheduler';
-import { OptimalTask, TaskCategory, TaskPriority, TasksState } from '../types';
+import { ONE_HOUR_IN_MS, OptimalTask, TaskCategory, TaskPriority, TasksState } from '../types';
 
 // Initialize the storage adapter (can be easily swapped with a different implementation)
 const storageAdapter: StorageAdapter = new LocalStorageAdapter();
@@ -627,4 +628,179 @@ export const createTaskFromDraft = () => {
   console.log('Created task:', createdTask);
 
   return createdTaskId;
+};
+
+// Helper functions for time management
+export const getDefaultStartTime = () => {
+  const nextFifteen = getNextFifteenMinuteInterval();
+  return format(nextFifteen, 'HH:mm');
+};
+
+export const getDefaultEndTime = () => {
+  const nextFifteen = getNextFifteenMinuteInterval();
+  return format(addMilliseconds(nextFifteen, ONE_HOUR_IN_MS), 'HH:mm');
+};
+
+// Enhanced task creation function
+export const createNewTask = (
+  values: {
+    title: string;
+    notes?: string;
+    emoji?: string;
+    startTime?: string;
+    dueTime?: string;
+    duration?: number;
+    dueDate?: Date;
+    priority?: TaskPriority;
+    category?: TaskCategory;
+    subtasks?: any[];
+    progress?: number;
+  },
+  category: TaskCategory = 'work',
+) => {
+  try {
+    // Handle start time and date
+    let taskDate = tasksStore.state.selectedDate;
+    let timeString = '';
+    let startTime: Date;
+
+    if (values.startTime) {
+      timeString = values.startTime;
+      startTime = parse(values.startTime, 'HH:mm', parseISO(taskDate));
+
+      // If there's a due time, append it
+      if (values.dueTime) {
+        timeString += `—${values.dueTime}`;
+      }
+
+      // If there's a due date, use it as the task date
+      if (values.dueDate) {
+        taskDate = format(values.dueDate, 'yyyy-MM-dd');
+        startTime = parse(values.startTime, 'HH:mm', values.dueDate);
+      }
+    } else {
+      // Use default time if none provided
+      startTime = getNextFifteenMinuteInterval();
+      timeString = format(startTime, 'HH:mm');
+    }
+
+    // Handle duration
+    const duration = values.duration && values.duration > 0 ? values.duration : ONE_HOUR_IN_MS;
+
+    // Calculate next start time
+    const nextStartTime = addMilliseconds(startTime, duration);
+
+    const taskId = uuidv4();
+    const task: OptimalTask = {
+      id: taskId,
+      title: values.title,
+      notes: values.notes || '',
+      emoji: values.emoji || '',
+      time: timeString,
+      duration,
+      dueDate: values.dueDate,
+      dueTime: values.dueTime,
+      priority: values.priority || 'none',
+      category: values.category || category,
+      completed: false,
+      isFocused: false,
+      taskDate,
+      subtasks: values.subtasks || [],
+      progress: values.progress || 0,
+      startTime,
+      nextStartTime,
+    };
+
+    addTask(task);
+    return taskId;
+  } catch (error) {
+    console.error('Failed to create new task:', error);
+    return null;
+  }
+};
+
+// Enhanced task editing function
+export const editExistingTask = (
+  task: OptimalTask,
+  values: {
+    title: string;
+    notes?: string;
+    emoji?: string;
+    startTime?: string;
+    dueTime?: string;
+    duration?: number;
+    dueDate?: Date;
+    priority?: TaskPriority;
+    category?: TaskCategory;
+    subtasks?: any[];
+    progress?: number;
+  },
+) => {
+  try {
+    // Extract values from form or use existing task values
+    const updatedValues: Partial<OptimalTask> = {
+      title: values.title || task.title,
+      notes: values.notes || task.notes,
+      emoji: values.emoji || task.emoji,
+      priority: values.priority || task.priority,
+      category: values.category || task.category,
+      subtasks: values.subtasks || task.subtasks || [],
+    };
+
+    // Calculate progress if subtasks are present
+    if (updatedValues.subtasks && updatedValues.subtasks.length > 0) {
+      const completedCount = updatedValues.subtasks.filter((s) => s.isCompleted).length;
+      updatedValues.progress = Math.round((completedCount / updatedValues.subtasks.length) * 100);
+    } else {
+      updatedValues.progress = values.progress || task.progress || 0;
+    }
+
+    try {
+      // Handle start time and date
+      let taskDate = task.taskDate;
+      let timeString = task.time || '';
+      let startTime = task.startTime;
+
+      if (values.startTime) {
+        timeString = values.startTime;
+        startTime = parse(values.startTime, 'HH:mm', parseISO(taskDate));
+
+        // If there's a due time, append it
+        if (values.dueTime) {
+          timeString += `—${values.dueTime}`;
+        }
+
+        // If there's a due date, use it as the task date
+        if (values.dueDate) {
+          taskDate = format(values.dueDate, 'yyyy-MM-dd');
+          startTime = parse(values.startTime, 'HH:mm', values.dueDate);
+        }
+      }
+
+      // Handle duration
+      const duration =
+        values.duration && values.duration > 0 ? values.duration : task.duration || ONE_HOUR_IN_MS;
+
+      // Calculate next start time
+      const nextStartTime = addMilliseconds(startTime, duration);
+
+      const finalUpdatedValues = {
+        ...updatedValues,
+        time: timeString,
+        duration,
+        taskDate,
+        dueDate: values.dueDate,
+        dueTime: values.dueTime,
+        startTime,
+        nextStartTime,
+      };
+
+      updateTask(task.id, finalUpdatedValues);
+    } catch (error) {
+      console.error('Error parsing dates:', error);
+      updateTask(task.id, updatedValues);
+    }
+  } catch (error) {
+    console.error('Failed to edit task:', error);
+  }
 };

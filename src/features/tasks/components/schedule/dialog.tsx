@@ -18,15 +18,14 @@ import {
   SelectValue,
 } from '@/shared/components/ui/select';
 import { Textarea } from '@/shared/components/ui/textarea';
+import { getNextFifteenMinuteInterval } from '@/shared/helpers/date/next-feefteen-minutes';
 import { useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
 import { ClipboardList, Hash, ListPlus, Maximize2, Plus, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
-import { TaskFormProvider, useTaskForm } from '../../context/task-form-context';
-import { useTaskFormSubmission } from '../../hooks/use-task-form-submission';
 import {
   clearDraftTask,
   createDraftTask,
@@ -134,20 +133,45 @@ const getSuggestedEmoji = (title: string, category: TaskCategory): string => {
   return categoryMappings.default;
 };
 
+const defaultValues: TaskFormValues = {
+  title: '',
+  notes: '',
+  emoji: '',
+  startTime: format(getNextFifteenMinuteInterval(), 'HH:mm'),
+  dueTime: '',
+  duration: 60 * 60 * 1000, // 1 hour in ms
+  category: 'work',
+  priority: 'medium',
+  subtasks: [],
+  progress: 0,
+};
+
 function TaskDialogContent({
   onSubmit,
   mode = 'create',
   className,
   onOpenChange,
   open,
+  initialValues,
 }: {
   onSubmit: (values: TaskFormValues) => void;
   mode?: 'create' | 'edit';
   className?: string;
   onOpenChange: (open: boolean) => void;
   open: boolean;
+  initialValues?: Partial<TaskFormValues>;
 }) {
-  const { values, updateValue, isValid } = useTaskForm();
+  // Local state for form values
+  const [values, setValues] = useState<TaskFormValues>(() => ({
+    ...defaultValues,
+    ...initialValues,
+    subtasks: initialValues?.subtasks || [],
+  }));
+
+  const updateValue = <K extends keyof TaskFormValues>(key: K, value: TaskFormValues[K]) => {
+    setValues((prev) => ({ ...prev, [key]: value }));
+  };
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const subtaskInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -179,7 +203,6 @@ function TaskDialogContent({
 
   // Get the current date for task creation
   const today = format(new Date(), 'yyyy-MM-dd');
-  const { createNewTask } = useTaskFormSubmission(today);
 
   // Auto-suggest emoji when title or category changes
   useEffect(() => {
@@ -203,6 +226,20 @@ function TaskDialogContent({
       }
     }
   }, [mode, hasDraftTask, values.title, values.notes, values.emoji]);
+
+  // Initialize draft task for new tasks
+  useEffect(() => {
+    if (mode === 'create' && open && !hasDraftTask) {
+      createDraftTask();
+    }
+
+    // Clean up draft task when dialog is closed
+    return () => {
+      if (mode === 'create' && !open && hasDraftTask) {
+        clearDraftTask();
+      }
+    };
+  }, [mode, open, hasDraftTask]);
 
   // Update form element handlers to sync with draft task
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -269,36 +306,6 @@ function TaskDialogContent({
       subtaskInputRef.current.focus();
     }
   }, [newSubtaskTitle, isAddingSubtask]);
-
-  // Initialize draft task for new tasks
-  useEffect(() => {
-    console.log(
-      'Dialog initialization effect - mode:',
-      mode,
-      'open:',
-      open,
-      'hasDraftTask:',
-      hasDraftTask,
-    );
-
-    if (mode === 'create' && open && !hasDraftTask) {
-      console.log('Creating new draft task');
-      createDraftTask();
-
-      // Verify the draft was created
-      setTimeout(() => {
-        console.log('Draft after creation:', tasksStore.state.draftTask);
-      }, 100);
-    }
-
-    // Clean up draft task when dialog is closed
-    return () => {
-      if (mode === 'create' && !open && hasDraftTask) {
-        console.log('Cleaning up draft task on dialog close');
-        clearDraftTask();
-      }
-    };
-  }, [mode, open, hasDraftTask]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -370,8 +377,8 @@ function TaskDialogContent({
         onSubmit(values);
         taskId = editingTaskId;
       } else {
-        // For create mode, create the task directly
-        taskId = createNewTask(values, values.category || 'work');
+        // For create mode, create the task from draft
+        taskId = createTaskFromDraft();
       }
 
       if (taskId) {
@@ -852,29 +859,16 @@ export function TaskDialog({
   mode = 'create',
   className,
 }: TaskDialogProps) {
-  // We still need TaskFormProvider for new tasks because we haven't fully migrated
-  // everything to store yet
-  const enhancedInitialValues = useMemo(() => {
-    if (!initialValues) return initialValues;
-
-    return {
-      ...initialValues,
-      // Ensure subtasks array exists and has the correct format
-      subtasks: initialValues.subtasks || [],
-    };
-  }, [initialValues]);
-
   return (
     <Dialog open={open}>
-      <TaskFormProvider initialValues={enhancedInitialValues}>
-        <TaskDialogContent
-          onSubmit={onSubmit}
-          mode={mode}
-          className={className}
-          onOpenChange={onOpenChange}
-          open={open}
-        />
-      </TaskFormProvider>
+      <TaskDialogContent
+        onSubmit={onSubmit}
+        mode={mode}
+        className={className}
+        onOpenChange={onOpenChange}
+        open={open}
+        initialValues={initialValues}
+      />
     </Dialog>
   );
 }
