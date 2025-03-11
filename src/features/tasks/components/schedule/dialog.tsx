@@ -37,6 +37,7 @@ import {
   updateDraftTaskCategory,
   updateDraftTaskField,
   updateDraftTaskPriority,
+  updateTask,
   updateTaskCategory,
   updateTaskPriority,
 } from '../../store/tasks.store';
@@ -243,14 +244,10 @@ function TaskDialogContent({
 
   // Initialize subtasks array if it doesn't exist
   useEffect(() => {
-    // Check if subtasks is undefined or null and initialize it
     if (!values.subtasks) {
       updateValue('subtasks', []);
-    } else {
-      // Force an update to ensure the subtasks are properly in sync
-      updateValue('subtasks', [...values.subtasks]);
     }
-  }, []);
+  }, []); // Run only once on mount
 
   // Ensure subtasks section is shown if there are subtasks
   useEffect(() => {
@@ -312,49 +309,34 @@ function TaskDialogContent({
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-
-    // Make sure we have a title
     if (!values.title) return;
-
-    console.log('handleSubmit called - mode:', mode, 'hasDraftTask:', hasDraftTask);
-    console.log('Current draft task:', tasksStore.state.draftTask);
 
     // For create mode, convert draft to real task
     if (mode === 'create' && hasDraftTask) {
-      // Make sure all data is synced to the draft task
+      // Sync all form values to draft task before creating
       updateDraftTaskField('title', values.title);
       if (values.notes) updateDraftTaskField('notes', values.notes);
       if (values.emoji) updateDraftTaskField('emoji', values.emoji);
-      if (values.subtasks && values.subtasks.length > 0) {
-        updateDraftTaskField('subtasks', values.subtasks);
-
-        // Calculate progress for subtasks
-        const completedCount = values.subtasks.filter((subtask) => subtask.isCompleted).length;
-        const progress = Math.round((completedCount / values.subtasks.length) * 100);
-        updateDraftTaskField('progress', progress);
-      }
-
-      console.log('Updated draft task before creation:', tasksStore.state.draftTask);
+      updateDraftTaskField('subtasks', values.subtasks || []);
+      updateDraftTaskField('progress', values.progress || 0);
 
       // Create the task from the draft
       const newTaskId = createTaskFromDraft();
-
       console.log('Created new task with ID:', newTaskId);
-
-      // Call onSubmit with the values for backward compatibility
       onSubmit(values);
-    } else if (mode === 'edit') {
-      // Make sure to include progress calculation for edit mode too
-      if (values.subtasks && values.subtasks.length > 0) {
-        const completedCount = values.subtasks.filter((subtask) => subtask.isCompleted).length;
-        const progress = Math.round((completedCount / values.subtasks.length) * 100);
-        updateValue('progress', progress);
-      }
-
-      // Normal submit for edit mode
+    } else if (mode === 'edit' && editingTaskId) {
+      // For edit mode, update the existing task with only the fields that match OptimalTask type
+      updateTask(editingTaskId, {
+        title: values.title,
+        notes: values.notes,
+        emoji: values.emoji,
+        subtasks: values.subtasks || [],
+        progress: values.progress || 0,
+        category: values.category,
+        priority: values.priority,
+      });
       onSubmit(values);
     } else {
-      // Fallback for any other case
       onSubmit(values);
     }
 
@@ -430,13 +412,17 @@ function TaskDialogContent({
 
       // Add to existing subtasks or create a new array
       const updatedSubtasks = [...(values.subtasks || []), newSubtask];
+
+      // Update form context
       updateValue('subtasks', updatedSubtasks);
+
+      // Calculate progress
+      const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
+      const progress = Math.round((completedCount / updatedSubtasks.length) * 100);
+      updateValue('progress', progress);
 
       // Clear input for next subtask but keep input field visible and focused
       setNewSubtaskTitle('');
-
-      // Keep the adding mode active so user can add multiple subtasks in succession
-      // Focus will be maintained by the useEffect that watches for changes to newSubtaskTitle
       setTimeout(() => {
         subtaskInputRef.current?.focus();
       }, 0);
@@ -454,14 +440,16 @@ function TaskDialogContent({
   };
 
   const handleToggleSubtask = (subtaskId: string, isCompleted: boolean) => {
-    const updatedSubtasks = values.subtasks?.map((subtask) =>
+    const currentSubtasks = values.subtasks || [];
+    const updatedSubtasks = currentSubtasks.map((subtask) =>
       subtask.id === subtaskId ? { ...subtask, isCompleted } : subtask,
     );
 
+    // Update form context
     updateValue('subtasks', updatedSubtasks);
 
-    // Update progress after toggling subtask
-    if (updatedSubtasks && updatedSubtasks.length > 0) {
+    // Update progress
+    if (updatedSubtasks.length > 0) {
       const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
       const progress = Math.round((completedCount / updatedSubtasks.length) * 100);
       updateValue('progress', progress);
@@ -469,16 +457,30 @@ function TaskDialogContent({
   };
 
   const handleEditSubtask = (subtaskId: string, title: string) => {
-    const updatedSubtasks = values.subtasks?.map((subtask) =>
+    const currentSubtasks = values.subtasks || [];
+    const updatedSubtasks = currentSubtasks.map((subtask) =>
       subtask.id === subtaskId ? { ...subtask, title } : subtask,
     );
 
+    // Update form context
     updateValue('subtasks', updatedSubtasks);
   };
 
   const handleDeleteSubtask = (subtaskId: string) => {
-    const updatedSubtasks = values.subtasks?.filter((subtask) => subtask.id !== subtaskId);
+    const currentSubtasks = values.subtasks || [];
+    const updatedSubtasks = currentSubtasks.filter((subtask) => subtask.id !== subtaskId);
+
+    // Update form context
     updateValue('subtasks', updatedSubtasks);
+
+    // Update progress
+    if (updatedSubtasks.length > 0) {
+      const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
+      const progress = Math.round((completedCount / updatedSubtasks.length) * 100);
+      updateValue('progress', progress);
+    } else {
+      updateValue('progress', 0);
+    }
   };
 
   const startAddingSubtask = () => {
