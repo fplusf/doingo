@@ -27,7 +27,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { TaskFormProvider, useTaskForm } from '../../context/task-form-context';
 import { useTaskFormSubmission } from '../../hooks/use-task-form-submission';
-import { setEditingTaskId, tasksStore } from '../../store/tasks.store';
+import {
+  getTaskCategoryAndPriority,
+  setEditingTaskId,
+  tasksStore,
+  updateTaskCategory,
+  updateTaskPriority,
+} from '../../store/tasks.store';
 import { PriorityPicker } from './priority-picker';
 import { TaskScheduler } from './task-scheduler';
 
@@ -140,6 +146,13 @@ function TaskDialogContent({
   const navigate = useNavigate();
   const showActionButtons = values.title && values.title.length >= 3;
   const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
+
+  // Get category and priority data from store if we're editing a task
+  const categoryData = useStore(tasksStore, (state) => {
+    if (!editingTaskId)
+      return { category: 'work' as TaskCategory, priority: 'medium' as TaskPriority };
+    return getTaskCategoryAndPriority(editingTaskId);
+  });
 
   // Show subtasks section automatically if there are existing subtasks
   const [showSubtasks, setShowSubtasks] = useState(
@@ -401,7 +414,7 @@ function TaskDialogContent({
       {/* Fixed header with action buttons */}
       <div className="flex h-10 items-center justify-between px-4">
         {/* Emoji picker on the left */}
-        <div className="flex items-center">
+        <div className="-ml-2 flex items-center">
           <EmojiPicker
             emoji={values.emoji || ''}
             onEmojiSelect={(newEmoji) => updateValue('emoji', newEmoji)}
@@ -565,53 +578,105 @@ function TaskDialogContent({
 
       {/* Fixed footer */}
       <div className="border-t border-border bg-card p-4">
-        <TaskScheduler className="text-muted-foreground" />
+        <TaskScheduler className="text-muted-foreground" taskId={editingTaskId || undefined} />
         <div className="mt-2 flex items-center gap-1">
-          <Select
-            value={values.category || 'work'}
-            onValueChange={(value: TaskCategory) => updateValue('category', value)}
-          >
-            <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
-              <div className="flex items-center">
-                {values.category === 'work' && <Hash className="mr-1 h-3.5 w-3.5" />}
-                {(values.category === 'passion' || values.category === 'play') && (
-                  <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                )}
-                <SelectValue>
-                  {values.category === 'work'
-                    ? 'Work'
-                    : values.category === 'passion'
-                      ? 'Passion'
-                      : 'Play'}
-                </SelectValue>
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="work">
-                <div className="flex items-center">
-                  <Hash className="mr-1 h-3.5 w-3.5" />
-                  Work
-                </div>
-              </SelectItem>
-              <SelectItem value="passion">
-                <div className="flex items-center">
-                  <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                  Passion
-                </div>
-              </SelectItem>
-              <SelectItem value="play">
-                <div className="flex items-center">
-                  <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                  Play
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          {editingTaskId ? (
+            <>
+              <Select
+                value={categoryData.category}
+                onValueChange={(value: TaskCategory) => updateTaskCategory(editingTaskId, value)}
+              >
+                <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
+                  <div className="flex items-center">
+                    {categoryData.category === 'work' && <Hash className="mr-1 h-3.5 w-3.5" />}
+                    {(categoryData.category === 'passion' || categoryData.category === 'play') && (
+                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                    )}
+                    <SelectValue>
+                      {categoryData.category === 'work'
+                        ? 'Work'
+                        : categoryData.category === 'passion'
+                          ? 'Passion'
+                          : 'Play'}
+                    </SelectValue>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="work">
+                    <div className="flex items-center">
+                      <Hash className="mr-1 h-3.5 w-3.5" />
+                      Work
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="passion">
+                    <div className="flex items-center">
+                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                      Passion
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="play">
+                    <div className="flex items-center">
+                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                      Play
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
 
-          <PriorityPicker
-            value={values.priority || 'medium'}
-            onValueChange={(priority) => updateValue('priority', priority)}
-          />
+              <PriorityPicker
+                value={categoryData.priority}
+                onValueChange={(priority) => updateTaskPriority(editingTaskId, priority)}
+              />
+            </>
+          ) : (
+            <>
+              <Select
+                value={values.category || 'work'}
+                onValueChange={(value: TaskCategory) => updateValue('category', value)}
+              >
+                <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
+                  <div className="flex items-center">
+                    {values.category === 'work' && <Hash className="mr-1 h-3.5 w-3.5" />}
+                    {(values.category === 'passion' || values.category === 'play') && (
+                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                    )}
+                    <SelectValue>
+                      {values.category === 'work'
+                        ? 'Work'
+                        : values.category === 'passion'
+                          ? 'Passion'
+                          : 'Play'}
+                    </SelectValue>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="work">
+                    <div className="flex items-center">
+                      <Hash className="mr-1 h-3.5 w-3.5" />
+                      Work
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="passion">
+                    <div className="flex items-center">
+                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                      Passion
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="play">
+                    <div className="flex items-center">
+                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                      Play
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              <PriorityPicker
+                value={values.priority || 'medium'}
+                onValueChange={(priority) => updateValue('priority', priority)}
+              />
+            </>
+          )}
         </div>
       </div>
     </DialogContent>
@@ -626,7 +691,8 @@ export function TaskDialog({
   mode = 'create',
   className,
 }: TaskDialogProps) {
-  // Ensure initialValues has properly formatted subtasks
+  // We still need TaskFormProvider for new tasks because we haven't fully migrated
+  // everything to store yet
   const enhancedInitialValues = useMemo(() => {
     if (!initialValues) return initialValues;
 

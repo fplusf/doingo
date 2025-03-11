@@ -56,6 +56,7 @@ export interface OptimalTask {
   subtasks?: Subtask[];
   progress?: number; // Percentage of completed subtasks (0-100)
   // canvasData?: string; // Serialized Excalidraw scene data
+  repetition?: 'once' | 'daily' | 'weekly' | 'custom'; // Task repetition pattern
 }
 
 export interface TasksState {
