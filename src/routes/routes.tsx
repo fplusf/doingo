@@ -1,4 +1,5 @@
 import CalendarPage from '@/features/calendar/pages/calendar-page';
+import InboxPage from '@/features/inbox/pages/inbox-page';
 import StatsOverview from '@/features/stats/components/stats-overview';
 import TodayPage from '@/features/tasks/pages/today-page';
 
@@ -82,11 +83,19 @@ export const StatsRoute = createRoute({
   component: StatsOverview,
 });
 
+// Inbox Route - For the inbox feature
+export const InboxRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: 'inbox',
+  component: InboxPage,
+});
+
 // Build the route tree with explicit parent-child relationships
 export const rootTree = RootRoute.addChildren([
   IndexRoute,
   RemindersRoute,
   CalendarRoute,
   StatsRoute,
+  InboxRoute,
   TasksRoute.addChildren([TasksIndexRoute, TaskDetailsRoute]),
 ]);

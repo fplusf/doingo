@@ -1,4 +1,5 @@
 import { setFocused, tasksStore } from '@/features/tasks/store/tasks.store';
+import { OptimalTask } from '@/features/tasks/types/index';
 import { NavUser } from '@/layouts/sidebar/nav-user';
 import ToggleTheme from '@/shared/components/toggle-theme';
 import {
@@ -15,7 +16,7 @@ import { toast } from '@/shared/hooks/use-toast';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
-import { BarChart, Bell, Calendar, Calendar1Icon, LucideFocus } from 'lucide-react';
+import { BarChart, Bell, Calendar, Calendar1Icon, Inbox, LucideFocus } from 'lucide-react';
 import * as React from 'react';
 
 const data = {
@@ -27,7 +28,7 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const tasks = useStore(tasksStore, (state) => state.tasks);
+  const tasks = useStore(tasksStore, (state) => state.tasks) as OptimalTask[];
   const selectedDate = useStore(tasksStore, (state) => state.selectedDate);
   const navigate = useNavigate();
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -144,6 +145,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </Tooltip>
             </SidebarMenuButton>
             <span className="mt-0.5 truncate text-xs">Focus</span>
+          </SidebarMenuItem>
+        </SidebarMenu>
+
+        <SidebarMenu>
+          <SidebarMenuItem className="flex flex-col items-center">
+            <SidebarMenuButton size="lg" asChild>
+              <Link
+                to="/inbox"
+                activeProps={{ className: 'active' }}
+                inactiveProps={{ className: 'inactive' }}
+              >
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
+                  <Inbox className="size-4" />
+                </div>
+              </Link>
+            </SidebarMenuButton>
+            <span className="mt-0.5 truncate text-xs">Inbox</span>
           </SidebarMenuItem>
         </SidebarMenu>
 
