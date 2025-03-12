@@ -70,6 +70,10 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
     const minutes = duration / 60_000;
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = Math.floor(minutes % 60);
+
+    if (hours === 0) {
+      return `${remainingMinutes} min`;
+    }
     return remainingMinutes === 0 ? `${hours} hr` : `${hours} hr, ${remainingMinutes} min`;
   }
 
@@ -168,6 +172,7 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
             task.isFocused && isToday && 'bg-gradient-to-r from-red-500 to-purple-500',
             // Add more compact styles for short tasks
             task.duration <= ONE_HOUR_IN_MS && 'py-0',
+            task.completed && 'opacity-60',
           )}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
@@ -182,9 +187,9 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
           >
             {/* Progress bar - only visible for tasks with subtasks */}
             {hasSubtasks && !task.completed && (
-              <div className="absolute left-0 top-0 h-[3px] w-full overflow-hidden rounded-t-md">
+              <div className="absolute inset-0 h-full w-full overflow-hidden rounded-3xl">
                 <div
-                  className="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-300"
+                  className="h-[2px] w-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-300"
                   style={{ width: `${progress}%` }}
                   aria-label={`${progress}% complete`}
                   role="progressbar"
@@ -241,7 +246,7 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
                   {task.title}
                 </h3>
 
-                {/* Show compact time info below title for small and medium tasks */}
+                {/* Show compact time info below title for all tasks */}
                 {task.duration <= ONE_HOUR_IN_MS * 2 && task.time && (
                   <div className="flex items-center justify-between">
                     <div className="flex items-baseline">

@@ -53,9 +53,7 @@ export const SortableTimelineTaskItem = ({
           <Tooltip>
             <TooltipTrigger asChild>
               <div
-                className={`absolute right-10 z-10 flex items-center gap-1 text-xs text-yellow-500 ${
-                  isShortTask ? '-bottom-[8px]' : '-bottom-[18px]'
-                }`}
+                className={`-bottom-18 absolute right-10 z-10 flex items-center gap-1 text-xs text-yellow-500`}
               >
                 <Blend className="h-4 w-4" />
               </div>
