@@ -17,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
-import { getNextFifteenMinuteInterval } from '@/shared/helpers/date/next-feefteen-minutes';
 import { useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
@@ -27,6 +26,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import {
   clearDraftTask,
+  getDefaultStartTime,
   getTaskCategoryAndPriority,
   resetDraftTask,
   setEditingTaskId,
@@ -135,7 +135,7 @@ const defaultValues: TaskFormValues = {
   title: '',
   notes: '',
   emoji: '',
-  startTime: format(getNextFifteenMinuteInterval(), 'HH:mm'),
+  startTime: getDefaultStartTime(),
   dueTime: '',
   duration: 60 * 60 * 1000, // 1 hour in ms
   category: 'work',

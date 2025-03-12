@@ -4,10 +4,13 @@ import { PRIORITY_COLORS as PRIORITY_COLOR_HEX } from '@/features/tasks/constant
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import { addMilliseconds, differenceInMilliseconds } from 'date-fns';
-import { Plus } from 'lucide-react';
+import { Clock, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { CategorySectionProps, ONE_HOUR_IN_MS, OptimalTask } from '../../types';
 import { SortableTimelineTaskItem } from './sortable-timeline-task-item';
+
+// Define 15 minutes in milliseconds
+const FIFTEEN_MINUTES_IN_MS = 15 * 60 * 1000;
 
 interface ConnectorSegment {
   top: string;
@@ -17,6 +20,7 @@ interface ConnectorSegment {
   left: string;
   isDotted?: boolean;
   timeGap?: number;
+  hasFreeSlot?: boolean;
 }
 
 export function CategorySection({
@@ -105,8 +109,9 @@ export function CategorySection({
             ? differenceInMilliseconds(nextTask.startTime, currentTaskEnd)
             : 0;
 
-        // Only consider it a large gap if there's no overlap and gap is > 1 hour
+        // Check for different gap thresholds
         const hasLargeGap = timeGap > ONE_HOUR_IN_MS;
+        const hasFreeSlot = timeGap >= FIFTEEN_MINUTES_IN_MS;
         const hasOverlap = timeGap < 0;
 
         // Calculate the bottom edge of current node and top edge of next node
@@ -118,8 +123,9 @@ export function CategorySection({
 
         // Calculate segment height based on gap
         const baseHeight = nextTop - currentBottom;
-        // Only increase spacing if there's a large gap and no overlap
-        const segmentHeight = hasLargeGap && !hasOverlap ? baseHeight * 2 : baseHeight;
+        // Increase spacing for large gaps (>1h) or smaller free slots (≥15m)
+        const segmentHeight =
+          (hasLargeGap || hasFreeSlot) && !hasOverlap ? baseHeight * 2 : baseHeight;
 
         segments.push({
           top: `${currentBottom}px`,
@@ -127,8 +133,9 @@ export function CategorySection({
           startColor: getTaskColor(currentTask),
           endColor: getTaskColor(nextTask),
           left: `${centerX}px`,
-          isDotted: hasLargeGap && !hasOverlap,
-          timeGap: hasLargeGap && !hasOverlap ? timeGap : undefined,
+          isDotted: hasLargeGap && !hasOverlap, // Only use dotted line for gaps > 1 hour
+          timeGap: (hasLargeGap || hasFreeSlot) && !hasOverlap ? timeGap : undefined,
+          hasFreeSlot: hasFreeSlot && !hasOverlap,
         });
       }
 
@@ -209,15 +216,16 @@ export function CategorySection({
               )}
             </div>
 
-            {/* "Free slot" label for gaps > 1 hour */}
-            {segment.isDotted && segment.timeGap && (
+            {/* "Free slot" label for gaps >= 15 minutes */}
+            {segment.timeGap && segment.hasFreeSlot && (
               <div
-                className="absolute left-20 whitespace-nowrap text-xs text-muted-foreground/60"
+                className="absolute left-20 flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground/60"
                 style={{
                   top: `calc(${segment.top} + ${segment.height} / 2 - 30px)`,
                   zIndex: 5,
                 }}
               >
+                <Clock className="h-3.5 w-3.5" />
                 Free slot - {formatDuration(segment.timeGap)}
               </div>
             )}
@@ -235,6 +243,7 @@ export function CategorySection({
 
             // For the current task, check if there's a large gap with the previous task
             let hasLargeGapWithPrevious = false;
+            let hasFreeSlotWithPrevious = false;
 
             if (prevTask && prevTask.startTime && task.startTime) {
               const prevTaskEnd =
@@ -248,6 +257,8 @@ export function CategorySection({
 
               hasLargeGapWithPrevious =
                 timeGapWithPrevious > ONE_HOUR_IN_MS && timeGapWithPrevious >= 0;
+              hasFreeSlotWithPrevious =
+                timeGapWithPrevious >= FIFTEEN_MINUTES_IN_MS && timeGapWithPrevious >= 0;
             }
 
             // For connector segments, still calculate gap with next task (this is correct)
@@ -272,8 +283,8 @@ export function CategorySection({
                   highlightedTaskId === task.id && 'bg-muted ring-2 ring-border/50',
                   // Base spacing between items
                   'mt-5',
-                  // Double the spacing ONLY if there's a large gap with the PREVIOUS task
-                  hasLargeGapWithPrevious && 'mt-10',
+                  // Double the spacing if there's a large gap OR a free slot with the PREVIOUS task
+                  (hasLargeGapWithPrevious || hasFreeSlotWithPrevious) && 'mt-10',
                 )}
                 style={{
                   // Add margin to the first item to match the timeline start

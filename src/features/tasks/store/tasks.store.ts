@@ -1,4 +1,7 @@
-import { getNextFifteenMinuteInterval } from '@/shared/helpers/date/next-feefteen-minutes';
+import {
+  findNextAvailableTimeSlot,
+  getNextFifteenMinuteInterval,
+} from '@/shared/helpers/date/next-feefteen-minutes';
 import { LocalStorageAdapter } from '@/shared/store/adapters/local-storage-adapter';
 import { StorageAdapter } from '@/shared/store/adapters/storage-adapter';
 import { Store } from '@tanstack/react-store';
@@ -377,16 +380,19 @@ export const getTaskCategoryAndPriority = (taskId: string | 'draft') => {
 
 // Draft task management
 export const createDraftTask = () => {
-  // Create a new draft task with default values
+  // Use proper helper for next 15-minute interval
+  const startTimeString = getDefaultStartTime();
+  // Parse the time string into a Date
+  const [hours, minutes] = startTimeString.split(':').map(Number);
   const now = new Date();
-  const startTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+  now.setHours(hours, minutes, 0, 0);
 
   tasksStore.setState((state) => ({
     ...state,
     draftTask: {
       title: '',
       emoji: '',
-      time: startTime,
+      time: startTimeString,
       startTime: now,
       nextStartTime: addMilliseconds(now, 60 * 60 * 1000), // 1 hour later
       duration: 60 * 60 * 1000, // Default 1 hour
@@ -427,8 +433,12 @@ export const clearDraftTask = () => {
 
 // Creates a fresh draft task with default values, replacing any existing draft
 export const resetDraftTask = () => {
+  // Use proper helper for next 15-minute interval
+  const startTimeString = getDefaultStartTime();
+  // Parse the time string into a Date
+  const [hours, minutes] = startTimeString.split(':').map(Number);
   const now = new Date();
-  const startTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+  now.setHours(hours, minutes, 0, 0);
 
   // First clear any existing draft completely
   tasksStore.setState((state) => ({
@@ -444,7 +454,7 @@ export const resetDraftTask = () => {
       id: 'draft',
       title: '',
       emoji: '',
-      time: startTime,
+      time: startTimeString,
       startTime: now,
       nextStartTime: addMilliseconds(now, 60 * 60 * 1000), // 1 hour later
       duration: 60 * 60 * 1000, // Default 1 hour
@@ -703,13 +713,28 @@ export const createTaskFromDraft = () => {
 
 // Helper functions for time management
 export const getDefaultStartTime = () => {
-  const nextFifteen = getNextFifteenMinuteInterval();
-  return format(nextFifteen, 'HH:mm');
+  const selectedDate = tasksStore.state.selectedDate;
+  const tasksOnDate = getTasksByDate(selectedDate);
+
+  if (tasksOnDate.length === 0) {
+    // For the first task of the day, use the next 15-minute interval
+    return format(getNextFifteenMinuteInterval(), 'HH:mm');
+  } else {
+    // For subsequent tasks, use the time after the end of the last task
+    return findNextAvailableTimeSlot(selectedDate);
+  }
 };
 
 export const getDefaultEndTime = () => {
-  const nextFifteen = getNextFifteenMinuteInterval();
-  return format(addMilliseconds(nextFifteen, ONE_HOUR_IN_MS), 'HH:mm');
+  const startTime = getDefaultStartTime();
+  const [hours, minutes] = startTime.split(':').map(Number);
+
+  // Create a Date object for the start time
+  const startDate = new Date();
+  startDate.setHours(hours, minutes, 0, 0);
+
+  // Add one hour to get the end time
+  return format(addMilliseconds(startDate, ONE_HOUR_IN_MS), 'HH:mm');
 };
 
 // Enhanced task creation function
@@ -902,4 +927,118 @@ export const highlightTask = (taskId: string) => {
       }, 500);
     }, 300);
   }, 500);
+};
+
+// Push forward affected tasks after a task's duration changes
+export const pushForwardAffectedTasks = (
+  taskId: string | 'draft',
+  startTime: string,
+  duration: number,
+  date: Date,
+) => {
+  const taskDate = format(date, 'yyyy-MM-dd');
+
+  // For draft tasks, use a temporary ID
+  const effectiveTaskId = taskId === 'draft' ? 'draft-temp' : taskId;
+
+  // Get tasks on the selected date
+  const tasksOnDate = tasksStore.state.tasks.filter(
+    (task) => task.taskDate === taskDate && task.id !== effectiveTaskId,
+  );
+
+  if (tasksOnDate.length === 0) return;
+
+  // Parse the current task's time range
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const startTimeInMinutes = hours * 60 + minutes;
+  const endTimeInMinutes = startTimeInMinutes + duration / (60 * 1000);
+
+  // Identify affected tasks (those that start during or after this task)
+  const affectedTasks = tasksOnDate.filter((task) => {
+    if (!task.time) return false;
+
+    const [taskStartTime] = task.time.split('—');
+    const [taskHours, taskMinutes] = taskStartTime.split(':').map(Number);
+    const taskStartInMinutes = taskHours * 60 + taskMinutes;
+
+    // Task is affected if it starts during or after this task's range
+    return taskStartInMinutes >= startTimeInMinutes && taskStartInMinutes < endTimeInMinutes;
+  });
+
+  if (affectedTasks.length === 0) return;
+
+  // Sort tasks by start time to maintain order
+  const sortedTasks = [...affectedTasks].sort((a, b) => {
+    if (!a.time || !b.time) return 0;
+
+    const [aStartTime] = a.time.split('—');
+    const [bStartTime] = b.time.split('—');
+
+    const [aHours, aMinutes] = aStartTime.split(':').map(Number);
+    const [bHours, bMinutes] = bStartTime.split(':').map(Number);
+
+    const aStartInMinutes = aHours * 60 + aMinutes;
+    const bStartInMinutes = bHours * 60 + bMinutes;
+
+    return aStartInMinutes - bStartInMinutes;
+  });
+
+  // Calculate the new start time for the first affected task
+  // Convert end time back to hours and minutes
+  const newStartHour = Math.floor(endTimeInMinutes / 60);
+  const newStartMinute = endTimeInMinutes % 60;
+
+  // Round to the nearest 15-minute interval
+  const roundedMinutes = Math.ceil(newStartMinute / 15) * 15;
+  let adjustedHour = newStartHour;
+  let adjustedMinute = roundedMinutes;
+
+  // If rounded to 60 minutes, add an hour and set minutes to 0
+  if (roundedMinutes === 60) {
+    adjustedHour += 1;
+    adjustedMinute = 0;
+  }
+
+  // Format the new start time
+  const newStartTime = `${adjustedHour.toString().padStart(2, '0')}:${adjustedMinute.toString().padStart(2, '0')}`;
+
+  // Create a date object for the adjusted start time
+  const adjustedStartDate = new Date(date);
+  adjustedStartDate.setHours(adjustedHour, adjustedMinute, 0, 0);
+
+  // Update the first affected task
+  if (sortedTasks.length > 0) {
+    const firstTask = sortedTasks[0];
+    updateTaskStartDateTime(firstTask.id, adjustedStartDate, newStartTime);
+
+    // Update remaining tasks in sequence
+    let previousEndTime = addMilliseconds(adjustedStartDate, firstTask.duration || ONE_HOUR_IN_MS);
+
+    for (let i = 1; i < sortedTasks.length; i++) {
+      const currentTask = sortedTasks[i];
+
+      // Round to the nearest 15-minute interval
+      const prevEndMinutes = previousEndTime.getMinutes();
+      const roundedEndMinutes = Math.ceil(prevEndMinutes / 15) * 15;
+
+      previousEndTime.setMinutes(roundedEndMinutes);
+      previousEndTime.setSeconds(0);
+      previousEndTime.setMilliseconds(0);
+
+      // If rounded to 60 minutes, add an hour and set minutes to 0
+      if (roundedEndMinutes === 60) {
+        previousEndTime.setHours(previousEndTime.getHours() + 1);
+        previousEndTime.setMinutes(0);
+      }
+
+      // Format the new start time for this task
+      const taskStartTime = format(previousEndTime, 'HH:mm');
+
+      // Update this task's start time
+      updateTaskStartDateTime(currentTask.id, previousEndTime, taskStartTime);
+
+      // Calculate the end time for the next task
+      previousEndTime = addMilliseconds(previousEndTime, currentTask.duration || ONE_HOUR_IN_MS);
+    }
+  }
 };
