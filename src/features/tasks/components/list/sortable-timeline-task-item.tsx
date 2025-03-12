@@ -4,7 +4,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Blend } from 'lucide-react';
 import React from 'react';
-import { OptimalTask } from '../../types';
+import { ONE_HOUR_IN_MS, OptimalTask } from '../../types';
 import { TimelineItem } from '../timeline/timeline';
 import { DragHandle } from './drag-handle';
 import { TaskItem } from './task-item';
@@ -41,6 +41,9 @@ export const SortableTimelineTaskItem = ({
     width: '100%',
   };
 
+  // Determine if this is a short task (1 hour or less)
+  const isShortTask = task.duration !== undefined && task.duration <= ONE_HOUR_IN_MS;
+
   return (
     <div
       ref={setNodeRef}
@@ -72,11 +75,15 @@ export const SortableTimelineTaskItem = ({
       {/* Task Card */}
       <div className="ml-16 w-full cursor-auto" {...listeners}>
         <TaskItem task={task} onEdit={onEdit} />
-        {/* Overlap indicator */}
+        {/* Overlap indicator - adjust position for short tasks */}
         {overlapsWithNext && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="absolute -bottom-[18px] right-10 z-10 flex items-center gap-1 text-xs text-yellow-500">
+              <div
+                className={`absolute right-10 z-10 flex items-center gap-1 text-xs text-yellow-500 ${
+                  isShortTask ? '-bottom-[8px]' : '-bottom-[18px]'
+                }`}
+              >
                 <Blend className="h-4 w-4" />
               </div>
             </TooltipTrigger>
@@ -87,8 +94,11 @@ export const SortableTimelineTaskItem = ({
         )}
       </div>
 
-      {/* Drag Handle (optional) */}
-      <div className="absolute right-0 top-1/3 z-10" {...listeners}>
+      {/* Drag Handle - adjust position for short tasks */}
+      <div
+        className={`absolute right-0 z-10 ${isShortTask ? 'top-1/2 -translate-y-1/2' : 'top-1/3'}`}
+        {...listeners}
+      >
         <DragHandle />
       </div>
     </div>

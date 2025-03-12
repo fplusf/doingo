@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 import { addMilliseconds } from 'date-fns';
 import React from 'react';
 import { PRIORITY_BG_CLASSES } from '../../constants/priority-colors';
-import { TaskPriority } from '../../types';
+import { ONE_HOUR_IN_MS, TaskPriority } from '../../types';
 
 interface TimelineNodeProps {
   emoji: string;
@@ -55,6 +55,32 @@ export function TimelineNode({
     }
   };
 
+  // Get height based on task duration
+  const getNodeHeight = () => {
+    if (height) {
+      return height; // Use provided height if available
+    }
+
+    // If we have duration, calculate based on that
+    if (duration !== undefined) {
+      // 0 to 1 hour: 60px height
+      if (duration <= ONE_HOUR_IN_MS) {
+        return '60px';
+      }
+      // 1 to 2 hours: 120px height (intermediate size)
+      else if (duration <= ONE_HOUR_IN_MS * 2) {
+        return '120px';
+      }
+      // Default height for longer tasks
+      return '48px';
+    }
+
+    // Default fallback
+    return '48px';
+  };
+
+  const nodeHeight = getNodeHeight();
+
   return (
     <div className="relative">
       {/* Time labels - Commented on purpose for now */}
@@ -79,7 +105,7 @@ export function TimelineNode({
           className,
         )}
         style={{
-          height: height || '48px',
+          height: nodeHeight,
           minHeight: '48px',
         }}
         onClick={handleClick}

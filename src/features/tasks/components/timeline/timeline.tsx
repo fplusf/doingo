@@ -68,11 +68,15 @@ export const TimelineItem = ({
 
   // Get height based on task duration
   const getHeightFromDuration = () => {
-    // 0 to 1 hour: 110px height
+    // 0 to 1 hour: 60px height
     if (duration <= ONE_HOUR_IN_MS) {
-      return 'h-[110px]';
+      return 'h-[60px]';
     }
-    // 1 to 3 hours: 170px height
+    // 1 to 2 hours: 120px height (intermediate size)
+    else if (duration <= ONE_HOUR_IN_MS * 2) {
+      return 'h-[120px]';
+    }
+    // 2 to 3 hours: 170px height
     else if (duration <= ONE_HOUR_IN_MS * 3) {
       return 'h-[170px]';
     }
@@ -99,7 +103,9 @@ export const TimelineItem = ({
         if (duration) {
           // Set explicit height based on duration
           if (duration <= ONE_HOUR_IN_MS) {
-            setNodeHeight('110px');
+            setNodeHeight('60px');
+          } else if (duration <= ONE_HOUR_IN_MS * 2) {
+            setNodeHeight('120px');
           } else if (duration <= ONE_HOUR_IN_MS * 3) {
             setNodeHeight('170px');
           } else {
@@ -161,7 +167,15 @@ export const TimelineItem = ({
       {/* Add connector extension that goes beyond the current item for visual continuity */}
       {!isLastItem && (
         <div
-          className="absolute -bottom-[20px] left-5 z-[5] h-[20px] w-[3px]"
+          className={cn(
+            'absolute left-5 z-[5] w-[3px]',
+            // For tasks of different sizes, use different connector heights
+            duration <= ONE_HOUR_IN_MS
+              ? '-bottom-[45px] h-[45px]'
+              : duration <= ONE_HOUR_IN_MS * 2
+                ? '-bottom-[30px] h-[30px]'
+                : '-bottom-[20px] h-[20px]',
+          )}
           style={getConnectorGradient()}
         />
       )}

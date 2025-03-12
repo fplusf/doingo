@@ -25,23 +25,25 @@ export const CategorySection = ({
       <div className="relative mt-4">
         {/* Task Cards with Timeline Items */}
         <div className="flex flex-col gap-y-5 space-y-0">
-          {tasks.map((task, index) => (
-            <div
-              key={task.id}
-              className={cn(
-                'rounded-3xl transition-colors duration-300',
-                highlightedTaskId === task.id && 'bg-muted ring-2 ring-border/50',
-              )}
-            >
-              <SortableTimelineTaskItem
-                task={task}
-                onEdit={onEditTask}
-                isLastItem={index === tasks.length - 1}
-                nextTask={index < tasks.length - 1 ? tasks[index + 1] : undefined}
-                overlapsWithNext={overlaps.get(task.id) || false}
-              />
-            </div>
-          ))}
+          {tasks.map((task, index) => {
+            return (
+              <div
+                key={task.id}
+                className={cn(
+                  'rounded-3xl transition-colors duration-300',
+                  highlightedTaskId === task.id && 'bg-muted ring-2 ring-border/50',
+                )}
+              >
+                <SortableTimelineTaskItem
+                  task={task}
+                  onEdit={onEditTask}
+                  isLastItem={index === tasks.length - 1}
+                  nextTask={index < tasks.length - 1 ? tasks[index + 1] : undefined}
+                  overlapsWithNext={overlaps.get(task.id) || false}
+                />
+              </div>
+            );
+          })}
           <Button
             onClick={onAddTask}
             variant="ghost"

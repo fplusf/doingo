@@ -42,7 +42,7 @@ export function DayTimeline({
   endTime = '22:00',
   skipRanges = [],
   className,
-  hourHeight = 120,
+  hourHeight = 120, // 📌 The pixels here must by fully dynamic depending on the entire height of the TasksTimline and then it stretch to that height and divides equaylly to the number of hours
   lineWidth = 40,
   waveRadius = 3, // Affects 3 items on each side by default
   waveMultiplier = 2, // Maximum size multiplier
