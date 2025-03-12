@@ -17,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
-import { Textarea } from '@/shared/components/ui/textarea';
 import { getNextFifteenMinuteInterval } from '@/shared/helpers/date/next-feefteen-minutes';
 import { useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
@@ -260,9 +259,18 @@ function TaskDialogContent({
     }
   };
 
+  // Auto-adjust height when title changes
   useEffect(() => {
     adjustTextareaHeight();
   }, [values.title]);
+
+  // Auto-adjust height when dialog opens
+  useEffect(() => {
+    if (open && textareaRef.current) {
+      // Use a short timeout to ensure the dialog is fully rendered
+      setTimeout(adjustTextareaHeight, 10);
+    }
+  }, [open]);
 
   // Position cursor at the end when dialog opens in edit mode
   useEffect(() => {
@@ -586,16 +594,31 @@ function TaskDialogContent({
                 ariaLabel="Mark task as completed"
               />
               <div className="flex-1">
-                <Textarea
-                  ref={textareaRef}
-                  value={values.title || ''}
-                  onChange={handleTitleChange}
-                  onKeyDown={handleKeyDown}
-                  rows={1}
-                  placeholder="Task description"
-                  className="min-h-[1.5rem] resize-none border-none bg-transparent px-2 text-xl font-semibold text-foreground outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                  autoFocus={mode === 'create'}
-                />
+                <div className="relative w-full">
+                  <div
+                    className="invisible whitespace-pre-wrap break-words px-2 text-xl font-semibold"
+                    aria-hidden="true"
+                    style={{
+                      minHeight: '1.5rem',
+                      // Add a single space to ensure height is never zero
+                      // Plus a line break for each new line in the content
+                      // to ensure correct height calculation
+                      paddingBottom: '1px',
+                    }}
+                  >
+                    {(values.title || '') + (values.title?.endsWith('\n') ? ' ' : '\n')}
+                  </div>
+                  <textarea
+                    ref={textareaRef}
+                    value={values.title || ''}
+                    onChange={handleTitleChange}
+                    onKeyDown={handleKeyDown}
+                    rows={1}
+                    placeholder="Task description"
+                    className="absolute left-0 top-0 h-full min-h-[1.5rem] w-full resize-none border-none bg-transparent px-2 text-xl font-semibold text-foreground outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                    autoFocus={mode === 'create'}
+                  />
+                </div>
               </div>
             </div>
 
