@@ -8,7 +8,6 @@ import {
   setEditingTaskId,
   setSelectedDate,
   tasksStore,
-  updateTask,
 } from '@/features/tasks/store/tasks.store';
 import {
   ONE_HOUR_IN_MS,
@@ -17,33 +16,18 @@ import {
   TaskPriority,
 } from '@/features/tasks/types/task.types';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
-import {
-  DndContext,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import { restrictToWindowEdges } from '@dnd-kit/modifiers';
-import {
-  SortableContext,
-  arrayMove,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+// Temporarily removed DnD imports and functionality for stability and performance optimization
+// To re-enable, restore the following imports and their related components:
+// import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
+// import { restrictToWindowEdges } from '@dnd-kit/modifiers';
+// import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { format, parse } from 'date-fns';
 import React, { useEffect, useRef, useState } from 'react';
 import { TasksRoute } from '../../../../routes/routes';
 import { TaskDialog } from '../schedule/dialog';
-import { DayTimeline } from '../timeline/day-timeline';
 import { CategorySection } from './category-section';
-import { SortableTimelineTaskItem } from './sortable-timeline-task-item';
 import { TaskMoveToast } from './task-move-toast';
 
 interface DayContainerProps {
@@ -111,7 +95,7 @@ export const TasksList = React.forwardRef<
     priority: 'none' as TaskPriority,
     category: 'work' as TaskCategory,
   });
-  const [activeId, setActiveId] = useState<string | null>(null);
+  // Removed activeId state since drag and drop is disabled
   // Toast state for task moved notification
   const [showMoveToast, setShowMoveToast] = useState(false);
   const [movedTaskInfo, setMovedTaskInfo] = useState<{
@@ -253,58 +237,6 @@ export const TasksList = React.forwardRef<
     return { tasks: grouped, overlaps };
   }, [tasks]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // 8px movement required before activation
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-    document.body.style.cursor = 'grabbing';
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    setActiveId(null);
-    document.body.style.cursor = '';
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeTask = tasks.find((task) => task.id === active.id);
-    const overTask = tasks.find((task) => task.id === over.id);
-
-    if (!activeTask || !overTask) return;
-
-    // If tasks are in the same category, just reorder
-    if (activeTask.category === overTask.category) {
-      const oldIndex = tasks.findIndex((task) => task.id === active.id);
-      const newIndex = tasks.findIndex((task) => task.id === over.id);
-      const newTasks = arrayMove(tasks, oldIndex, newIndex);
-
-      // Get all existing tasks that are not in the current filtered list
-      const otherTasks = allTasks?.filter((task) => task.taskDate !== selectedDate) || [];
-
-      // Update the store with both the reordered current tasks and other tasks
-      tasksStore.setState((state) => ({
-        ...state,
-        tasks: [...otherTasks, ...newTasks],
-      }));
-    } else {
-      // If tasks are in different categories, update the category
-      updateTask(activeTask.id, { category: overTask.category });
-    }
-  };
-
-  const handleDragCancel = () => {
-    setActiveId(null);
-    document.body.style.cursor = '';
-  };
-
   // Update end time when start time changes
   useEffect(() => {
     if (startTime) {
@@ -319,75 +251,35 @@ export const TasksList = React.forwardRef<
     setEditingTaskId(task.id);
   };
 
-  const activeTask = activeId ? tasks.find((task) => task.id === activeId) : null;
-
   return (
     <ScrollArea viewportRef={viewportRef} className="relative h-full w-full">
       <div ref={tasksRef} className="relative mx-auto w-full max-w-[900px] px-10 pb-16">
-        <DayTimeline
-          className="pointer-events-auto absolute -left-80 z-50"
-          skipRanges={[
-            {
-              start: '12:00',
-              end: '13:00',
-            },
-            {
-              start: '14:00',
-              end: '20:00',
-            },
-          ]}
-        />
-
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragCancel={handleDragCancel}
-        >
-          <SortableContext
-            items={tasks.map((task) => task.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            {Object.entries(tasksByCategory.tasks).map(([category, tasks]) => (
-              <div key={category} className="relative">
-                <CategorySection
-                  category={category as TaskCategory}
-                  tasks={tasks}
-                  onEditTask={handleStartEdit}
-                  onAddTask={() => {
-                    setNewTask({
-                      title: '',
-                      emoji: '',
-                      priority: 'none',
-                      category: category as TaskCategory,
-                    });
-                    setStartTime(getDefaultStartTime());
-                    setEndTime(getDefaultEndTime());
-                    setDuration(ONE_HOUR_IN_MS);
-                    setDueDate(undefined);
-                    setIsCreating(true);
-                    setActiveCategory(category as TaskCategory);
-                  }}
-                  overlaps={tasksByCategory.overlaps}
-                  highlightedTaskId={highlightedTaskId}
-                />
-              </div>
-            ))}
-          </SortableContext>
-
-          <DragOverlay
-            modifiers={[restrictToWindowEdges]}
-            dropAnimation={{
-              duration: 500,
-              easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
-            }}
-          >
-            {activeId && activeTask ? (
-              <SortableTimelineTaskItem task={activeTask} onEdit={handleStartEdit} />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+        {/* Temporarily removed DndContext and SortableContext for stability */}
+        {Object.entries(tasksByCategory.tasks).map(([category, tasks]) => (
+          <div key={category} className="relative">
+            <CategorySection
+              category={category as TaskCategory}
+              tasks={tasks}
+              onEditTask={handleStartEdit}
+              onAddTask={() => {
+                setNewTask({
+                  title: '',
+                  emoji: '',
+                  priority: 'none',
+                  category: category as TaskCategory,
+                });
+                setStartTime(getDefaultStartTime());
+                setEndTime(getDefaultEndTime());
+                setDuration(ONE_HOUR_IN_MS);
+                setDueDate(undefined);
+                setIsCreating(true);
+                setActiveCategory(category as TaskCategory);
+              }}
+              overlaps={tasksByCategory.overlaps}
+              highlightedTaskId={highlightedTaskId}
+            />
+          </div>
+        ))}
       </div>
 
       {/* New Task Dialog */}

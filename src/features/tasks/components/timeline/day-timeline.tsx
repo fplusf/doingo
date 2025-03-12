@@ -37,6 +37,8 @@ type LinePosition = {
   groupIndex?: number;
 };
 
+// TODO: Use it once we need timeline by hours
+// 📌 The pixels here must by fully dynamic depending on the entire height of the TasksTimline and then it stretch to that height and divides equaylly to the number of hours
 export function DayTimeline({
   startTime = '07:00',
   endTime = '22:00',

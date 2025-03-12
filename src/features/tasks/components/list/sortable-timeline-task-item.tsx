@@ -1,12 +1,8 @@
 import { toggleTaskCompletion, updateTask } from '@/features/tasks/store/tasks.store';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { Blend } from 'lucide-react';
-import React from 'react';
 import { ONE_HOUR_IN_MS, OptimalTask } from '../../types';
 import { TimelineItem } from '../timeline/timeline';
-import { DragHandle } from './drag-handle';
 import { TaskItem } from './task-item';
 
 interface SortableTimelineTaskItemProps {
@@ -24,36 +20,13 @@ export const SortableTimelineTaskItem = ({
   nextTask,
   overlapsWithNext = false,
 }: SortableTimelineTaskItemProps) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: task.id,
-    transition: {
-      duration: 200,
-      easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-    },
-  });
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    position: 'relative',
-    zIndex: isDragging ? 1 : 0,
-    width: '100%',
-  };
-
   // Determine if this is a short task (1 hour or less)
   const isShortTask = task.duration !== undefined && task.duration <= ONE_HOUR_IN_MS;
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      className="group relative mb-0 cursor-grab pb-0 active:cursor-grabbing"
-      data-id={task.id}
-    >
+    <div className="group relative mb-0 pb-0" data-id={task.id}>
       {/* Timeline Item */}
-      <div className="absolute left-2 -ml-4 w-full" {...listeners}>
+      <div className="absolute left-2 -ml-4 w-full">
         <TimelineItem
           priority={task.priority}
           startTime={task.startTime}
@@ -73,7 +46,7 @@ export const SortableTimelineTaskItem = ({
       </div>
 
       {/* Task Card */}
-      <div className="ml-16 w-full cursor-auto" {...listeners}>
+      <div className="ml-16 w-full">
         <TaskItem task={task} onEdit={onEdit} />
         {/* Overlap indicator - adjust position for short tasks */}
         {overlapsWithNext && (
@@ -92,14 +65,6 @@ export const SortableTimelineTaskItem = ({
             </TooltipContent>
           </Tooltip>
         )}
-      </div>
-
-      {/* Drag Handle - adjust position for short tasks */}
-      <div
-        className={`absolute right-0 z-10 ${isShortTask ? 'top-1/2 -translate-y-1/2' : 'top-1/3'}`}
-        {...listeners}
-      >
-        <DragHandle />
       </div>
     </div>
   );
