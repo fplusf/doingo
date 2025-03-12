@@ -1,4 +1,4 @@
-import { OptimalTask } from '../../../features/tasks/types';
+import { OptimalTask } from '@/features/tasks/types/task.types';
 
 export interface StorageAdapter {
   // Tasks specific methods

@@ -1,5 +1,6 @@
 import { CategoryBadge } from '@/features/tasks/components/timeline/category-badge';
 import { TIMELINE_CATEGORIES } from '@/features/tasks/components/timeline/timeline';
+import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import { Plus } from 'lucide-react';
 import { CategorySectionProps } from '../../types';
@@ -11,6 +12,7 @@ export const CategorySection = ({
   onAddTask,
   onEditTask,
   overlaps,
+  highlightedTaskId,
 }: CategorySectionProps) => {
   return (
     <div className="relative mb-16 min-h-8" id={`category-${category}`}>
@@ -24,14 +26,21 @@ export const CategorySection = ({
         {/* Task Cards with Timeline Items */}
         <div className="flex flex-col gap-y-5 space-y-0">
           {tasks.map((task, index) => (
-            <SortableTimelineTaskItem
+            <div
               key={task.id}
-              task={task}
-              onEdit={onEditTask}
-              isLastItem={index === tasks.length - 1}
-              nextTask={index < tasks.length - 1 ? tasks[index + 1] : undefined}
-              overlapsWithNext={overlaps.get(task.id) || false}
-            />
+              className={cn(
+                'rounded-3xl transition-colors duration-300',
+                highlightedTaskId === task.id && 'bg-muted ring-2 ring-border/50',
+              )}
+            >
+              <SortableTimelineTaskItem
+                task={task}
+                onEdit={onEditTask}
+                isLastItem={index === tasks.length - 1}
+                nextTask={index < tasks.length - 1 ? tasks[index + 1] : undefined}
+                overlapsWithNext={overlaps.get(task.id) || false}
+              />
+            </div>
           ))}
           <Button
             onClick={onAddTask}

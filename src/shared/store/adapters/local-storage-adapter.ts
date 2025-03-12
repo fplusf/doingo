@@ -1,4 +1,4 @@
-import { OptimalTask } from '@/features/tasks/types';
+import { OptimalTask } from '@/features/tasks/types/task.types';
 import { format } from 'date-fns';
 import { StorageAdapter } from './storage-adapter';
 

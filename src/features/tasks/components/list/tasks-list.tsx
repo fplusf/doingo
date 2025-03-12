@@ -4,12 +4,18 @@ import {
   getDefaultEndTime,
   getDefaultStartTime,
   getTasksByDate,
+  highlightTask,
   setEditingTaskId,
   setSelectedDate,
   tasksStore,
   updateTask,
 } from '@/features/tasks/store/tasks.store';
-import { ONE_HOUR_IN_MS } from '@/features/tasks/types';
+import {
+  ONE_HOUR_IN_MS,
+  OptimalTask,
+  TaskCategory,
+  TaskPriority,
+} from '@/features/tasks/types/task.types';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import {
   DndContext,
@@ -34,11 +40,11 @@ import { useStore } from '@tanstack/react-store';
 import { format, parse } from 'date-fns';
 import React, { useEffect, useRef, useState } from 'react';
 import { TasksRoute } from '../../../../routes/routes';
-import { OptimalTask, TaskCategory, TaskPriority } from '../../types';
 import { TaskDialog } from '../schedule/dialog';
 import { DayTimeline } from '../timeline/day-timeline';
 import { CategorySection } from './category-section';
 import { SortableTimelineTaskItem } from './sortable-timeline-task-item';
+import { TaskMoveToast } from './task-move-toast';
 
 interface DayContainerProps {
   ref?: React.RefObject<{ setIsCreating: (value: boolean) => void }>;
@@ -88,6 +94,8 @@ export const TasksList = React.forwardRef<
 >((props, ref) => {
   const allTasks = useStore(tasksStore, (state) => state.tasks);
   const selectedDate = useStore(tasksStore, (state) => state.selectedDate);
+  const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
+  const highlightedTaskId = useStore(tasksStore, (state) => state.highlightedTaskId);
   const search = useSearch({ from: TasksRoute.fullPath });
 
   const [isCreating, setIsCreating] = useState(false);
@@ -104,6 +112,21 @@ export const TasksList = React.forwardRef<
     category: 'work' as TaskCategory,
   });
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Toast state for task moved notification
+  const [showMoveToast, setShowMoveToast] = useState(false);
+  const [movedTaskInfo, setMovedTaskInfo] = useState<{
+    title: string;
+    id: string;
+    destinationDate: string | null;
+  }>({
+    title: '',
+    id: '',
+    destinationDate: null,
+  });
+
+  // Keep track of the previous tasks to detect changes
+  const prevTasksRef = useRef<OptimalTask[]>([]);
+
   const navigate = useNavigate();
   const tasksRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -119,6 +142,52 @@ export const TasksList = React.forwardRef<
   const tasks = React.useMemo(() => {
     return getTasksByDate(selectedDate);
   }, [selectedDate, allTasks]);
+
+  // Listen for changes in tasks and detect when a date has been changed
+  React.useEffect(() => {
+    // Find the task that's currently being edited
+    if (editingTaskId) {
+      const currentTask = allTasks.find((task) => task.id === editingTaskId);
+      const prevTask = prevTasksRef.current.find((task) => task.id === editingTaskId);
+
+      // If we found both the current and previous versions of the task
+      if (currentTask && prevTask) {
+        const currentDateStr = currentTask.taskDate
+          ? format(new Date(currentTask.taskDate), 'yyyy-MM-dd')
+          : null;
+        const prevDateStr = prevTask.taskDate
+          ? format(new Date(prevTask.taskDate), 'yyyy-MM-dd')
+          : null;
+
+        // If the date has changed and the task is no longer on the current date
+        if (
+          currentDateStr &&
+          prevDateStr &&
+          currentDateStr !== prevDateStr &&
+          prevDateStr === selectedDate
+        ) {
+          // Show toast notification
+          setMovedTaskInfo({
+            title: currentTask.title || 'Task',
+            id: currentTask.id,
+            destinationDate: currentDateStr,
+          });
+          setShowMoveToast(true);
+        }
+      }
+    }
+
+    // Update our reference to the current tasks
+    prevTasksRef.current = [...allTasks];
+  }, [allTasks, editingTaskId, selectedDate]);
+
+  // Remove the local highlightedTaskId state since we're using the store
+  React.useEffect(() => {
+    if (movedTaskInfo.id && movedTaskInfo.destinationDate === selectedDate) {
+      highlightTask(movedTaskInfo.id);
+      setMovedTaskInfo({ title: '', id: '', destinationDate: null });
+    }
+  }, [selectedDate, movedTaskInfo]);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -160,7 +229,7 @@ export const TasksList = React.forwardRef<
     };
 
     // First group tasks by category
-    tasks.forEach((task) => {
+    tasks.forEach((task: OptimalTask) => {
       grouped[task.category || 'work'].push(task);
     });
 
@@ -172,7 +241,7 @@ export const TasksList = React.forwardRef<
       const sortedTasks = sortByStartTime(grouped[category as TaskCategory]);
 
       // Check for overlaps
-      sortedTasks.forEach((task: OptimalTask, index: number) => {
+      sortedTasks.forEach((task, index: number) => {
         if (index < sortedTasks.length - 1) {
           overlaps.set(task.id, hasTimeOverlap(task, sortedTasks[index + 1]));
         }
@@ -301,6 +370,7 @@ export const TasksList = React.forwardRef<
                     setActiveCategory(category as TaskCategory);
                   }}
                   overlaps={tasksByCategory.overlaps}
+                  highlightedTaskId={highlightedTaskId}
                 />
               </div>
             ))}
@@ -376,6 +446,24 @@ export const TasksList = React.forwardRef<
           }}
         />
       )}
+
+      {/* Task Move Toast */}
+      <TaskMoveToast
+        isOpen={showMoveToast}
+        onOpenChange={setShowMoveToast}
+        taskTitle={movedTaskInfo.title}
+        destinationDate={movedTaskInfo.destinationDate}
+        onViewClick={() => {
+          // Store the task ID and trigger highlight after navigation
+          if (movedTaskInfo.id) {
+            setMovedTaskInfo((prev) => ({ ...prev })); // Keep the info for highlighting after navigation
+          }
+          // Close the dialog if it's open
+          if (editingTask) {
+            setEditingTask(null);
+          }
+        }}
+      />
     </ScrollArea>
   );
 });

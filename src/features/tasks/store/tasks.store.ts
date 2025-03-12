@@ -4,8 +4,15 @@ import { StorageAdapter } from '@/shared/store/adapters/storage-adapter';
 import { Store } from '@tanstack/react-store';
 import { addMilliseconds, format, parse, parseISO, startOfDay } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
-import { RepetitionOption } from '../components/schedule/task-scheduler';
-import { ONE_HOUR_IN_MS, OptimalTask, TaskCategory, TaskPriority, TasksState } from '../types';
+import {
+  ONE_HOUR_IN_MS,
+  OptimalTask,
+  RepetitionOption,
+  Subtask,
+  TaskCategory,
+  TaskPriority,
+  TasksState,
+} from '../types/task.types';
 
 // Initialize the storage adapter (can be easily swapped with a different implementation)
 const storageAdapter: StorageAdapter = new LocalStorageAdapter();
@@ -14,16 +21,19 @@ const storageAdapter: StorageAdapter = new LocalStorageAdapter();
 const today = format(new Date(), 'yyyy-MM-dd');
 
 // Initialize store with tasks from storage
-export const tasksStore = new Store<TasksState>({
-  tasks: storageAdapter.getTasks().map((task) => ({
+const initialState: TasksState = {
+  tasks: storageAdapter.getTasks().map((task: OptimalTask) => ({
     ...task,
-    taskDate: task.taskDate || today, // Ensure all tasks have a taskDate, defaulting to today
+    taskDate: task.taskDate || today,
   })),
   selectedDate: today,
   focusedTaskId: null,
   editingTaskId: null,
   draftTask: null,
-});
+  highlightedTaskId: null,
+};
+
+export const tasksStore = new Store<TasksState>(initialState);
 
 // Helper function to update state and storage
 const updateStateAndStorage = (updater: (state: TasksState) => TasksState) => {
@@ -40,7 +50,7 @@ export const setSelectedDate = (date: string) => {
 };
 
 export const getTasksByDate = (date: string) => {
-  return tasksStore.state.tasks.filter((task) => task.taskDate === date);
+  return tasksStore.state.tasks.filter((task: OptimalTask) => task.taskDate === date);
 };
 
 export const addTask = (task: Omit<OptimalTask, 'id'>) => {
@@ -65,7 +75,7 @@ export const addTask = (task: Omit<OptimalTask, 'id'>) => {
 
 export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
   updateStateAndStorage((state) => {
-    const task = state.tasks.find((t) => t.id === id);
+    const task = state.tasks.find((t: OptimalTask) => t.id === id);
     if (!task) return state;
 
     // If time is being updated, extract the date from the start time
@@ -92,7 +102,9 @@ export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
 
     return {
       ...state,
-      tasks: state.tasks.map((task) => (task.id === id ? { ...task, ...updates } : task)),
+      tasks: state.tasks.map((task: OptimalTask) =>
+        task.id === id ? { ...task, ...updates } : task,
+      ),
     };
   });
 };
@@ -105,7 +117,7 @@ export const deleteTask = (id: string) => {
 
   updateStateAndStorage((state) => ({
     ...state,
-    tasks: state.tasks.filter((task) => task.id !== id),
+    tasks: state.tasks.filter((task: OptimalTask) => task.id !== id),
   }));
 };
 
@@ -128,7 +140,7 @@ export const setFocused = (id: string, isFocused: boolean) => {
 
   updateStateAndStorage((state) => {
     // Find the task that should be focused
-    const taskToFocus = state.tasks.find((task) => task.id === id);
+    const taskToFocus = state.tasks.find((task: OptimalTask) => task.id === id);
 
     // If the task is not for today, don't allow focusing
     if (taskToFocus && taskToFocus.taskDate !== today && isFocused) {
@@ -138,7 +150,7 @@ export const setFocused = (id: string, isFocused: boolean) => {
     return {
       ...state,
       focusedTaskId: isFocused ? id : null,
-      tasks: state.tasks.map((task) => {
+      tasks: state.tasks.map((task: OptimalTask) => {
         if (task.id === id) {
           return { ...task, isFocused };
         }
@@ -153,7 +165,7 @@ export const toggleTaskCompletion = (id: string) => {
   // Simply toggle the completion status without reordering
   updateStateAndStorage((state) => ({
     ...state,
-    tasks: state.tasks.map((task) => {
+    tasks: state.tasks.map((task: OptimalTask) => {
       if (task.id === id) {
         return {
           ...task,
@@ -174,25 +186,26 @@ export const clearTasks = () => {
     focusedTaskId: null,
     editingTaskId: null,
     draftTask: null,
+    highlightedTaskId: null,
   }));
 };
 
 // Scheduling-specific functions
 export const updateTaskRepetition = (taskId: string, repetition: RepetitionOption) => {
   updateStateAndStorage((state) => {
-    const task = state.tasks.find((t) => t.id === taskId);
+    const task = state.tasks.find((t: OptimalTask) => t.id === taskId);
     if (!task) return state;
 
     return {
       ...state,
-      tasks: state.tasks.map((t) => (t.id === taskId ? { ...t, repetition } : t)),
+      tasks: state.tasks.map((t: OptimalTask) => (t.id === taskId ? { ...t, repetition } : t)),
     };
   });
 };
 
 export const updateTaskStartDateTime = (taskId: string, date: Date, time: string) => {
   updateStateAndStorage((state) => {
-    const task = state.tasks.find((t) => t.id === taskId);
+    const task = state.tasks.find((t: OptimalTask) => t.id === taskId);
     if (!task) return state;
 
     // Format taskDate from the provided date
@@ -215,7 +228,7 @@ export const updateTaskStartDateTime = (taskId: string, date: Date, time: string
 
     return {
       ...state,
-      tasks: state.tasks.map((t) =>
+      tasks: state.tasks.map((t: OptimalTask) =>
         t.id === taskId
           ? {
               ...t,
@@ -302,7 +315,7 @@ export const getTaskSchedulingInfo = (taskId: string | 'draft') => {
     };
   }
 
-  const task = tasksStore.state.tasks.find((t) => t.id === taskId);
+  const task = tasksStore.state.tasks.find((t: OptimalTask) => t.id === taskId);
   if (!task) return null;
 
   return {
@@ -353,7 +366,7 @@ export const getTaskCategoryAndPriority = (taskId: string | 'draft') => {
     };
   }
 
-  const task = tasksStore.state.tasks.find((t) => t.id === taskId);
+  const task = tasksStore.state.tasks.find((t: OptimalTask) => t.id === taskId);
   if (!task) return { category: 'work' as TaskCategory, priority: 'medium' as TaskPriority };
 
   return {
@@ -414,7 +427,17 @@ export const clearDraftTask = () => {
 
 // Update draft task schedule functions
 export const updateDraftTaskRepetition = (repetition: RepetitionOption) => {
-  updateDraftTaskField('repetition', repetition);
+  tasksStore.setState((state) => {
+    if (!state.draftTask) return state;
+
+    return {
+      ...state,
+      draftTask: {
+        ...state.draftTask,
+        repetition,
+      },
+    };
+  });
 };
 
 export const updateDraftTaskStartDateTime = (date: Date, time: string) => {
@@ -580,26 +603,34 @@ export const createTaskFromDraft = () => {
     // Generate an ID for the new task
     newTaskId = uuidv4();
 
+    const currentDate = new Date();
+    const taskDate = state.draftTask.taskDate || format(currentDate, 'yyyy-MM-dd');
+    const startTimeDate = state.draftTask.startTime
+      ? new Date(state.draftTask.startTime)
+      : currentDate;
+    const nextStartTimeDate = state.draftTask.nextStartTime
+      ? new Date(state.draftTask.nextStartTime)
+      : addMilliseconds(startTimeDate, duration);
+
     // Create a new task from the draft with validated fields
     const newTask: OptimalTask = {
       id: newTaskId,
       title: state.draftTask.title || '',
       time: state.draftTask.time || '',
-      startTime: (state.draftTask.startTime as Date) || new Date(),
-      nextStartTime:
-        (state.draftTask.nextStartTime as Date) || addMilliseconds(new Date(), duration),
-      duration: duration,
+      startTime: startTimeDate,
+      nextStartTime: nextStartTimeDate,
+      duration,
       completed: false,
       priority: (state.draftTask.priority as TaskPriority) || 'medium',
       category: (state.draftTask.category as TaskCategory) || 'work',
-      taskDate: state.draftTask.taskDate || format(new Date(), 'yyyy-MM-dd'),
+      taskDate,
       isFocused: false,
       notes: state.draftTask.notes || '',
       emoji: state.draftTask.emoji || '',
       dueDate: dueDate,
       dueTime: state.draftTask.dueTime || '',
       progress: state.draftTask.progress || 0,
-      subtasks: state.draftTask.subtasks || [],
+      subtasks: (state.draftTask.subtasks || []) as Subtask[],
       repetition: (state.draftTask.repetition as RepetitionOption) || 'once',
     };
 
@@ -619,12 +650,12 @@ export const createTaskFromDraft = () => {
   });
 
   const createdTaskId =
-    tasksStore.state.tasks.find((t) => t.id === newTaskId)?.id ||
+    tasksStore.state.tasks.find((t: OptimalTask) => t.id === newTaskId)?.id ||
     tasksStore.state.tasks[tasksStore.state.tasks.length - 1].id;
   console.log('Created task ID:', createdTaskId);
 
   // Log the created task to verify duration and dueDate
-  const createdTask = tasksStore.state.tasks.find((t) => t.id === createdTaskId);
+  const createdTask = tasksStore.state.tasks.find((t: OptimalTask) => t.id === createdTaskId);
   console.log('Created task:', createdTask);
 
   return createdTaskId;
@@ -732,7 +763,7 @@ export const editExistingTask = (
     dueDate?: Date;
     priority?: TaskPriority;
     category?: TaskCategory;
-    subtasks?: any[];
+    subtasks?: Subtask[];
     progress?: number;
   },
 ) => {
@@ -749,7 +780,7 @@ export const editExistingTask = (
 
     // Calculate progress if subtasks are present
     if (updatedValues.subtasks && updatedValues.subtasks.length > 0) {
-      const completedCount = updatedValues.subtasks.filter((s) => s.isCompleted).length;
+      const completedCount = updatedValues.subtasks.filter((s: Subtask) => s.isCompleted).length;
       updatedValues.progress = Math.round((completedCount / updatedValues.subtasks.length) * 100);
     } else {
       updatedValues.progress = values.progress || task.progress || 0;
@@ -759,7 +790,7 @@ export const editExistingTask = (
       // Handle start time and date
       let taskDate = task.taskDate;
       let timeString = task.time || '';
-      let startTime = task.startTime;
+      let startTime = new Date(task.taskDate);
 
       if (values.startTime) {
         timeString = values.startTime;
@@ -803,4 +834,32 @@ export const editExistingTask = (
   } catch (error) {
     console.error('Failed to edit task:', error);
   }
+};
+
+export const setHighlightedTaskId = (taskId: string | null) => {
+  tasksStore.setState((state) => ({
+    ...state,
+    highlightedTaskId: taskId,
+  }));
+};
+
+// Helper function to trigger highlight animation
+export const highlightTask = (taskId: string) => {
+  // First blink
+  setHighlightedTaskId(taskId);
+
+  setTimeout(() => {
+    setHighlightedTaskId(null);
+
+    // Brief pause
+    setTimeout(() => {
+      // Second blink
+      setHighlightedTaskId(taskId);
+
+      // End animation
+      setTimeout(() => {
+        setHighlightedTaskId(null);
+      }, 500);
+    }, 300);
+  }, 500);
 };
