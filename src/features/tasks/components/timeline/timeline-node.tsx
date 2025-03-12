@@ -98,15 +98,17 @@ export function TimelineNode({
       {/* Node */}
       <div
         className={cn(
-          'relative flex items-center justify-center',
+          'timeline-node relative flex items-center justify-center',
           'w-11 rounded-3xl px-2',
           PRIORITY_BG_CLASSES[priority],
-          'cursor-pointer',
+          'cursor-pointer shadow-sm',
           className,
         )}
         style={{
           height: nodeHeight,
           minHeight: '48px',
+          zIndex: 10,
+          position: 'relative',
         }}
         onClick={handleClick}
         role="button"

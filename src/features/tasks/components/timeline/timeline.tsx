@@ -164,21 +164,8 @@ export const TimelineItem = ({
       className={cn('group relative flex w-full', dynamicHeight)}
       onClick={handleNodeClick}
     >
-      {/* Add connector extension that goes beyond the current item for visual continuity */}
-      {!isLastItem && (
-        <div
-          className={cn(
-            'absolute left-5 z-[5] w-[3px]',
-            // For tasks of different sizes, use different connector heights
-            duration <= ONE_HOUR_IN_MS
-              ? '-bottom-[45px] h-[45px]'
-              : duration <= ONE_HOUR_IN_MS * 2
-                ? '-bottom-[30px] h-[30px]'
-                : '-bottom-[20px] h-[20px]',
-          )}
-          style={getConnectorGradient()}
-        />
-      )}
+      {/* Continuous vertical connector line - now handled at the CategorySection level */}
+      {/* Keep z-indices consistent: CategorySection line: z-0, TimelineNode: z-10 */}
 
       {/* Timeline node with emoji */}
       <div
