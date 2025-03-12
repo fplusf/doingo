@@ -27,9 +27,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import {
   clearDraftTask,
-  createDraftTask,
-  createTaskFromDraft,
   getTaskCategoryAndPriority,
+  resetDraftTask,
   setEditingTaskId,
   tasksStore,
   updateDraftTaskCategory,
@@ -160,12 +159,28 @@ function TaskDialogContent({
   open: boolean;
   initialValues?: Partial<TaskFormValues>;
 }) {
-  // Local state for form values
-  const [values, setValues] = useState<TaskFormValues>(() => ({
-    ...defaultValues,
-    ...initialValues,
-    subtasks: initialValues?.subtasks || [],
-  }));
+  // Local state for form values - always start with empty title in create mode
+  const [values, setValues] = useState<TaskFormValues>(() => {
+    // In create mode, start with guaranteed empty values for key fields
+    if (mode === 'create') {
+      return {
+        ...defaultValues,
+        ...initialValues,
+        // Explicitly override title, emoji, and notes to empty regardless of initialValues
+        title: '',
+        emoji: '',
+        notes: '',
+        subtasks: [],
+      };
+    }
+
+    // For edit mode, use passed values
+    return {
+      ...defaultValues,
+      ...initialValues,
+      subtasks: initialValues?.subtasks || [],
+    };
+  });
 
   const updateValue = <K extends keyof TaskFormValues>(key: K, value: TaskFormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -226,19 +241,50 @@ function TaskDialogContent({
     }
   }, [mode, hasDraftTask, values.title, values.notes, values.emoji]);
 
-  // Initialize draft task for new tasks
+  // Initialize draft task for new tasks and ensure cleanup
   useEffect(() => {
+    // Create draft when opening the dialog
     if (mode === 'create' && open && !hasDraftTask) {
-      createDraftTask();
+      console.log('Creating new draft task with reset values');
+      resetDraftTask(); // Use resetDraftTask instead of createDraftTask to ensure clean slate
+    } else if (mode === 'create' && open && hasDraftTask) {
+      // If dialog is opening and there's already a draft, reset it to avoid stale data
+      console.log('Resetting existing draft task');
+      resetDraftTask();
     }
 
-    // Clean up draft task when dialog is closed
+    // Clean up draft task when dialog is closed - simpler condition
     return () => {
-      if (mode === 'create' && !open && hasDraftTask) {
+      if (mode === 'create' && hasDraftTask) {
+        console.log('Clearing draft task in cleanup effect');
         clearDraftTask();
       }
     };
   }, [mode, open, hasDraftTask]);
+
+  // IMPORTANT: Add an effect to synchronize the form values with the draft task state
+  // This ensures that the form always shows the current state of the draft task
+  useEffect(() => {
+    if (mode === 'create' && hasDraftTask && open) {
+      const draftTask = tasksStore.state.draftTask;
+      if (draftTask) {
+        console.log('Syncing form values from draft task', { title: draftTask.title });
+        // Only update the form if the values are different to avoid loops
+        if (draftTask.title !== values.title) {
+          updateValue('title', draftTask.title || '');
+        }
+        if (draftTask.notes !== values.notes) {
+          updateValue('notes', draftTask.notes || '');
+        }
+        if (draftTask.emoji !== values.emoji) {
+          updateValue('emoji', draftTask.emoji || '');
+        }
+        if (draftTask.subtasks !== values.subtasks) {
+          updateValue('subtasks', draftTask.subtasks || []);
+        }
+      }
+    }
+  }, [mode, hasDraftTask, open, tasksStore.state.draftTask]);
 
   // Update form element handlers to sync with draft task
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -326,7 +372,7 @@ function TaskDialogContent({
     if (e) e.preventDefault();
     if (!values.title) return;
 
-    // For create mode, convert draft to real task
+    // For create mode, sync form values to draft task before submitting
     if (mode === 'create' && hasDraftTask) {
       // Sync all form values to draft task before creating
       updateDraftTaskField('title', values.title);
@@ -335,10 +381,13 @@ function TaskDialogContent({
       updateDraftTaskField('subtasks', values.subtasks || []);
       updateDraftTaskField('progress', values.progress || 0);
 
-      // Create the task from the draft
-      const newTaskId = createTaskFromDraft();
-      console.log('Created new task with ID:', newTaskId);
+      // Let the onSubmit handler create the task - don't create it here
+      // to prevent duplicate creation
       onSubmit(values);
+
+      // Explicitly clear the draft task after submission
+      console.log('Clearing draft task after submission');
+      clearDraftTask();
     } else if (mode === 'edit' && editingTaskId) {
       // For edit mode, update the existing task with only the fields that match OptimalTask type
       updateTask(editingTaskId, {
@@ -385,8 +434,22 @@ function TaskDialogContent({
         onSubmit(values);
         taskId = editingTaskId;
       } else {
-        // For create mode, create the task from draft
-        taskId = createTaskFromDraft();
+        // For create mode, submit values and let parent handle task creation
+        // Don't call createTaskFromDraft directly to avoid duplicates
+        onSubmit(values);
+
+        // Explicitly clear the draft task in create mode
+        if (mode === 'create' && hasDraftTask) {
+          console.log('Clearing draft task after fullscreen submission');
+          clearDraftTask();
+        }
+
+        // We don't have a taskId yet since onSubmit will create it
+        // Navigate to the tasks list instead
+        navigate({ to: '/tasks' });
+        onOpenChange(false);
+        setEditingTaskId(null);
+        return;
       }
 
       if (taskId) {

@@ -176,11 +176,17 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
           )}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
+          onClick={() => onEdit(task)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') onEdit(task);
+          }}
+          role="button"
+          tabIndex={0}
         >
           <div
             className={cn(
               task.isFocused && isToday && 'bg-sidebar/95',
-              'relative h-full w-full rounded-md pr-6',
+              'relative h-full w-full rounded-3xl pr-6',
               // Adjust padding for short tasks
               task.duration <= ONE_HOUR_IN_MS ? 'p-0 px-2 py-0' : 'p-2 py-4',
             )}
@@ -200,15 +206,7 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
               </div>
             )}
 
-            <div
-              className="flex h-full flex-grow cursor-pointer items-center justify-between gap-4"
-              onClick={() => onEdit(task)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') onEdit(task);
-              }}
-              role="button"
-              tabIndex={0}
-            >
+            <div className="flex h-full flex-grow cursor-pointer items-center justify-between gap-4">
               <TaskCheckbox
                 className={cn(task.duration <= ONE_HOUR_IN_MS ? 'mx-1 my-0' : 'm-2')}
                 size="lg"

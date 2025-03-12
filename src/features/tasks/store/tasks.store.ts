@@ -425,6 +425,46 @@ export const clearDraftTask = () => {
   }));
 };
 
+// Creates a fresh draft task with default values, replacing any existing draft
+export const resetDraftTask = () => {
+  const now = new Date();
+  const startTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+  // First clear any existing draft completely
+  tasksStore.setState((state) => ({
+    ...state,
+    draftTask: null,
+  }));
+
+  // Then create a fresh draft with default values
+  tasksStore.setState((state) => ({
+    ...state,
+    draftTask: {
+      // Explicitly set all fields to their default values
+      id: 'draft',
+      title: '',
+      emoji: '',
+      time: startTime,
+      startTime: now,
+      nextStartTime: addMilliseconds(now, 60 * 60 * 1000), // 1 hour later
+      duration: 60 * 60 * 1000, // Default 1 hour
+      completed: false,
+      priority: 'medium' as TaskPriority,
+      category: 'work' as TaskCategory,
+      isFocused: false,
+      taskDate: format(now, 'yyyy-MM-dd'),
+      progress: 0,
+      repetition: 'once' as RepetitionOption,
+      dueDate: undefined,
+      dueTime: '',
+      notes: '',
+      subtasks: [],
+    },
+  }));
+
+  console.log('Draft task has been reset to default values with empty title');
+};
+
 // Update draft task schedule functions
 export const updateDraftTaskRepetition = (repetition: RepetitionOption) => {
   tasksStore.setState((state) => {

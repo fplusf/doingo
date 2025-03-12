@@ -1,10 +1,12 @@
 import {
-  createNewTask,
+  clearDraftTask,
+  createTaskFromDraft,
   editExistingTask,
   getDefaultEndTime,
   getDefaultStartTime,
   getTasksByDate,
   highlightTask,
+  resetDraftTask,
   setEditingTaskId,
   setSelectedDate,
   tasksStore,
@@ -262,6 +264,9 @@ export const TasksList = React.forwardRef<
               tasks={tasks}
               onEditTask={handleStartEdit}
               onAddTask={() => {
+                // Ensure any existing draft is completely reset before creating a new task
+                resetDraftTask();
+
                 setNewTask({
                   title: '',
                   emoji: '',
@@ -285,12 +290,32 @@ export const TasksList = React.forwardRef<
       {/* New Task Dialog */}
       <TaskDialog
         open={isCreating}
-        onOpenChange={setIsCreating}
+        onOpenChange={(open) => {
+          if (open) {
+            // When opening the dialog, reset the draft task
+            resetDraftTask();
+            console.log('Reset draft task when opening dialog');
+
+            // Also reset the local task state (redundant but safe)
+            setNewTask({
+              title: '',
+              emoji: '',
+              priority: 'none',
+              category: activeCategory,
+            });
+          } else {
+            // When closing the dialog, clear the draft task
+            clearDraftTask();
+            console.log('Clearing draft task when dialog is closed from TasksList');
+          }
+          setIsCreating(open);
+        }}
         mode="create"
         initialValues={{
-          title: '',
-          notes: '',
-          emoji: '',
+          // Don't include title to avoid stale values
+          // title: '',
+          // notes: '',
+          // emoji: '',
           startTime: getDefaultStartTime(),
           dueTime: '',
           duration: ONE_HOUR_IN_MS,
@@ -300,7 +325,10 @@ export const TasksList = React.forwardRef<
           subtasks: [],
         }}
         onSubmit={(values) => {
-          createNewTask(values, activeCategory);
+          const taskId = createTaskFromDraft();
+          console.log('Task created with ID:', taskId);
+          // Additional cleanup to ensure draft is cleared
+          clearDraftTask();
           setIsCreating(false);
         }}
       />
@@ -309,7 +337,17 @@ export const TasksList = React.forwardRef<
       {editingTask && (
         <TaskDialog
           open={!!editingTask}
-          onOpenChange={(open) => !open && setEditingTask(null)}
+          onOpenChange={(open) => {
+            if (!open) {
+              // First clear any draft task
+              clearDraftTask();
+              console.log('Clearing draft task when edit dialog is closed');
+
+              // Then clean up other state
+              setEditingTask(null);
+              setEditingTaskId(null);
+            }
+          }}
           mode="edit"
           initialValues={(() => {
             const task = tasks.find((t) => t.id === editingTask);
