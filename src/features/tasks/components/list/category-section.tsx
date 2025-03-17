@@ -161,19 +161,20 @@ export function CategorySection({
   return (
     <div className="relative mb-16 min-h-8" id={`category-${category}`}>
       <CategoryBadge
+        className="mt-4"
         category={category}
         label={TIMELINE_CATEGORIES[category].label}
         color={TIMELINE_CATEGORIES[category].color}
         isSticky
       />
-      <div className="relative mt-4" ref={containerRef}>
+      <div className="relative" ref={containerRef}>
         {/* Multiple connector segments with gradient transitions */}
         {connectorSegments.map((segment, index) => (
           <div key={index} className="relative">
             {/* Connector line */}
             <div
               className={cn(
-                'absolute w-[3px] -translate-x-1/2 transition-all duration-300 ease-in-out',
+                'absolute w-[2px] -translate-x-1/2 transition-all duration-300 ease-in-out',
               )}
               style={{
                 top: segment.top,
@@ -185,7 +186,7 @@ export function CategorySection({
                   : {
                       background: `linear-gradient(to bottom, ${segment.startColor}, ${segment.endColor})`,
                     }),
-                opacity: 0.9,
+                opacity: 0.85,
                 zIndex: 0,
               }}
             >
@@ -204,10 +205,10 @@ export function CategorySection({
                         className="absolute left-0 w-full rounded-full"
                         style={{
                           backgroundColor: color,
-                          height: '4px',
-                          width: '3px',
-                          top: `calc(${position * 100}% - 2px)`,
-                          opacity: 0.9,
+                          height: '3px',
+                          width: '2px',
+                          top: `calc(${position * 100}% - 1.5px)`,
+                          opacity: 0.85,
                         }}
                       />
                     );
@@ -219,7 +220,7 @@ export function CategorySection({
             {/* "Free slot" label for gaps >= 15 minutes */}
             {segment.timeGap && segment.hasFreeSlot && (
               <div
-                className="absolute left-20 flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground/60"
+                className="absolute left-20 flex items-center gap-1.5 whitespace-nowrap text-xs text-gray-400"
                 style={{
                   top: `calc(${segment.top} + ${segment.height} / 2 - 30px)`,
                   zIndex: 5,

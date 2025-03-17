@@ -7,20 +7,20 @@ import { TimelineNode } from './timeline-node';
 export const TIMELINE_CATEGORIES = {
   work: {
     label: 'Work',
-    color: '#3b82f6', // blue
+    color: '#42A5F5', // Blue
   },
   passion: {
     label: 'Passion',
-    color: '#f97316', // orange
+    color: '#E57373', // Red
   },
   play: {
     label: 'Play',
-    color: '#10b981', // green
+    color: '#66BB6A', // Green
   },
 } as const;
 
 const DEFAULT_CATEGORY = 'work';
-const DEFAULT_COLOR = '#64748b'; // slate-500
+const DEFAULT_COLOR = '#9ca3af'; // softer slate color
 
 interface TimelineItemProps {
   startTime: Date;
@@ -183,6 +183,8 @@ export const TimelineItem = ({
           onClick={handleNodeClick}
           startTime={startTime}
           duration={duration}
+          prevTaskEndTime={isLastItem ? undefined : nextStartTime}
+          hideEndTime={!isLastItem}
         />
       </div>
     </div>
