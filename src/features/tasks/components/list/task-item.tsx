@@ -167,11 +167,9 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'task-card border-secondary-600/50 relative flex w-full flex-col rounded-3xl bg-card p-0.5 text-current hover:bg-card/80 hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
+            'task-card border-secondary-600/50 relative flex w-full flex-col rounded-3xl bg-card p-[1px] text-current hover:bg-card/80 hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
             cardHeight,
-            task.isFocused && isToday && 'bg-gradient-to-r from-red-500 to-purple-500',
-            // Add more compact styles for short tasks
-            task.duration <= ONE_HOUR_IN_MS && 'py-0',
+            task.isFocused && isToday && 'bg-gradient-to-r from-orange-300 to-orange-600',
             task.completed && 'opacity-60',
           )}
           onMouseEnter={() => setIsHovered(true)}
@@ -188,7 +186,7 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
               task.isFocused && isToday && 'bg-sidebar/95',
               'relative h-full w-full rounded-3xl pr-6',
               // Adjust padding for short tasks
-              task.duration <= ONE_HOUR_IN_MS ? 'p-0 px-2 py-0' : 'p-2 py-4',
+              task.duration <= ONE_HOUR_IN_MS ? 'p-0 px-4 py-0' : 'p-2 py-4',
             )}
           >
             {/* Progress bar - only visible for tasks with subtasks */}
@@ -313,13 +311,13 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
                               size="icon"
                               onClick={handleFocusClick}
                               className={cn(
-                                'mx-4 mr-6 flex bg-transparent hover:bg-transparent',
+                                'flex h-7 w-7 bg-transparent p-0 hover:bg-transparent',
                                 task.completed && 'hidden',
                               )}
                             >
                               <LucideFocus
                                 className={cn(
-                                  'ml-2 h-4 w-4 transition-all duration-200',
+                                  'h-4 w-4 transition-all duration-200',
                                   task.isFocused && isToday
                                     ? 'fill-blue-500 text-blue-500'
                                     : 'text-muted-foreground',
@@ -342,9 +340,9 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
                               variant="ghost"
                               size="icon"
                               onClick={handleDetailsClick}
-                              className="mr-4 flex bg-transparent hover:bg-transparent"
+                              className="flex h-7 w-7 bg-transparent p-0 hover:bg-transparent"
                             >
-                              <ArrowRight className="ml-2 h-4 w-4 text-muted-foreground hover:text-foreground" />
+                              <ArrowRight className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -358,7 +356,7 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
 
                 {/* For small and medium tasks, show compact controls on the right side */}
                 {task.duration <= ONE_HOUR_IN_MS * 2 && (
-                  <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center">
+                  <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
                     {/* Focus button for small and medium tasks */}
                     {!task.completed && (
                       <TooltipProvider>
@@ -366,9 +364,9 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
                           <TooltipTrigger asChild>
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="icon"
                               onClick={handleFocusClick}
-                              className="mr-1 h-7 w-7 bg-transparent p-0 hover:bg-transparent"
+                              className="flex h-7 w-7 bg-transparent p-0 hover:bg-transparent"
                             >
                               <LucideFocus
                                 className={cn(
@@ -394,9 +392,9 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
                             onClick={handleDetailsClick}
-                            className="h-7 w-7 bg-transparent p-0 hover:bg-transparent"
+                            className="flex h-7 w-7 bg-transparent p-0 hover:bg-transparent"
                           >
                             <ArrowRight className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </Button>

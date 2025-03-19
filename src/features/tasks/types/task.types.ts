@@ -67,7 +67,7 @@ export interface TaskCardProps {
 export interface CategorySectionProps {
   category: OptimalTask['category'];
   tasks: OptimalTask[];
-  onAddTask: () => void;
+  onAddTask: (startTime?: Date) => void;
   onEditTask: (task: OptimalTask) => void;
   overlaps: Map<string, boolean>;
   highlightedTaskId: string | null;

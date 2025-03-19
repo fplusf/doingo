@@ -30,7 +30,7 @@ export const CategoryBadge: React.FC<CategoryLineProps> = ({
         className={cn(
           'text-md mx-auto font-medium',
           category === 'work' && 'text-red-300',
-          category === 'passion' && 'text-blue-300',
+          category === 'passion' && 'text-yellow-400',
           category === 'play' && 'text-green-300',
         )}
       >

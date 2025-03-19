@@ -200,23 +200,22 @@ export function TimelineNode({
       backgroundColor: '#4b5563', // Softer gray background color
     };
 
-    // If completed or in past, fill completely with priority color
-    if (completed || timeStatus === 'past') {
+    // Past tasks should be filled with priority color
+    if (timeStatus === 'past') {
       return {
         backgroundColor: priorityColor,
       };
     }
 
     // For ongoing tasks, we'll use the sand effect
-    // But keep a base background color
-    if (timeStatus === 'present') {
+    if (timeStatus === 'present' && !completed) {
       return {
         backgroundColor: '#4b5563', // Softer background for present tasks
         overflow: 'hidden', // Ensure particles don't overflow
       };
     }
 
-    // For future tasks, use default background
+    // For future tasks and completed present tasks, use default background
     return defaultBg;
   };
 
@@ -305,10 +304,11 @@ export function TimelineNode({
         }}
       >
         {/* Sand level at the bottom */}
-        {timeStatus === 'present' && <div style={getSandLevelStyle()} />}
+        {timeStatus === 'present' && !completed && <div style={getSandLevelStyle()} />}
 
         {/* Sand particles with CSS animations */}
         {timeStatus === 'present' &&
+          !completed &&
           particles.map((particle) => <div key={particle.id} style={getParticleStyle(particle)} />)}
 
         {/* Emoji container - keep above sand */}

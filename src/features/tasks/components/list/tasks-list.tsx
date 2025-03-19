@@ -263,7 +263,7 @@ export const TasksList = React.forwardRef<
               category={category as TaskCategory}
               tasks={tasks}
               onEditTask={handleStartEdit}
-              onAddTask={() => {
+              onAddTask={(startTime) => {
                 // Ensure any existing draft is completely reset before creating a new task
                 resetDraftTask();
 
@@ -273,8 +273,21 @@ export const TasksList = React.forwardRef<
                   priority: 'none',
                   category: category as TaskCategory,
                 });
-                setStartTime(getDefaultStartTime());
-                setEndTime(getDefaultEndTime());
+
+                // Format the startTime (if provided) to "HH:mm" string format
+                const formattedStartTime = startTime
+                  ? format(startTime, 'HH:mm')
+                  : getDefaultStartTime();
+                setStartTime(formattedStartTime);
+
+                // For end time, add ONE_HOUR_IN_MS to the start time
+                if (startTime) {
+                  const endTimeDate = new Date(startTime.getTime() + ONE_HOUR_IN_MS);
+                  setEndTime(format(endTimeDate, 'HH:mm'));
+                } else {
+                  setEndTime(getDefaultEndTime());
+                }
+
                 setDuration(ONE_HOUR_IN_MS);
                 setDueDate(undefined);
                 setIsCreating(true);

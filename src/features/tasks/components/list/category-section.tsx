@@ -4,7 +4,7 @@ import { PRIORITY_COLORS as PRIORITY_COLOR_HEX } from '@/features/tasks/constant
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import { addMilliseconds, differenceInMilliseconds } from 'date-fns';
-import { Clock, Plus } from 'lucide-react';
+import { Clock, Coffee, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { CategorySectionProps, ONE_HOUR_IN_MS, OptimalTask } from '../../types';
 import { SortableTimelineTaskItem } from './sortable-timeline-task-item';
@@ -20,7 +20,15 @@ interface ConnectorSegment {
   left: string;
   isDotted?: boolean;
   timeGap?: number;
+  remainingDuration?: number;
   hasFreeSlot?: boolean;
+  hasSmallGap?: boolean;
+  hasLargeGap?: boolean;
+  startTime?: Date;
+  endTime?: Date;
+  isPastGap?: boolean;
+  isCurrentGap?: boolean;
+  isFutureGap?: boolean;
 }
 
 export function CategorySection({
@@ -41,9 +49,22 @@ export function CategorySection({
     return PRIORITY_COLOR_HEX[priority] || PRIORITY_COLOR_HEX.none;
   };
 
+  // Clear connector segments when component unmounts or tasks change
+  useEffect(() => {
+    return () => {
+      setConnectorSegments([]);
+    };
+  }, [tasks]);
+
   // Update connector segments when DOM changes
   useEffect(() => {
-    if (tasks.length <= 0 || !containerRef.current) return;
+    // Explicitly clear connector segments when no tasks
+    if (tasks.length <= 0) {
+      setConnectorSegments([]);
+      return;
+    }
+
+    if (!containerRef.current) return;
 
     const updateConnectorSegments = () => {
       const container = containerRef.current;
@@ -51,7 +72,10 @@ export function CategorySection({
 
       // Find all timeline nodes within the container
       const timelineNodes = container.querySelectorAll('.timeline-node');
-      if (timelineNodes.length === 0) return;
+      if (timelineNodes.length === 0) {
+        setConnectorSegments([]);
+        return;
+      }
 
       // Don't create connector segments if there's only a single node
       if (timelineNodes.length === 1) {
@@ -104,15 +128,35 @@ export function CategorySection({
             ? addMilliseconds(currentTask.startTime, currentTask.duration)
             : currentTask.startTime;
 
-        const timeGap =
+        const now = new Date();
+
+        // Check if tasks are from a past date by comparing full dates, not just components
+        const isCurrentTaskInPast = currentTaskEnd && currentTaskEnd < now;
+        const isNextTaskInPast = nextTask.startTime && nextTask.startTime < now;
+        const isNextTaskInFuture = nextTask.startTime && nextTask.startTime > now;
+
+        // Calculate gap duration - original full duration between tasks
+        const fullGapDuration =
           currentTaskEnd && nextTask.startTime
             ? differenceInMilliseconds(nextTask.startTime, currentTaskEnd)
             : 0;
 
-        // Check for different gap thresholds
-        const hasLargeGap = timeGap > ONE_HOUR_IN_MS;
-        const hasFreeSlot = timeGap >= FIFTEEN_MINUTES_IN_MS;
-        const hasOverlap = timeGap < 0;
+        // Calculate remaining duration from now to next task start
+        const remainingDuration =
+          nextTask.startTime && nextTask.startTime > now
+            ? differenceInMilliseconds(nextTask.startTime, now)
+            : 0;
+
+        // Determine gap type based on task positions relative to current time
+        const isPastGap = isCurrentTaskInPast && isNextTaskInPast;
+        const isCurrentGap = isCurrentTaskInPast && isNextTaskInFuture;
+        const isFutureGap = !isCurrentTaskInPast && !isPastGap;
+
+        // Determine gap size categories
+        const hasLargeGap = fullGapDuration > ONE_HOUR_IN_MS && fullGapDuration > 0;
+        const hasFreeSlot = fullGapDuration >= FIFTEEN_MINUTES_IN_MS && fullGapDuration > 0;
+        const hasSmallGap = fullGapDuration > 0 && fullGapDuration < FIFTEEN_MINUTES_IN_MS;
+        const hasOverlap = fullGapDuration < 0;
 
         // Calculate the bottom edge of current node and top edge of next node
         const currentBottom = currentRect.bottom - containerRect.top;
@@ -123,9 +167,13 @@ export function CategorySection({
 
         // Calculate segment height based on gap
         const baseHeight = nextTop - currentBottom;
-        // Increase spacing for large gaps (>1h) or smaller free slots (≥15m)
+        // Make connectors taller with different multipliers based on gap size
         const segmentHeight =
-          (hasLargeGap || hasFreeSlot) && !hasOverlap ? baseHeight * 2 : baseHeight;
+          hasLargeGap && !hasOverlap
+            ? baseHeight * 3 // Triple height for large gaps (>1h)
+            : hasFreeSlot && !hasOverlap
+              ? baseHeight * 1.5 // 1.5x height for free slots (≥15m)
+              : baseHeight; // Default height for small gaps and overlaps
 
         segments.push({
           top: `${currentBottom}px`,
@@ -133,17 +181,25 @@ export function CategorySection({
           startColor: getTaskColor(currentTask),
           endColor: getTaskColor(nextTask),
           left: `${centerX}px`,
-          isDotted: hasLargeGap && !hasOverlap, // Only use dotted line for gaps > 1 hour
-          timeGap: (hasLargeGap || hasFreeSlot) && !hasOverlap ? timeGap : undefined,
+          isDotted: hasLargeGap && !hasOverlap,
+          timeGap: fullGapDuration > 0 ? fullGapDuration : undefined,
+          remainingDuration: remainingDuration > 0 ? remainingDuration : undefined,
           hasFreeSlot: hasFreeSlot && !hasOverlap,
+          hasSmallGap: hasSmallGap && !hasOverlap,
+          hasLargeGap: hasLargeGap && !hasOverlap,
+          startTime: currentTaskEnd,
+          endTime: nextTask.startTime,
+          isPastGap: isPastGap,
+          isCurrentGap: isCurrentGap,
+          isFutureGap: isFutureGap,
         });
       }
 
       setConnectorSegments(segments);
     };
 
-    // Initial update
-    setTimeout(updateConnectorSegments, 50);
+    // Initial update with a delay to ensure DOM is ready
+    const initialUpdateTimeout = setTimeout(updateConnectorSegments, 50);
 
     // Set up observer to monitor layout changes
     const resizeObserver = new ResizeObserver(updateConnectorSegments);
@@ -151,6 +207,7 @@ export function CategorySection({
 
     // Clean up
     return () => {
+      clearTimeout(initialUpdateTimeout);
       if (containerRef.current) {
         resizeObserver.unobserve(containerRef.current);
       }
@@ -193,9 +250,9 @@ export function CategorySection({
               {/* For dotted lines, create individual dots with gradient color interpolation */}
               {segment.isDotted && (
                 <>
-                  {Array.from({ length: 10 }).map((_, i) => {
+                  {Array.from({ length: 20 }).map((_, i) => {
                     // Calculate position percentage (0 to 1)
-                    const position = i / 9;
+                    const position = i / 19;
                     // Interpolate between the two colors based on position
                     const color = interpolateColor(segment.startColor, segment.endColor, position);
 
@@ -217,17 +274,62 @@ export function CategorySection({
               )}
             </div>
 
-            {/* "Free slot" label for gaps >= 15 minutes */}
-            {segment.timeGap && segment.hasFreeSlot && (
+            {/* "Free slot" or "Get ready" label */}
+            {segment.timeGap && segment.timeGap > 0 && (
               <div
                 className="absolute left-20 flex items-center gap-1.5 whitespace-nowrap text-xs text-gray-400"
                 style={{
-                  top: `calc(${segment.top} + ${segment.height} / 2 - 30px)`,
+                  top:
+                    segment.isPastGap && !segment.hasLargeGap
+                      ? `calc(${segment.top} + 0px)`
+                      : `calc(${segment.top} + ${segment.height} / 2 - ${segment.hasLargeGap ? '80px' : '12px'})`,
+                  transform: 'translateY(-50%)',
                   zIndex: 5,
                 }}
               >
-                <Clock className="h-3.5 w-3.5" />
-                Free slot - {formatDuration(segment.timeGap)}
+                {segment.isPastGap ? (
+                  <>
+                    <Coffee className="h-3.5 w-3.5" />
+                    Break
+                  </>
+                ) : segment.isCurrentGap ? (
+                  <>
+                    <Clock className="h-3.5 w-3.5" />
+                    Free slot - {formatDuration(segment.remainingDuration || 0)}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="ml-2 h-5 w-5 p-0 text-gray-400 hover:bg-transparent hover:text-gray-600"
+                      onClick={() =>
+                        segment.startTime ? onAddTask(segment.startTime) : onAddTask()
+                      }
+                      aria-label="Add task in free slot"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
+                ) : segment.hasFreeSlot ? (
+                  <>
+                    <Clock className="h-3.5 w-3.5" />
+                    Free slot - {formatDuration(segment.timeGap || 0)}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="ml-2 h-5 w-5 p-0 text-gray-400 hover:bg-transparent hover:text-gray-600"
+                      onClick={() =>
+                        segment.startTime ? onAddTask(segment.startTime) : onAddTask()
+                      }
+                      aria-label="Add task in free slot"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
+                ) : segment.hasSmallGap ? (
+                  <>
+                    <Clock className="h-3.5 w-3.5" />
+                    Get ready for the next task!
+                  </>
+                ) : null}
               </div>
             )}
           </div>
@@ -284,8 +386,9 @@ export function CategorySection({
                   highlightedTaskId === task.id && 'bg-muted ring-2 ring-border/50',
                   // Base spacing between items
                   'mt-5',
-                  // Double the spacing if there's a large gap OR a free slot with the PREVIOUS task
-                  (hasLargeGapWithPrevious || hasFreeSlotWithPrevious) && 'mt-10',
+                  // Increase spacing based on gap size with PREVIOUS task
+                  hasLargeGapWithPrevious && 'mt-20', // Triple spacing for large gaps (>1h)
+                  !hasLargeGapWithPrevious && hasFreeSlotWithPrevious && 'mt-10', // Double spacing for free slots (≥15m)
                 )}
                 style={{
                   // Add margin to the first item to match the timeline start
@@ -303,7 +406,7 @@ export function CategorySection({
             );
           })}
           <Button
-            onClick={onAddTask}
+            onClick={() => onAddTask()}
             variant="ghost"
             className="z-30 my-10 ml-16 w-[calc(100%-4rem)] justify-start gap-2 bg-transparent text-muted-foreground hover:bg-transparent"
           >
