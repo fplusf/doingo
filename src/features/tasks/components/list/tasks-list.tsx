@@ -208,35 +208,20 @@ export const TasksList = React.forwardRef<
 
   // Group tasks by category and sort by start time, adding overlap information
   const tasksByCategory = React.useMemo(() => {
-    const grouped = {
-      work: [] as OptimalTask[],
-      passion: [] as OptimalTask[],
-      play: [] as OptimalTask[],
-    };
-
-    // First group tasks by category
-    tasks.forEach((task: OptimalTask) => {
-      grouped[task.category || 'work'].push(task);
-    });
+    // Sort all tasks by start time
+    const sortedTasks = sortByStartTime(tasks);
 
     // Track overlaps in a Map
     const overlaps = new Map<string, boolean>();
 
-    // Sort tasks and check for overlaps in each category
-    Object.keys(grouped).forEach((category) => {
-      const sortedTasks = sortByStartTime(grouped[category as TaskCategory]);
-
-      // Check for overlaps
-      sortedTasks.forEach((task, index: number) => {
-        if (index < sortedTasks.length - 1) {
-          overlaps.set(task.id, hasTimeOverlap(task, sortedTasks[index + 1]));
-        }
-      });
-
-      grouped[category as TaskCategory] = sortedTasks;
+    // Check for overlaps between consecutive tasks
+    sortedTasks.forEach((task, index) => {
+      if (index < sortedTasks.length - 1) {
+        overlaps.set(task.id, hasTimeOverlap(task, sortedTasks[index + 1]));
+      }
     });
 
-    return { tasks: grouped, overlaps };
+    return { tasks: sortedTasks, overlaps };
   }, [tasks]);
 
   // Update end time when start time changes
@@ -256,48 +241,46 @@ export const TasksList = React.forwardRef<
   return (
     <ScrollArea viewportRef={viewportRef} className="relative h-full w-full">
       <div ref={tasksRef} className="relative mx-auto w-full max-w-[900px] px-10 pb-16">
-        {/* Temporarily removed DndContext and SortableContext for stability */}
-        {Object.entries(tasksByCategory.tasks).map(([category, tasks]) => (
-          <div key={category} className="relative">
-            <CategorySection
-              category={category as TaskCategory}
-              tasks={tasks}
-              onEditTask={handleStartEdit}
-              onAddTask={(startTime) => {
-                // Ensure any existing draft is completely reset before creating a new task
-                resetDraftTask();
+        {/* Single timeline section */}
+        <div className="relative">
+          <CategorySection
+            category="work"
+            tasks={tasksByCategory.tasks}
+            onEditTask={handleStartEdit}
+            onAddTask={(startTime) => {
+              // Ensure any existing draft is completely reset before creating a new task
+              resetDraftTask();
 
-                setNewTask({
-                  title: '',
-                  emoji: '',
-                  priority: 'none',
-                  category: category as TaskCategory,
-                });
+              setNewTask({
+                title: '',
+                emoji: '',
+                priority: 'none',
+                category: 'work',
+              });
 
-                // Format the startTime (if provided) to "HH:mm" string format
-                const formattedStartTime = startTime
-                  ? format(startTime, 'HH:mm')
-                  : getDefaultStartTime();
-                setStartTime(formattedStartTime);
+              // Format the startTime (if provided) to "HH:mm" string format
+              const formattedStartTime = startTime
+                ? format(startTime, 'HH:mm')
+                : getDefaultStartTime();
+              setStartTime(formattedStartTime);
 
-                // For end time, add ONE_HOUR_IN_MS to the start time
-                if (startTime) {
-                  const endTimeDate = new Date(startTime.getTime() + ONE_HOUR_IN_MS);
-                  setEndTime(format(endTimeDate, 'HH:mm'));
-                } else {
-                  setEndTime(getDefaultEndTime());
-                }
+              // For end time, add ONE_HOUR_IN_MS to the start time
+              if (startTime) {
+                const endTimeDate = new Date(startTime.getTime() + ONE_HOUR_IN_MS);
+                setEndTime(format(endTimeDate, 'HH:mm'));
+              } else {
+                setEndTime(getDefaultEndTime());
+              }
 
-                setDuration(ONE_HOUR_IN_MS);
-                setDueDate(undefined);
-                setIsCreating(true);
-                setActiveCategory(category as TaskCategory);
-              }}
-              overlaps={tasksByCategory.overlaps}
-              highlightedTaskId={highlightedTaskId}
-            />
-          </div>
-        ))}
+              setDuration(ONE_HOUR_IN_MS);
+              setDueDate(undefined);
+              setIsCreating(true);
+              setActiveCategory('work');
+            }}
+            overlaps={tasksByCategory.overlaps}
+            highlightedTaskId={highlightedTaskId}
+          />
+        </div>
       </div>
 
       {/* New Task Dialog */}
@@ -363,7 +346,7 @@ export const TasksList = React.forwardRef<
           }}
           mode="edit"
           initialValues={(() => {
-            const task = tasks.find((t) => t.id === editingTask);
+            const task = tasksByCategory.tasks.find((t) => t.id === editingTask);
             if (!task) return {};
 
             return {
@@ -381,7 +364,7 @@ export const TasksList = React.forwardRef<
             };
           })()}
           onSubmit={(values) => {
-            const taskToEdit = tasks.find((t) => t.id === editingTask);
+            const taskToEdit = tasksByCategory.tasks.find((t) => t.id === editingTask);
             if (taskToEdit) {
               editExistingTask(taskToEdit, values);
             }

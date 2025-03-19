@@ -1,4 +1,3 @@
-import { CategoryBadge } from '@/features/tasks/components/timeline/category-badge';
 import { TIMELINE_CATEGORIES } from '@/features/tasks/components/timeline/timeline';
 import { PRIORITY_COLORS as PRIORITY_COLOR_HEX } from '@/features/tasks/constants/priority-colors';
 import { cn } from '@/lib/utils';
@@ -217,6 +216,7 @@ export function CategorySection({
 
   return (
     <div className="relative mb-16 min-h-8" id={`category-${category}`}>
+      {/* Commented out CategoryBadge for single timeline
       <CategoryBadge
         className="mt-4"
         category={category}
@@ -224,6 +224,7 @@ export function CategorySection({
         color={TIMELINE_CATEGORIES[category].color}
         isSticky
       />
+      */}
       <div className="relative" ref={containerRef}>
         {/* Multiple connector segments with gradient transitions */}
         {connectorSegments.map((segment, index) => (
