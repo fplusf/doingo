@@ -167,16 +167,26 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'task-card border-secondary-600/50 relative flex w-full flex-col rounded-3xl bg-card p-[1px] text-current hover:bg-card/80 hover:shadow-md sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
+            'task-card relative flex w-full flex-col rounded-3xl bg-card sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
             cardHeight,
             task.isFocused && isToday && 'bg-gradient-to-r from-orange-300 to-orange-600',
-            task.completed && 'opacity-60',
+            task.completed && 'opacity-60 transition-opacity duration-300 hover:opacity-100',
           )}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
+          onMouseEnter={(e) => {
+            setIsHovered(true);
+            e.currentTarget.style.borderColor = '#4d5057';
+          }}
+          onMouseLeave={(e) => {
+            setIsHovered(false);
+            e.currentTarget.style.borderColor = 'transparent';
+          }}
           onClick={() => onEdit(task)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') onEdit(task);
+          }}
+          style={{
+            border: '1px solid transparent',
+            transition: 'border-color 0.2s ease-in-out',
           }}
           role="button"
           tabIndex={0}
@@ -184,7 +194,7 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
           <div
             className={cn(
               task.isFocused && isToday && 'bg-sidebar/95',
-              'relative h-full w-full rounded-3xl pr-6',
+              'relative h-full w-full rounded-3xl',
               // Adjust padding for short tasks
               task.duration <= ONE_HOUR_IN_MS ? 'p-0 px-4 py-0' : 'p-2 py-4',
             )}
@@ -236,7 +246,7 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
                       ? 'mb-1'
                       : '',
                     task.duration > ONE_HOUR_IN_MS ? lineClamp : 'line-clamp-1',
-                    task.completed && 'line-through opacity-20',
+                    task.completed && 'line-through opacity-60',
                   )}
                 >
                   {task.title}

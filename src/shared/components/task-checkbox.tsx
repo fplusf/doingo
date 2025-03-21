@@ -65,8 +65,8 @@ export const TaskCheckbox = React.forwardRef<HTMLButtonElement, TaskCheckboxProp
           }
         }}
         className={cn(
-          'flex shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-600 outline-none ring-0 transition-colors hover:border-green-500 focus:outline-none focus:ring-green-500',
-          checked ? 'border-green-500 bg-green-500' : 'border-gray-500 bg-background',
+          'flex shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-400 outline-none ring-0 transition-colors hover:border-green-500 focus:outline-none focus:ring-green-500',
+          checked ? 'border-green-500 bg-green-500' : 'border-gray-400 bg-background',
           sizeClasses[size],
           className,
         )}
@@ -78,7 +78,7 @@ export const TaskCheckbox = React.forwardRef<HTMLButtonElement, TaskCheckboxProp
         <Check
           className={cn(
             iconSizeClasses[size],
-            checked ? 'text-white opacity-100' : 'text-gray-400 opacity-50',
+            checked ? 'text-white opacity-100' : 'text-gray-400 opacity-80',
           )}
         />
       </button>

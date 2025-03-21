@@ -169,9 +169,9 @@ export function CategorySection({
         // Make connectors taller with different multipliers based on gap size
         const segmentHeight =
           hasLargeGap && !hasOverlap
-            ? baseHeight * 3 // Triple height for large gaps (>1h)
+            ? baseHeight * 1.5 // Reduce multiplier for large gaps from 3 to 1.5
             : hasFreeSlot && !hasOverlap
-              ? baseHeight * 1.5 // 1.5x height for free slots (≥15m)
+              ? baseHeight * 1.2 // Reduce multiplier for free slots from 1.5 to 1.2
               : baseHeight; // Default height for small gaps and overlaps
 
         segments.push({
@@ -232,7 +232,7 @@ export function CategorySection({
             {/* Connector line */}
             <div
               className={cn(
-                'absolute w-[2px] -translate-x-1/2 transition-all duration-300 ease-in-out',
+                'absolute w-[3px] -translate-x-1/2 transition-all duration-300 ease-in-out',
               )}
               style={{
                 top: segment.top,
@@ -251,9 +251,9 @@ export function CategorySection({
               {/* For dotted lines, create individual dots with gradient color interpolation */}
               {segment.isDotted && (
                 <>
-                  {Array.from({ length: 20 }).map((_, i) => {
+                  {Array.from({ length: 10 }).map((_, i) => {
                     // Calculate position percentage (0 to 1)
-                    const position = i / 19;
+                    const position = i / 9;
                     // Interpolate between the two colors based on position
                     const color = interpolateColor(segment.startColor, segment.endColor, position);
 
@@ -263,9 +263,9 @@ export function CategorySection({
                         className="absolute left-0 w-full rounded-full"
                         style={{
                           backgroundColor: color,
-                          height: '3px',
-                          width: '2px',
-                          top: `calc(${position * 100}% - 1.5px)`,
+                          height: '4px',
+                          width: '3px',
+                          top: `calc(${position * 100}% - 2px)`,
                           opacity: 0.85,
                         }}
                       />
@@ -278,20 +278,22 @@ export function CategorySection({
             {/* "Free slot" or "Get ready" label */}
             {segment.timeGap && segment.timeGap > 0 && (
               <div
-                className="absolute left-20 flex items-center gap-1.5 whitespace-nowrap text-xs text-gray-400"
+                className={cn(
+                  'absolute left-20 flex items-center gap-1.5 whitespace-nowrap text-xs text-gray-400',
+                  'rounded-md px-2 py-1',
+                  segment.isPastGap ? 'bg-gray-800/40' : 'bg-gray-800/20',
+                )}
                 style={{
-                  top:
-                    segment.isPastGap && !segment.hasLargeGap
-                      ? `calc(${segment.top} + 0px)`
-                      : `calc(${segment.top} + ${segment.height} / 2 - ${segment.hasLargeGap ? '80px' : '12px'})`,
+                  // Position slightly above the exact middle of the connector
+                  top: `calc(${segment.top} + ${parseFloat(segment.height) / 2 - 10}px)`,
                   transform: 'translateY(-50%)',
-                  zIndex: 5,
+                  zIndex: 10,
                 }}
               >
                 {segment.isPastGap ? (
                   <>
                     <Coffee className="h-3.5 w-3.5" />
-                    Break
+                    <span>Break</span>
                   </>
                 ) : segment.isCurrentGap ? (
                   <>
@@ -388,8 +390,8 @@ export function CategorySection({
                   // Base spacing between items
                   'mt-5',
                   // Increase spacing based on gap size with PREVIOUS task
-                  hasLargeGapWithPrevious && 'mt-20', // Triple spacing for large gaps (>1h)
-                  !hasLargeGapWithPrevious && hasFreeSlotWithPrevious && 'mt-10', // Double spacing for free slots (≥15m)
+                  hasLargeGapWithPrevious && 'mt-12', // Reduce spacing for large gaps (was mt-20)
+                  !hasLargeGapWithPrevious && hasFreeSlotWithPrevious && 'mt-8', // Reduce spacing for free slots (was mt-10)
                 )}
                 style={{
                   // Add margin to the first item to match the timeline start

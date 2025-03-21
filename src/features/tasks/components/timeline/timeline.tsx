@@ -1,6 +1,5 @@
 import { cn } from '@/lib/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { PRIORITY_COLORS } from '../../constants/priority-colors';
 import { ONE_HOUR_IN_MS, TaskCategory, TaskPriority } from '../../types';
 import { TimelineNode } from './timeline-node';
 
@@ -140,22 +139,6 @@ export const TimelineItem = ({
     if (onEditTask) {
       onEditTask();
     }
-  };
-
-  // Create a gradient for the connector line
-  const getConnectorGradient = () => {
-    const currentColor = PRIORITY_COLORS[priority];
-    const nextColor = PRIORITY_COLORS[nextTaskPriority];
-
-    // If colors are the same, just use a solid color
-    if (currentColor === nextColor) {
-      return { background: currentColor };
-    }
-
-    // Create a linear gradient from top to bottom
-    return {
-      background: `linear-gradient(to bottom, ${currentColor} 0%, ${nextColor} 100%)`,
-    };
   };
 
   return (

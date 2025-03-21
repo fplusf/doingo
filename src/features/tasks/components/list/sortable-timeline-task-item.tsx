@@ -49,7 +49,7 @@ export const SortableTimelineTaskItem = ({
       <div className="ml-16 w-full">
         <TaskItem task={task} onEdit={onEdit} />
         {/* Overlap indicator - adjust position for short tasks */}
-        {overlapsWithNext && (
+        {overlapsWithNext && !task.completed && (
           <Tooltip>
             <TooltipTrigger asChild>
               <div
