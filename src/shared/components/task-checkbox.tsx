@@ -78,7 +78,7 @@ export const TaskCheckbox = React.forwardRef<HTMLButtonElement, TaskCheckboxProp
         <Check
           className={cn(
             iconSizeClasses[size],
-            checked ? 'text-white opacity-100' : 'text-gray-400 opacity-80',
+            checked ? 'text-white opacity-100' : 'text-gray-400 opacity-80 hover:text-green-500',
           )}
         />
       </button>
