@@ -31,7 +31,7 @@ export const TopSidebarTrigger: React.FC = () => {
  * This hack done since, the Sidebar context can't be use outside the SidebarContext
  * and in this case we need to keep the DragWindowRegion outside of the SidebarContext.
  */
-export const TopSidebarTriggerVisible = ({ className }: { className: string }) => {
+export const TopSidebarTriggerVisible = ({ className }: { className?: string }) => {
   const sidebarState = useSyncExternalStore(
     layoutStore.subscribe,
     () => layoutStore.state.sidebar.isClosed,

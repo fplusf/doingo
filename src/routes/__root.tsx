@@ -40,7 +40,7 @@ function Root() {
           <div className="flex min-h-0 flex-1 flex-col">
             <SidebarProvider style={{ '--sidebar-width': '5rem' } as any}>
               <AppSidebar />
-              <SidebarInset className="top-12 h-[calc(100vh-4rem)] overflow-hidden">
+              <SidebarInset className="top-10 h-[calc(100vh-3rem)] overflow-hidden">
                 <TopSidebarTrigger />
                 <Outlet />
               </SidebarInset>

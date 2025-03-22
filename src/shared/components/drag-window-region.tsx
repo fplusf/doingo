@@ -14,20 +14,20 @@ interface DragWindowRegionProps {
 
 export function DragWindowRegion({ children }: { children: DragWindowRegionChildren }) {
   return (
-    <div className="fixed inset-0 flex h-12 w-screen flex-col items-stretch justify-between bg-sidebar">
+    <div className="fixed inset-0 flex h-10 w-screen scale-95 flex-col items-stretch justify-between bg-sidebar">
       {/* Draggable background layer */}
       <div className="draglayer absolute inset-0" />
 
       {/* Content layer with three sections */}
-      <div className="z-12 relative flex h-12 w-full items-center justify-between bg-sidebar">
+      <div className="z-12 relative flex h-10 w-full items-center justify-between bg-sidebar">
         {/* Left section - fixed width */}
-        <div className="no-drag flex min-w-[200px] items-center gap-2 px-4 pl-20">
-          <TopSidebarTriggerVisible className="mt-2" />
+        <div className="no-drag mt-3 flex min-w-[200px] items-center px-4 pl-20">
+          <TopSidebarTriggerVisible />
           {children.left()}
         </div>
 
         {/* Center section - draggable unless content exists */}
-        <div className="flex flex-1 items-center justify-center">
+        <div className="mt-3 flex flex-1 items-center justify-center">
           {children.center ? (
             <div className="no-drag">{children.center()}</div>
           ) : (
@@ -36,7 +36,7 @@ export function DragWindowRegion({ children }: { children: DragWindowRegionChild
         </div>
 
         {/* Right section - fixed width */}
-        <div className="no-drag flex min-w-[200px] items-center justify-end gap-2 px-4">
+        <div className="no-drag mt-3 flex min-w-[200px] items-center justify-end gap-2 px-4">
           {children.right()}
         </div>
       </div>

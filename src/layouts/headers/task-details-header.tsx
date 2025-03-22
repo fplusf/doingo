@@ -9,12 +9,7 @@ export function TaskDetailHeader() {
       const navigate = useNavigate();
 
       return (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate({ to: '..' })}
-          className="gap mt-2"
-        >
+        <Button variant="ghost" size="sm" onClick={() => navigate({ to: '..' })}>
           <ChevronLeft className="h-4 w-4" />
           Back
         </Button>
@@ -27,11 +22,11 @@ export function TaskDetailHeader() {
       const currentTab = search.tab || 'document';
 
       return (
-        <Tabs value={currentTab} className="w-[400px]">
-          <TabsList className="mx-auto mt-2.5 grid h-9 w-72 grid-cols-3 text-xs">
+        <Tabs value={currentTab} className="mt-0 w-[400px]">
+          <TabsList className="mx-auto mt-0 grid h-8 w-72 grid-cols-3 bg-background/40 text-xs">
             <TabsTrigger
               value="document"
-              className="h-7"
+              className="h-6"
               onClick={() =>
                 navigate({
                   to: '/tasks/$taskId',
@@ -44,7 +39,7 @@ export function TaskDetailHeader() {
             </TabsTrigger>
             <TabsTrigger
               value="both"
-              className="h-7"
+              className="h-6"
               onClick={() =>
                 navigate({
                   to: '/tasks/$taskId',
@@ -57,7 +52,7 @@ export function TaskDetailHeader() {
             </TabsTrigger>
             <TabsTrigger
               value="canvas"
-              className="h-7"
+              className="h-6"
               onClick={() =>
                 navigate({
                   to: '/tasks/$taskId',
