@@ -166,11 +166,6 @@ function TaskDialogContent({
       return {
         ...defaultValues,
         ...initialValues,
-        // Explicitly override title, emoji, and notes to empty regardless of initialValues
-        title: '',
-        emoji: '',
-        notes: '',
-        subtasks: [],
       };
     }
 
@@ -331,7 +326,7 @@ function TaskDialogContent({
 
       return () => cancelAnimationFrame(frameId);
     }
-  }, [open, mode, values.title]);
+  }, [open, mode]);
 
   // Initialize subtasks array if it doesn't exist
   useEffect(() => {
