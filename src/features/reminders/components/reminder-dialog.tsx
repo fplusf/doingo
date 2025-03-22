@@ -45,7 +45,7 @@ export const ReminderDialog = ({ open, onOpenChange, reminder }: ReminderDialogP
   const [description, setDescription] = React.useState('');
   const [dueDate, setDueDate] = React.useState<Date | undefined>(undefined);
   const [priority, setPriority] = React.useState<'low' | 'medium' | 'high' | 'none'>('none');
-  const [list, setList] = React.useState(selectedListId || 'reminders');
+  const [list, setList] = React.useState(selectedListId || 'all');
   const [titleError, setTitleError] = React.useState(false);
 
   // Reset the form when the dialog opens/closes or when editing a different reminder
@@ -64,7 +64,7 @@ export const ReminderDialog = ({ open, onOpenChange, reminder }: ReminderDialogP
         setDescription('');
         setDueDate(undefined);
         setPriority('none');
-        setList(selectedListId || 'reminders');
+        setList(selectedListId || 'all');
       }
       setTitleError(false);
     }

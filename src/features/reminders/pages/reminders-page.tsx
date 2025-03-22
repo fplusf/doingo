@@ -1,40 +1,35 @@
-import { ListDialog } from '@/features/reminders/components/list-dialog';
 import { ReminderDialog } from '@/features/reminders/components/reminder-dialog';
 import { ReminderItem } from '@/features/reminders/components/reminder-item';
 import { ReminderListItem } from '@/features/reminders/components/reminder-list-item';
 import {
-  deleteList,
   getListById,
+  getOverdueReminders,
   getRemindersByList,
+  getUpcomingReminders,
   remindersStore,
 } from '@/features/reminders/store/reminders.store';
 import { Reminder } from '@/features/reminders/types';
 import { Button } from '@/shared/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/shared/components/ui/dropdown-menu';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import { Separator } from '@/shared/components/ui/separator';
 import { useStore } from '@tanstack/react-store';
-import { Edit, MoreVertical, Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import * as React from 'react';
 
 export default function RemindersPage() {
   const lists = useStore(remindersStore, (state) => state.lists);
   const selectedListId = useStore(remindersStore, (state) => state.selectedListId);
   const reminders = useStore(remindersStore, (state) =>
-    getRemindersByList(state.selectedListId || 'reminders'),
+    getRemindersByList(state.selectedListId || 'all'),
   );
 
   const [reminderDialogOpen, setReminderDialogOpen] = React.useState(false);
   const [selectedReminder, setSelectedReminder] = React.useState<Reminder | undefined>(undefined);
-  const [listDialogOpen, setListDialogOpen] = React.useState(false);
-  const [editingList, setEditingList] = React.useState<any>(undefined);
+  // Commented out list dialog state as list creation is disabled for now
+  // const [listDialogOpen, setListDialogOpen] = React.useState(false);
+  // const [editingList, setEditingList] = React.useState<any>(undefined);
 
-  const selectedList = getListById(selectedListId || 'reminders');
+  const selectedList = getListById(selectedListId || 'all');
 
   const handleAddReminder = () => {
     setSelectedReminder(undefined);
@@ -46,30 +41,39 @@ export default function RemindersPage() {
     setReminderDialogOpen(true);
   };
 
-  const handleAddList = () => {
-    setEditingList(undefined);
-    setListDialogOpen(true);
-  };
+  // Commented out list management functions as list creation is disabled for now
+  // const handleAddList = () => {
+  //   setEditingList(undefined);
+  //   setListDialogOpen(true);
+  // };
 
-  const handleEditList = () => {
-    if (selectedList) {
-      setEditingList(selectedList);
-      setListDialogOpen(true);
-    }
-  };
+  // const handleEditList = () => {
+  //   if (selectedList) {
+  //     setEditingList(selectedList);
+  //     setListDialogOpen(true);
+  //   }
+  // };
 
-  const handleDeleteList = () => {
-    if (selectedListId && selectedListId !== 'reminders') {
-      deleteList(selectedListId);
-    }
-  };
+  // const handleDeleteList = () => {
+  //   if (selectedListId && selectedListId !== 'reminders') {
+  //     deleteList(selectedListId);
+  //   }
+  // };
 
   // Get counts for each list
   const listCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
 
+    // For the special lists, we use the specialized selectors
+    counts['all'] = remindersStore.state.reminders.length;
+    counts['upcoming'] = getUpcomingReminders().length;
+    counts['overdue'] = getOverdueReminders().length;
+
+    // For any other lists (though we don't have custom lists now)
     lists.forEach((list) => {
-      counts[list.id] = getRemindersByList(list.id).length;
+      if (!['all', 'upcoming', 'overdue'].includes(list.id)) {
+        counts[list.id] = getRemindersByList(list.id).length;
+      }
     });
 
     return counts;
@@ -85,9 +89,10 @@ export default function RemindersPage() {
       <div className="flex h-full w-64 flex-col border-r">
         <div className="flex items-center justify-between p-4">
           <h2 className="text-lg font-semibold">My Lists</h2>
-          <Button variant="ghost" size="icon" onClick={handleAddList} aria-label="Add new list">
+          {/* Commented out add list button as list creation is disabled for now */}
+          {/* <Button variant="ghost" size="icon" onClick={handleAddList} aria-label="Add new list">
             <Plus className="h-4 w-4" />
-          </Button>
+          </Button> */}
         </div>
         <ScrollArea className="flex-1">
           <div className="space-y-1 px-2 py-2">
@@ -119,7 +124,8 @@ export default function RemindersPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button onClick={handleAddReminder}>Add Reminder</Button>
-            {selectedListId && selectedListId !== 'reminders' && (
+            {/* Commented out list editing/deletion as list management is disabled for now */}
+            {/* {selectedListId && selectedListId !== 'reminders' && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
@@ -137,7 +143,7 @@ export default function RemindersPage() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
+            )} */}
           </div>
         </div>
 
@@ -195,7 +201,8 @@ export default function RemindersPage() {
         onOpenChange={setReminderDialogOpen}
         reminder={selectedReminder}
       />
-      <ListDialog open={listDialogOpen} onOpenChange={setListDialogOpen} list={editingList} />
+      {/* Commented out list dialog as list creation is disabled for now */}
+      {/* <ListDialog open={listDialogOpen} onOpenChange={setListDialogOpen} list={editingList} /> */}
     </div>
   );
 }

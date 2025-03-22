@@ -15,22 +15,22 @@ const SELECTED_LIST_STORAGE_KEY = 'selected-reminder-list';
 // Default lists
 const defaultLists: ReminderList[] = [
   {
-    id: 'reminders',
-    name: 'Reminders',
+    id: 'all',
+    name: 'All',
     color: '#FF9500',
     createdAt: Date.now(),
     updatedAt: Date.now(),
   },
   {
-    id: 'work',
-    name: 'Work',
+    id: 'upcoming',
+    name: 'Upcoming',
     color: '#007AFF',
     createdAt: Date.now(),
     updatedAt: Date.now(),
   },
   {
-    id: 'personal',
-    name: 'Personal',
+    id: 'overdue',
+    name: 'Overdue',
     color: '#FF2D55',
     createdAt: Date.now(),
     updatedAt: Date.now(),
@@ -38,10 +38,14 @@ const defaultLists: ReminderList[] = [
 ];
 
 // Initialize store with reminders from storage
+// First clear existing lists from storage to force using our new defaults
+storageAdapter.saveItem(LISTS_STORAGE_KEY, defaultLists);
+storageAdapter.saveItem(SELECTED_LIST_STORAGE_KEY, 'all');
+
 export const remindersStore = new Store<RemindersState>({
   reminders: storageAdapter.getItem(REMINDERS_STORAGE_KEY) || [],
-  lists: storageAdapter.getItem(LISTS_STORAGE_KEY) || defaultLists,
-  selectedListId: storageAdapter.getItem(SELECTED_LIST_STORAGE_KEY) || 'reminders',
+  lists: defaultLists, // Always use default lists
+  selectedListId: 'all',
 });
 
 // Helper function to update state and storage
@@ -55,7 +59,33 @@ const updateStateAndStorage = (updater: (state: RemindersState) => RemindersStat
 
 // Selectors
 export const getRemindersByList = (listId: string) => {
+  if (listId === 'all') {
+    return remindersStore.state.reminders;
+  }
+
+  if (listId === 'upcoming') {
+    return getUpcomingReminders();
+  }
+
+  if (listId === 'overdue') {
+    return getOverdueReminders();
+  }
+
   return remindersStore.state.reminders.filter((reminder) => reminder.list === listId);
+};
+
+export const getOverdueReminders = () => {
+  const now = Date.now();
+  return remindersStore.state.reminders.filter(
+    (reminder) => reminder.dueDate && reminder.dueDate < now && !reminder.completed,
+  );
+};
+
+export const getUpcomingReminders = () => {
+  const now = Date.now();
+  return remindersStore.state.reminders.filter(
+    (reminder) => reminder.dueDate && reminder.dueDate >= now && !reminder.completed,
+  );
 };
 
 export const getListById = (listId: string) => {
@@ -152,7 +182,7 @@ export const deleteList = (id: string) => {
     // Delete all reminders in that list
     reminders: state.reminders.filter((reminder) => reminder.list !== id),
     // If the deleted list was selected, select the default list
-    selectedListId: state.selectedListId === id ? 'reminders' : state.selectedListId,
+    selectedListId: state.selectedListId === id ? 'all' : state.selectedListId,
   }));
 };
 
@@ -162,6 +192,6 @@ export const clearReminders = () => {
   remindersStore.setState(() => ({
     reminders: [],
     lists: defaultLists,
-    selectedListId: 'reminders',
+    selectedListId: 'all',
   }));
 };
