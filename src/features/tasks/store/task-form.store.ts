@@ -232,17 +232,28 @@ export const deleteSubtask = (subtaskId: string) => {
 };
 
 // Scheduling helpers
-export const updateStartDateTime = (date: Date, time: string) => {
+export const updateStartDateTime = (date: Date, time: string | null | undefined) => {
   taskFormStore.setState((state) => {
+    // Ensure time is a string
+    const timeString = typeof time === 'string' ? time : '';
+
     // Parse the start time
-    const startTimeComponents = time.split(':').map(Number);
+    const startTimeComponents = timeString.split(':').map(Number);
     const newStartDate = new Date(date);
-    newStartDate.setHours(startTimeComponents[0], startTimeComponents[1], 0, 0);
+
+    // Only set hours and minutes if we have valid components
+    if (
+      startTimeComponents.length >= 2 &&
+      !isNaN(startTimeComponents[0]) &&
+      !isNaN(startTimeComponents[1])
+    ) {
+      newStartDate.setHours(startTimeComponents[0], startTimeComponents[1], 0, 0);
+    }
 
     return {
       ...state,
       startDate: newStartDate,
-      startTime: time,
+      startTime: timeString,
       isDirty: true,
     };
   });

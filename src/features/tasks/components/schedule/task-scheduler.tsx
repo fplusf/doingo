@@ -80,7 +80,32 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
 
   // Handlers for the component inputs
   const handleStartDateTimeChange = (date: Date, time: string) => {
-    updateStartDateTime(date, time);
+    // For existing tasks
+    if (taskId) {
+      // Check if the date is changing
+      const newTaskDate = format(date, 'yyyy-MM-dd');
+      const currentTaskDate = format(startDate, 'yyyy-MM-dd');
+      const isDateChanged = newTaskDate !== currentTaskDate;
+
+      // Update the task form state
+      updateStartDateTime(date, time);
+
+      // If the task exists AND the date has changed, we need to update the task in the main store
+      if (isDateChanged) {
+        import('../../store/tasks.store').then(({ updateTaskStartDateTime }) => {
+          // Update the task in the main store which will handle moving it to the new date
+          updateTaskStartDateTime(taskId, date, time);
+
+          // Clear any overlap indicators
+          setHasOverlap(false);
+          setShowPushForwardPrompt(false);
+          setFreeTimeSlots([]);
+        });
+      }
+    } else {
+      // For new tasks, just update the form state
+      updateStartDateTime(date, time);
+    }
   };
 
   const handleDurationChange = (durationMs: number) => {

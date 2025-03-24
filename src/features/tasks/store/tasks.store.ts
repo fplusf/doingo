@@ -234,7 +234,7 @@ export const updateTaskStartDateTime = (taskId: string, date: Date, time: string
           ? {
               ...t,
               taskDate,
-              startTime,
+              startTime: startTime,
               nextStartTime,
               time: timeString,
             }
@@ -356,7 +356,7 @@ export const createNewTask = (
   category: TaskCategory = 'work',
 ) => {
   try {
-    // Handle start time and date
+    // Use the selected date as the base
     let taskDate = tasksStore.state.selectedDate;
     let timeString = '';
     let startTime: Date;
@@ -376,8 +376,13 @@ export const createNewTask = (
         startTime = parse(values.startTime, 'HH:mm', values.dueDate);
       }
     } else {
-      // Use default time if none provided
-      startTime = getNextFifteenMinuteInterval();
+      // Use default time if none provided, but still use selected date
+      const defaultTime = getNextFifteenMinuteInterval();
+      startTime = parse(
+        `${taskDate} ${format(defaultTime, 'HH:mm')}`,
+        'yyyy-MM-dd HH:mm',
+        new Date(),
+      );
       timeString = format(startTime, 'HH:mm');
     }
 
@@ -467,12 +472,6 @@ export const editExistingTask = (
         // If there's a due time, append it
         if (values.dueTime) {
           timeString += `—${values.dueTime}`;
-        }
-
-        // If there's a due date, use it as the task date
-        if (values.dueDate) {
-          taskDate = format(values.dueDate, 'yyyy-MM-dd');
-          startTime = parse(values.startTime, 'HH:mm', values.dueDate);
         }
       }
 
@@ -642,4 +641,8 @@ export const pushForwardAffectedTasks = (
       previousEndTime = addMilliseconds(previousEndTime, currentTask.duration || ONE_HOUR_IN_MS);
     }
   }
+};
+
+const parseDateTime = (dateStr: string, timeStr: string): Date => {
+  return parse(`${dateStr} ${timeStr}`, 'yyyy-MM-dd HH:mm', new Date());
 };
