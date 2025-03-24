@@ -631,9 +631,9 @@ function TaskDialogContent({
       </form>
 
       {/* Fixed footer */}
-      <div className="flex items-baseline justify-between border-t border-border bg-card p-2">
+      <div className="flex items-baseline border-t border-border bg-card p-2">
         <TaskScheduler className="text-muted-foreground" taskId={editingTaskId || undefined} />
-        <div className="mt-2 flex items-center gap-1">
+        <div className="mt-2 flex flex-1 items-center justify-between gap-1">
           <Select
             value={category}
             onValueChange={(value: TaskCategory) => updateField('category', value)}
@@ -672,6 +672,7 @@ function TaskDialogContent({
           </Select>
 
           <PriorityPicker
+            className="self-end"
             value={priority}
             onValueChange={(priority) => updateField('priority', priority)}
           />

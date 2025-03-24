@@ -109,7 +109,11 @@ export const updateField = <K extends keyof TaskFormState>(field: K, value: Task
   }));
 
   // Optimistically update the task store for selected fields
-  if (mode === 'edit' && taskId && (field === 'title' || field === 'emoji')) {
+  if (
+    mode === 'edit' &&
+    taskId &&
+    (field === 'title' || field === 'emoji' || field === 'priority')
+  ) {
     // Create an update object with just this field
     const update = { [field]: value } as Partial<OptimalTask>;
 
