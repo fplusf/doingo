@@ -17,6 +17,26 @@ interface DurationPickerProps {
   onChange: (durationMs: number) => void;
 }
 
+const PRESET_DURATIONS = [
+  { label: '5 min', value: 5 },
+  { label: '10 min', value: 10 },
+  { label: '15 min', value: 15 },
+  { label: '20 min', value: 20 },
+  { label: '25 min', value: 25 },
+  { label: '30 min', value: 30 },
+  { label: '45 min', value: 45 },
+  { label: '1 hr', value: 60 },
+  { label: '1.5 hr', value: 90 },
+  { label: '2 hr', value: 120 },
+  { label: '2.5 hr', value: 150 },
+  { label: '3 hr', value: 180 },
+  { label: '4 hr', value: 240 },
+  { label: '5 hr', value: 300 },
+  { label: '6 hr', value: 360 },
+  { label: '7 hr', value: 420 },
+  { label: '8 hr', value: 480 },
+];
+
 export function DurationPicker({ value, onChange }: DurationPickerProps) {
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [customHours, setCustomHours] = useState('');
@@ -31,9 +51,9 @@ export function DurationPicker({ value, onChange }: DurationPickerProps) {
     if (value !== prevValueRef.current && !customDurationSet) {
       const minutes = Math.round(value / (60 * 1000));
       // Check if the new duration matches any of our preset values
-      const presetDurations = Array.from({ length: 32 }, (_, i) => (i + 1) * 15);
-      if (presetDurations.includes(minutes)) {
-        setSelectedDuration(minutes.toString());
+      const matchingPreset = PRESET_DURATIONS.find((preset) => preset.value === minutes);
+      if (matchingPreset) {
+        setSelectedDuration(matchingPreset.value.toString());
       } else {
         // If it doesn't match preset, mark as custom
         setSelectedDuration(`custom:${minutes}`);
@@ -47,7 +67,8 @@ export function DurationPicker({ value, onChange }: DurationPickerProps) {
     if (isNaN(minutes) || minutes < 0) return '0m';
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    return hours ? `${hours}h${mins ? ` ${mins}m` : ''}` : `${mins}m`;
+    if (hours === 0) return `${mins}m`;
+    return mins === 0 ? `${hours} hr` : `${hours}.${mins} hr`;
   };
 
   const handleDurationSelectChange = (value: string) => {
@@ -105,7 +126,7 @@ export function DurationPicker({ value, onChange }: DurationPickerProps) {
       open={isSelectOpen}
       onOpenChange={setIsSelectOpen}
     >
-      <SelectTrigger ref={selectTriggerRef} className="h-8 min-w-[120px]">
+      <SelectTrigger ref={selectTriggerRef} className="h-8 w-28">
         <div className="flex items-center gap-1.5">
           <Clock className="h-3.5 w-3.5" />
           <SelectValue placeholder="Duration">
@@ -115,7 +136,7 @@ export function DurationPicker({ value, onChange }: DurationPickerProps) {
           </SelectValue>
         </div>
       </SelectTrigger>
-      <SelectContent className="max-h-[300px]">
+      <SelectContent className="max-h-[300px] w-48">
         <div className="border-b border-border p-2">
           <div className="mb-1 text-xs text-muted-foreground">Custom duration:</div>
           <div className="flex items-center gap-1">
@@ -156,9 +177,9 @@ export function DurationPicker({ value, onChange }: DurationPickerProps) {
 
         <ScrollArea className="h-[220px]">
           <SelectGroup>
-            {Array.from({ length: 32 }, (_, i) => (i + 1) * 15).map((minutes) => (
-              <SelectItem key={minutes} value={minutes.toString()}>
-                {formatDurationDisplay(minutes)}
+            {PRESET_DURATIONS.map((duration) => (
+              <SelectItem key={duration.value} value={duration.value.toString()}>
+                {duration.label}
               </SelectItem>
             ))}
           </SelectGroup>

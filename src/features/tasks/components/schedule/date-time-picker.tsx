@@ -1,7 +1,7 @@
 import { Button } from '@/shared/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import { format } from 'date-fns';
-import { Bell, CalendarIcon } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { useState } from 'react';
 import { OptimalCalendar } from '../../../../shared/components/ui/optimal-calendar';
 
@@ -12,7 +12,6 @@ interface DateTimeSelectorProps {
   placeholder?: string;
   icon?: React.ReactNode;
   buttonLabel?: string;
-  showBellIcon?: boolean;
   isDue?: boolean;
 }
 
@@ -23,7 +22,6 @@ export function DateTimePicker({
   placeholder = 'Select date',
   icon = <CalendarIcon className="h-3.5 w-3.5" />,
   buttonLabel,
-  showBellIcon = false,
   isDue = false,
 }: DateTimeSelectorProps) {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -43,15 +41,17 @@ export function DateTimePicker({
         >
           {date && time ? (
             <>
+              {icon}
               {format(date, 'MMM d')} {time}
             </>
           ) : isDue ? (
             <>
-              {showBellIcon && <Bell className="h-3.5 w-3.5" />}
+              {icon}
               <span>{buttonLabel || 'Due'}</span>
             </>
           ) : (
             <>
+              {icon}
               {format(new Date(), 'MMM d')} {format(new Date(), 'HH:mm')}
             </>
           )}

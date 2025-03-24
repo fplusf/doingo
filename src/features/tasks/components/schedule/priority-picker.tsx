@@ -1,13 +1,18 @@
-import { PRIORITY_COLORS, PRIORITY_LABELS } from '@/features/tasks/constants/priority-colors';
 import { TaskPriority } from '@/features/tasks/types';
 import { cn } from '@/lib/utils';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui/select';
+  NotUrgentImportantIcon,
+  NotUrgentNotImportantIcon,
+  UrgentImportantIcon,
+  UrgentNotImportantIcon,
+} from '@/shared/components/custom-icons/priority-icons';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/shared/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/shared/components/ui/tooltip';
 
 interface PrioritySelectProps {
   value: TaskPriority;
@@ -15,72 +20,73 @@ interface PrioritySelectProps {
   className?: string;
 }
 
-const priorities: { value: TaskPriority; label: string; description: string }[] = [
+const priorities: {
+  value: TaskPriority;
+  label: string;
+  icon: React.ReactNode;
+}[] = [
   {
     value: 'high',
-    label: 'Important & Urgent',
-    description: 'Do it now',
+    label: 'Urgent & Important',
+    icon: <UrgentImportantIcon className="h-5 w-5 text-red-500" />,
   },
   {
     value: 'medium',
-    label: 'Important & Not Urgent',
-    description: 'Schedule it',
+    label: 'Not Urgent & Important',
+    icon: <NotUrgentImportantIcon className="h-5 w-5 text-yellow-500" />,
   },
   {
     value: 'low',
-    label: 'Not Important & Urgent',
-    description: 'Delegate it',
+    label: 'Urgent & Not Important',
+    icon: <UrgentNotImportantIcon className="h-5 w-5 text-blue-500" />,
   },
   {
     value: 'none',
-    label: 'Not Important & Not Urgent',
-    description: 'Eliminate it',
+    label: 'Not Urgent & Not Important',
+    icon: <NotUrgentNotImportantIcon className="h-5 w-5 text-green-500" />,
   },
 ];
 
 export function PriorityPicker({ value, onValueChange, className }: PrioritySelectProps) {
-  const handlePriorityChange = (newValue: TaskPriority) => {
-    onValueChange(newValue);
-  };
+  const selectedPriority = priorities.find((p) => p.value === value) ?? priorities[3]; // Default to lowest priority
 
   return (
-    <Select value={value} onValueChange={handlePriorityChange}>
-      <SelectTrigger className={cn('h-8 w-[120px] px-2 text-sm', className)}>
-        <div className="flex items-center">
-          <div
-            className="mr-1.5 h-full w-2.5"
-            style={{
-              backgroundColor: PRIORITY_COLORS[value],
-            }}
-          />
-          <SelectValue>{PRIORITY_LABELS[value]}</SelectValue>
-        </div>
-      </SelectTrigger>
-      <SelectContent align="end">
-        <div className="grid grid-cols-2 gap-1 p-1">
-          {priorities.map((priority) => (
-            <SelectItem
-              defaultValue={''}
-              key={priority.value}
-              value={priority.value}
-              className={cn(
-                'relative col-span-1 flex cursor-pointer flex-col items-start overflow-hidden rounded-md p-3 hover:bg-accent',
-                'data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground',
-              )}
-            >
-              <div
-                className="absolute left-0 top-0 h-full w-2.5"
-                style={{
-                  backgroundColor: PRIORITY_COLORS[priority.value],
-                }}
-              />
-
-              <div className="mt-2 pl-2 font-medium">{priority.label}</div>
-              <div className="pl-2 text-xs text-muted-foreground">{priority.description}</div>
-            </SelectItem>
-          ))}
-        </div>
-      </SelectContent>
-    </Select>
+    <TooltipProvider>
+      <Tooltip>
+        <Select
+          value={value}
+          onValueChange={(value: string) => onValueChange(value as TaskPriority)}
+        >
+          <TooltipTrigger asChild>
+            <SelectTrigger className={cn('h-8 w-[40px] justify-center px-0', className)}>
+              <div className="flex items-center justify-center">{selectedPriority.icon}</div>
+            </SelectTrigger>
+          </TooltipTrigger>
+          <SelectContent align="end">
+            <div className="grid grid-cols-2 gap-0 p-2">
+              {priorities.map((priority, index) => (
+                <SelectItem
+                  key={priority.value}
+                  value={priority.value as string}
+                  hideCheck
+                  className={cn(
+                    'relative col-span-1 flex cursor-pointer flex-col items-start overflow-hidden p-3',
+                    'data-[state=checked]:bg-primary/30 data-[state=checked]:text-primary-foreground',
+                    index % 2 === 0 ? 'border-r-2 border-background' : '',
+                    index < 2 ? 'border-b-2 border-background' : '',
+                  )}
+                >
+                  <div className="flex items-center gap-2">{priority.icon}</div>
+                  <div className={cn('mt-2 text-sm font-medium')}>{priority.label}</div>
+                </SelectItem>
+              ))}
+            </div>
+          </SelectContent>
+        </Select>
+        <TooltipContent side="bottom" align="center">
+          <p className={cn('font-medium')}>{selectedPriority.label}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

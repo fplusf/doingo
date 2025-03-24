@@ -19,7 +19,7 @@ import {
 } from '@/shared/components/ui/select';
 import { useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
-import { ClipboardList, Hash, ListPlus, Maximize2, Plus, X } from 'lucide-react';
+import { Hash, ListPlus, Maximize2, Plus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import {
@@ -34,12 +34,7 @@ import {
   updateFields,
   updateSubtask,
 } from '../../store/task-form.store';
-import {
-  getTaskCategoryAndPriority,
-  setEditingTaskId,
-  tasksStore,
-  updateTask,
-} from '../../store/tasks.store';
+import { setEditingTaskId, tasksStore, updateTask } from '../../store/tasks.store';
 import { PriorityPicker } from './priority-picker';
 import { TaskScheduler } from './task-scheduler';
 
@@ -156,26 +151,12 @@ function TaskDialogContent({
   const priority = useStore(taskFormStore, (state) => state.priority);
   const subtasks = useStore(taskFormStore, (state) => state.subtasks);
   const progress = useStore(taskFormStore, (state) => state.progress);
-  const formMode = useStore(taskFormStore, (state) => state.mode);
-  const taskId = useStore(taskFormStore, (state) => state.taskId);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const subtaskInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const showActionButtons = title && title.length > 0;
   const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
-
-  // Get category and priority data from store
-  const categoryData = useStore(tasksStore, (state) => {
-    // If editing an existing task
-    if (editingTaskId) return getTaskCategoryAndPriority(editingTaskId);
-
-    // Use current form values
-    return {
-      category,
-      priority,
-    };
-  });
 
   // Show subtasks section automatically if there are existing subtasks
   const [showSubtasks, setShowSubtasks] = useState(Boolean(subtasks && subtasks.length > 0));
@@ -448,7 +429,7 @@ function TaskDialogContent({
       onInteractOutside={handleClose}
       onEscapeKeyDown={handleClose}
       className={cn(
-        'fixed left-1/2 top-[50%] z-50 grid max-h-[80vh] w-full max-w-full -translate-x-1/2 -translate-y-1/2 grid-rows-[auto_1fr_auto] rounded-lg border bg-card text-zinc-400 shadow-[0_0_30px_rgba(0,0,0,0.8)] duration-75 dark:shadow-[0_0_30px_rgba(0,0,0,0.8)] sm:max-w-2xl',
+        'fixed left-1/2 top-[50%] z-50 grid max-h-[80vh] w-full max-w-full -translate-x-1/2 -translate-y-1/2 grid-rows-[auto_1fr_auto] rounded-lg border bg-card p-2 px-1 text-zinc-400 shadow-[0_0_30px_rgba(0,0,0,0.8)] duration-75 dark:shadow-[0_0_30px_rgba(0,0,0,0.8)] sm:max-w-2xl',
         className,
       )}
     >
@@ -463,7 +444,7 @@ function TaskDialogContent({
       </DialogHeader>
 
       {/* Fixed header with action buttons */}
-      <div className="flex h-10 items-center justify-between px-4">
+      <div className="flex h-10 items-center justify-between px-4 pr-1">
         {/* Emoji picker on the left */}
         <div className="-ml-2 flex items-center">
           <EmojiPicker
@@ -650,7 +631,7 @@ function TaskDialogContent({
       </form>
 
       {/* Fixed footer */}
-      <div className="border-t border-border bg-card p-4">
+      <div className="flex items-baseline justify-between border-t border-border bg-card p-2">
         <TaskScheduler className="text-muted-foreground" taskId={editingTaskId || undefined} />
         <div className="mt-2 flex items-center gap-1">
           <Select
@@ -661,7 +642,7 @@ function TaskDialogContent({
               <div className="flex items-center">
                 {category === 'work' && <Hash className="mr-1 h-3.5 w-3.5" />}
                 {(category === 'passion' || category === 'play') && (
-                  <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                  <Hash className="mr-1 h-3.5 w-3.5" />
                 )}
                 <SelectValue>
                   {category === 'work' ? 'Work' : category === 'passion' ? 'Passion' : 'Play'}
@@ -677,13 +658,13 @@ function TaskDialogContent({
               </SelectItem>
               <SelectItem value="passion">
                 <div className="flex items-center">
-                  <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                  <Hash className="mr-1 h-3.5 w-3.5" />
                   Passion
                 </div>
               </SelectItem>
               <SelectItem value="play">
                 <div className="flex items-center">
-                  <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                  <Hash className="mr-1 h-3.5 w-3.5" />
                   Play
                 </div>
               </SelectItem>

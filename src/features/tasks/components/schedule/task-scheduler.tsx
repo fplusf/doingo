@@ -6,7 +6,7 @@ import {
 } from '@/shared/helpers/date/next-feefteen-minutes';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
-import { AlertCircle, ArrowLeftRight, Clock } from 'lucide-react';
+import { AlertCircle, ArrowLeftRight, Clock, Flag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   taskFormStore,
@@ -137,7 +137,7 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
           time={dueTime}
           onChange={handleDueDateTimeChange}
           buttonLabel="Due"
-          showBellIcon={true}
+          icon={<Flag className="h-3.5 w-3.5" />}
           isDue={true}
         />
 

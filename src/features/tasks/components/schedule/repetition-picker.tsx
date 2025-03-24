@@ -5,6 +5,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
+import { Repeat } from 'lucide-react';
 
 export type RepetitionOption = 'once' | 'daily' | 'weekly' | 'custom';
 
@@ -17,6 +18,7 @@ export function RepetitionPicker({ value, onChange }: RepetitionPickerProps) {
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger className="h-8 w-[100px] px-2 text-sm">
+        <Repeat className="h-3.5 w-3.5" />
         <SelectValue>{value.charAt(0).toUpperCase() + value.slice(1)}</SelectValue>
       </SelectTrigger>
       <SelectContent>
