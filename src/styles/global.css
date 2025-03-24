@@ -68,7 +68,7 @@ body {
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
   .dark {
-    --sidebar-background: 220 11% 4%;
+    --sidebar-background: 220 11% 8%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
@@ -122,11 +122,11 @@ body {
 
   .dark {
     /* Base colors remain the same */
-    --background: 240 3% 8%;
+    --background: 240 3.2% 12.2%;
     --foreground: 0 0% 98%;
 
     /* Cards and surfaces remain the same*/
-    --card: 240 3% 13%;
+    --card: 244 4% 16%;
     --card-foreground: 0 0% 98%;
 
     --popover: 220 6% 17%;
