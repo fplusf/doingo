@@ -1,5 +1,5 @@
 import { EmojiPicker } from '@/features/tasks/components/schedule/emoji-picker';
-import { Subtask, TaskCategory, TaskPriority } from '@/features/tasks/types';
+import { OptimalTask, Subtask, TaskCategory, TaskPriority } from '@/features/tasks/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -19,24 +19,26 @@ import {
 } from '@/shared/components/ui/select';
 import { useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
-import { format } from 'date-fns';
 import { ClipboardList, Hash, ListPlus, Maximize2, Plus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import {
-  clearDraftTask,
-  getDefaultStartTime,
+  addSubtask,
+  deleteSubtask,
+  loadTaskForEditing,
+  resetForm,
+  submitForm,
+  TaskFormState,
+  taskFormStore,
+  updateField,
+  updateFields,
+  updateSubtask,
+} from '../../store/task-form.store';
+import {
   getTaskCategoryAndPriority,
-  resetDraftTask,
   setEditingTaskId,
   tasksStore,
-  updateDraftTaskCategory,
-  updateDraftTaskField,
-  updateDraftTaskPriority,
   updateTask,
-  updateTaskCategory,
-  updateTaskPriority,
 } from '../../store/tasks.store';
 import { PriorityPicker } from './priority-picker';
 import { TaskScheduler } from './task-scheduler';
@@ -131,19 +133,6 @@ const getSuggestedEmoji = (title: string, category: TaskCategory): string => {
   return categoryMappings.default;
 };
 
-const defaultValues: TaskFormValues = {
-  title: '',
-  notes: '',
-  emoji: '',
-  startTime: getDefaultStartTime(),
-  dueTime: '',
-  duration: 60 * 60 * 1000, // 1 hour in ms
-  category: 'work',
-  priority: 'medium',
-  subtasks: [],
-  progress: 0,
-};
-
 function TaskDialogContent({
   onSubmit,
   mode = 'create',
@@ -159,139 +148,78 @@ function TaskDialogContent({
   open: boolean;
   initialValues?: Partial<TaskFormValues>;
 }) {
-  // Local state for form values - always start with empty title in create mode
-  const [values, setValues] = useState<TaskFormValues>(() => {
-    // In create mode, start with guaranteed empty values for key fields
-    if (mode === 'create') {
-      return {
-        ...defaultValues,
-        ...initialValues,
-      };
-    }
-
-    // For edit mode, use passed values
-    return {
-      ...defaultValues,
-      ...initialValues,
-      subtasks: initialValues?.subtasks || [],
-    };
-  });
-
-  const updateValue = <K extends keyof TaskFormValues>(key: K, value: TaskFormValues[K]) => {
-    setValues((prev) => ({ ...prev, [key]: value }));
-  };
+  // Use the store for all form values
+  const title = useStore(taskFormStore, (state) => state.title);
+  const notes = useStore(taskFormStore, (state) => state.notes);
+  const emoji = useStore(taskFormStore, (state) => state.emoji);
+  const category = useStore(taskFormStore, (state) => state.category);
+  const priority = useStore(taskFormStore, (state) => state.priority);
+  const subtasks = useStore(taskFormStore, (state) => state.subtasks);
+  const progress = useStore(taskFormStore, (state) => state.progress);
+  const formMode = useStore(taskFormStore, (state) => state.mode);
+  const taskId = useStore(taskFormStore, (state) => state.taskId);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const subtaskInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const showActionButtons = values.title && values.title.length >= 3;
+  const showActionButtons = title && title.length > 0;
   const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
-  const hasDraftTask = useStore(tasksStore, (state) => Boolean(state.draftTask));
 
-  // Get category and priority data from store if we're editing a task
+  // Get category and priority data from store
   const categoryData = useStore(tasksStore, (state) => {
     // If editing an existing task
     if (editingTaskId) return getTaskCategoryAndPriority(editingTaskId);
 
-    // If creating a new task with draft
-    if (mode === 'create' && hasDraftTask) return getTaskCategoryAndPriority('draft');
-
-    // Fallback for compatibility
+    // Use current form values
     return {
-      category: values.category || ('work' as TaskCategory),
-      priority: values.priority || ('medium' as TaskPriority),
+      category,
+      priority,
     };
   });
 
   // Show subtasks section automatically if there are existing subtasks
-  const [showSubtasks, setShowSubtasks] = useState(
-    Boolean(values.subtasks && values.subtasks.length > 0),
-  );
+  const [showSubtasks, setShowSubtasks] = useState(Boolean(subtasks && subtasks.length > 0));
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
 
-  // Get the current date for task creation
-  const today = format(new Date(), 'yyyy-MM-dd');
+  // Initialize form when dialog opens
+  useEffect(() => {
+    if (open) {
+      // Initialize form for create or edit mode
+      if (mode === 'create') {
+        // Set form mode
+        updateField('mode', 'create');
+
+        // Reset form to default values
+        resetForm();
+
+        // Apply any initial values passed to the component
+        if (initialValues) {
+          updateFields(initialValues as Partial<TaskFormState>);
+        }
+      } else if (mode === 'edit' && editingTaskId) {
+        // Set form mode
+        updateField('mode', 'edit');
+
+        // Find the task to edit
+        const taskToEdit = tasksStore.state.tasks.find((t) => t.id === editingTaskId);
+        if (taskToEdit) {
+          // Load task data into form
+          loadTaskForEditing(taskToEdit);
+        }
+      }
+    }
+  }, [open, mode, editingTaskId, initialValues]);
 
   // Auto-suggest emoji when title or category changes
   useEffect(() => {
-    if (values.title && !values.emoji) {
-      const suggestedEmoji = getSuggestedEmoji(values.title, values.category || 'work');
-      updateValue('emoji', suggestedEmoji);
+    if (title && !emoji) {
+      const suggestedEmoji = getSuggestedEmoji(title, category || 'work');
+      updateField('emoji', suggestedEmoji);
     }
-  }, [values.title, values.category]);
+  }, [title, category, emoji]);
 
-  // Add effect to sync title changes
-  useEffect(() => {
-    if (mode === 'create' && hasDraftTask) {
-      if (values.title) {
-        updateDraftTaskField('title', values.title);
-      }
-      if (values.notes) {
-        updateDraftTaskField('notes', values.notes);
-      }
-      if (values.emoji) {
-        updateDraftTaskField('emoji', values.emoji);
-      }
-    }
-  }, [mode, hasDraftTask, values.title, values.notes, values.emoji]);
-
-  // Initialize draft task for new tasks and ensure cleanup
-  useEffect(() => {
-    // Create draft when opening the dialog
-    if (mode === 'create' && open && !hasDraftTask) {
-      console.log('Creating new draft task with reset values');
-      resetDraftTask(); // Use resetDraftTask instead of createDraftTask to ensure clean slate
-    } else if (mode === 'create' && open && hasDraftTask) {
-      // If dialog is opening and there's already a draft, reset it to avoid stale data
-      console.log('Resetting existing draft task');
-      resetDraftTask();
-    }
-
-    // Clean up draft task when dialog is closed - simpler condition
-    return () => {
-      if (mode === 'create' && hasDraftTask) {
-        console.log('Clearing draft task in cleanup effect');
-        clearDraftTask();
-      }
-    };
-  }, [mode, open, hasDraftTask]);
-
-  // IMPORTANT: Add an effect to synchronize the form values with the draft task state
-  // This ensures that the form always shows the current state of the draft task
-  useEffect(() => {
-    if (mode === 'create' && hasDraftTask && open) {
-      const draftTask = tasksStore.state.draftTask;
-      if (draftTask) {
-        console.log('Syncing form values from draft task', { title: draftTask.title });
-        // Only update the form if the values are different to avoid loops
-        if (draftTask.title !== values.title) {
-          updateValue('title', draftTask.title || '');
-        }
-        if (draftTask.notes !== values.notes) {
-          updateValue('notes', draftTask.notes || '');
-        }
-        if (draftTask.emoji !== values.emoji) {
-          updateValue('emoji', draftTask.emoji || '');
-        }
-        if (draftTask.subtasks !== values.subtasks) {
-          updateValue('subtasks', draftTask.subtasks || []);
-        }
-      }
-    }
-  }, [mode, hasDraftTask, open, tasksStore.state.draftTask]);
-
-  // Update form element handlers to sync with draft task
-  const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newTitle = e.target.value;
-    updateValue('title', newTitle);
-
-    // Also update draft task if we're creating a new task
-    if (mode === 'create' && hasDraftTask) {
-      updateDraftTaskField('title', newTitle);
-    }
-  };
-
+  // Auto-adjust height when title changes
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -300,10 +228,9 @@ function TaskDialogContent({
     }
   };
 
-  // Auto-adjust height when title changes
   useEffect(() => {
     adjustTextareaHeight();
-  }, [values.title]);
+  }, [title]);
 
   // Auto-adjust height when dialog opens
   useEffect(() => {
@@ -315,32 +242,25 @@ function TaskDialogContent({
 
   // Position cursor at the end when dialog opens in edit mode
   useEffect(() => {
-    if (open && mode === 'edit' && textareaRef.current && values.title) {
+    if (open && mode === 'edit' && textareaRef.current && title) {
       // Use requestAnimationFrame to ensure dialog is fully rendered
       const frameId = requestAnimationFrame(() => {
         if (textareaRef.current) {
           textareaRef.current.focus();
-          textareaRef.current.setSelectionRange(values.title.length, values.title.length);
+          textareaRef.current.setSelectionRange(title.length, title.length);
         }
       });
 
       return () => cancelAnimationFrame(frameId);
     }
-  }, [open, mode]);
-
-  // Initialize subtasks array if it doesn't exist
-  useEffect(() => {
-    if (!values.subtasks) {
-      updateValue('subtasks', []);
-    }
-  }, []); // Run only once on mount
+  }, [open, mode, title]);
 
   // Ensure subtasks section is shown if there are subtasks
   useEffect(() => {
-    if (values.subtasks && values.subtasks.length > 0 && !showSubtasks) {
+    if (subtasks && subtasks.length > 0 && !showSubtasks) {
       setShowSubtasks(true);
     }
-  }, [values.subtasks, showSubtasks]);
+  }, [subtasks, showSubtasks]);
 
   // Focus subtask input when adding a new subtask
   useEffect(() => {
@@ -356,102 +276,83 @@ function TaskDialogContent({
     }
   }, [newSubtaskTitle, isAddingSubtask]);
 
+  // Create a unified batch submission function for clean submission
+  const submitFormBatch = () => {
+    if (!title) return;
+
+    console.log('Submitting form as batch on exit');
+
+    // Get all form values and submit them
+    const formValues = submitForm();
+    onSubmit(formValues as TaskFormValues);
+
+    // For edit mode, update the task in the store
+    if (mode === 'edit' && editingTaskId) {
+      // Convert form values to OptimalTask format
+      const updateObj: Partial<OptimalTask> = {
+        title,
+        notes,
+        emoji,
+        subtasks,
+        progress,
+        category,
+        priority,
+      };
+
+      // Update the task with all changes at once
+      updateTask(editingTaskId, updateObj);
+    }
+  };
+
+  // Update key event handlers to use the batch submission
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      if (title && title.length > 0) {
+        submitFormBatch();
+        onOpenChange(false);
+        setEditingTaskId(null);
+      }
     }
   };
 
+  // Replace handleSubmit with the batch submission
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!values.title) return;
-
-    // For create mode, sync form values to draft task before submitting
-    if (mode === 'create' && hasDraftTask) {
-      // Sync all form values to draft task before creating
-      updateDraftTaskField('title', values.title);
-      if (values.notes) updateDraftTaskField('notes', values.notes);
-      if (values.emoji) updateDraftTaskField('emoji', values.emoji);
-      updateDraftTaskField('subtasks', values.subtasks || []);
-      updateDraftTaskField('progress', values.progress || 0);
-
-      // Let the onSubmit handler create the task - don't create it here
-      // to prevent duplicate creation
-      onSubmit(values);
-
-      // Explicitly clear the draft task after submission
-      console.log('Clearing draft task after submission');
-      clearDraftTask();
-    } else if (mode === 'edit' && editingTaskId) {
-      // For edit mode, update the existing task with only the fields that match OptimalTask type
-      updateTask(editingTaskId, {
-        title: values.title,
-        notes: values.notes,
-        emoji: values.emoji,
-        subtasks: values.subtasks || [],
-        progress: values.progress || 0,
-        category: values.category,
-        priority: values.priority,
-      });
-      onSubmit(values);
-    } else {
-      onSubmit(values);
+    if (title && title.length > 0) {
+      submitFormBatch();
+      onOpenChange(false);
+      setEditingTaskId(null);
     }
-
-    onOpenChange(false);
   };
 
+  // Update handleClose to submit changes if title is valid
   const handleClose = () => {
-    // If creating a new task, clear the draft when closing without saving
-    if (mode === 'create' && hasDraftTask) {
-      console.log('Clearing draft task on manual close');
-      clearDraftTask();
+    if (title && title.length > 0) {
+      // Submit changes before closing
+      submitFormBatch();
     }
 
     onOpenChange(false);
     setEditingTaskId(null);
   };
 
+  // Update handleFullScreen to use batch submission
   const handleFullScreen = () => {
-    if (values.title && values.title.length >= 3) {
-      // Calculate progress for subtasks before submission
-      if (values.subtasks && values.subtasks.length > 0) {
-        const completedCount = values.subtasks.filter((subtask) => subtask.isCompleted).length;
-        const progress = Math.round((completedCount / values.subtasks.length) * 100);
-        updateValue('progress', progress);
-      }
+    if (title && title.length > 0) {
+      // Submit the form in batch
+      submitFormBatch();
 
       let taskId: string | null = null;
 
       if (mode === 'edit' && editingTaskId) {
-        // For edit mode, submit changes and use existing task ID
-        onSubmit(values);
         taskId = editingTaskId;
-      } else {
-        // For create mode, submit values and let parent handle task creation
-        // Don't call createTaskFromDraft directly to avoid duplicates
-        onSubmit(values);
-
-        // Explicitly clear the draft task in create mode
-        if (mode === 'create' && hasDraftTask) {
-          console.log('Clearing draft task after fullscreen submission');
-          clearDraftTask();
-        }
-
-        // We don't have a taskId yet since onSubmit will create it
-        // Navigate to the tasks list instead
-        navigate({ to: '/tasks' });
-        onOpenChange(false);
-        setEditingTaskId(null);
-        return;
       }
 
+      // Navigate based on available task ID
       if (taskId) {
-        // Navigate to the task details page
         navigate({ to: `/tasks/${taskId}`, params: { taskId } });
       } else {
-        // Fallback if task creation fails or taskId not found
         navigate({ to: '/tasks' });
       }
 
@@ -476,83 +377,55 @@ function TaskDialogContent({
   };
 
   const handleCreateSubtask = () => {
-    if (newSubtaskTitle.trim()) {
-      const newSubtask: Subtask = {
-        id: uuidv4(),
-        title: newSubtaskTitle.trim(),
-        isCompleted: false,
-      };
+    // Create subtask even if empty
+    addSubtask(newSubtaskTitle);
 
-      // Add to existing subtasks or create a new array
-      const updatedSubtasks = [...(values.subtasks || []), newSubtask];
+    // Clear input but keep focus for the next subtask
+    setNewSubtaskTitle('');
 
-      // Update form context
-      updateValue('subtasks', updatedSubtasks);
-
-      // Calculate progress
-      const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
-      const progress = Math.round((completedCount / updatedSubtasks.length) * 100);
-      updateValue('progress', progress);
-
-      // Clear input for next subtask but keep input field visible and focused
-      setNewSubtaskTitle('');
-      setTimeout(() => {
-        subtaskInputRef.current?.focus();
-      }, 0);
-    }
-  };
-
-  const handleSubtaskKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleCreateSubtask();
-    } else if (e.key === 'Escape') {
-      setIsAddingSubtask(false);
-      setNewSubtaskTitle('');
-    }
-  };
-
-  const handleToggleSubtask = (subtaskId: string, isCompleted: boolean) => {
-    const currentSubtasks = values.subtasks || [];
-    const updatedSubtasks = currentSubtasks.map((subtask) =>
-      subtask.id === subtaskId ? { ...subtask, isCompleted } : subtask,
-    );
-
-    // Update form context
-    updateValue('subtasks', updatedSubtasks);
-
-    // Update progress
-    if (updatedSubtasks.length > 0) {
-      const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
-      const progress = Math.round((completedCount / updatedSubtasks.length) * 100);
-      updateValue('progress', progress);
-    }
+    // Keep input field open - don't set isAddingSubtask to false
+    // Focus the input field after rendering for the next subtask
+    setTimeout(() => {
+      subtaskInputRef.current?.focus();
+    }, 0);
   };
 
   const handleEditSubtask = (subtaskId: string, title: string) => {
-    const currentSubtasks = values.subtasks || [];
-    const updatedSubtasks = currentSubtasks.map((subtask) =>
-      subtask.id === subtaskId ? { ...subtask, title } : subtask,
-    );
-
-    // Update form context
-    updateValue('subtasks', updatedSubtasks);
+    updateSubtask(subtaskId, { title });
   };
 
-  const handleDeleteSubtask = (subtaskId: string) => {
-    const currentSubtasks = values.subtasks || [];
-    const updatedSubtasks = currentSubtasks.filter((subtask) => subtask.id !== subtaskId);
+  const handleToggleSubtask = (subtaskId: string, isCompleted: boolean) => {
+    updateSubtask(subtaskId, { isCompleted });
+  };
 
-    // Update form context
-    updateValue('subtasks', updatedSubtasks);
+  const handleSubtaskKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, subtaskId?: string) => {
+    // For adding new subtasks
+    if (!subtaskId) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        // Create subtask unconditionally on Enter press
+        handleCreateSubtask();
+      } else if (e.key === 'Escape') {
+        setIsAddingSubtask(false);
+        setNewSubtaskTitle('');
+      }
+      return;
+    }
 
-    // Update progress
-    if (updatedSubtasks.length > 0) {
-      const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
-      const progress = Math.round((completedCount / updatedSubtasks.length) * 100);
-      updateValue('progress', progress);
-    } else {
-      updateValue('progress', 0);
+    // For existing subtasks
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const inputElement = e.target as HTMLInputElement;
+      if (inputElement.value === '') {
+        e.preventDefault();
+        deleteSubtask(subtaskId);
+
+        // After deleting a subtask, focus the new subtask input field
+        setTimeout(() => {
+          if (isAddingSubtask && subtaskInputRef.current) {
+            subtaskInputRef.current.focus();
+          }
+        }, 0);
+      }
     }
   };
 
@@ -562,6 +435,11 @@ function TaskDialogContent({
     setTimeout(() => {
       subtaskInputRef.current?.focus();
     }, 0);
+  };
+
+  // Update title field in the form store
+  const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    updateField('title', e.target.value);
   };
 
   return (
@@ -589,8 +467,8 @@ function TaskDialogContent({
         {/* Emoji picker on the left */}
         <div className="-ml-2 flex items-center">
           <EmojiPicker
-            emoji={values.emoji || ''}
-            onEmojiSelect={(newEmoji) => updateValue('emoji', newEmoji)}
+            emoji={emoji || ''}
+            onEmojiSelect={(newEmoji) => updateField('emoji', newEmoji)}
           />
         </div>
 
@@ -645,8 +523,8 @@ function TaskDialogContent({
           <div className="space-y-4">
             <div className="relative flex items-baseline gap-2">
               <TaskCheckbox
-                checked={values.progress === 100}
-                onCheckedChange={(checked) => updateValue('progress', checked ? 100 : 0)}
+                checked={progress === 100}
+                onCheckedChange={(checked) => updateField('progress', checked ? 100 : 0)}
                 size="lg"
                 className="mt-1"
                 ariaLabel="Mark task as completed"
@@ -664,11 +542,11 @@ function TaskDialogContent({
                       paddingBottom: '1px',
                     }}
                   >
-                    {(values.title || '') + (values.title?.endsWith('\n') ? ' ' : '\n')}
+                    {(title || '') + (title?.endsWith('\n') ? ' ' : '\n')}
                   </div>
                   <textarea
                     ref={textareaRef}
-                    value={values.title || ''}
+                    value={title || ''}
                     onChange={handleTitleChange}
                     onKeyDown={handleKeyDown}
                     rows={1}
@@ -682,23 +560,22 @@ function TaskDialogContent({
 
             {/* Subtasks section */}
             {showSubtasks && (
-              <div>
+              <div className="mb-1 mt-2">
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-sm font-medium text-muted-foreground">Subtasks</h3>
-                  {values.subtasks && values.subtasks.length > 0 && (
+                  {subtasks && subtasks.length > 0 && (
                     <span className="text-xs text-muted-foreground">
-                      {values.subtasks.filter((s) => s.isCompleted).length}/{values.subtasks.length}{' '}
-                      completed
+                      {subtasks.filter((s) => s.isCompleted).length}/{subtasks.length} completed
                     </span>
                   )}
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {/* Show subtasks if they exist */}
-                  {values.subtasks &&
-                    values.subtasks.length > 0 &&
-                    values.subtasks.map((subtask) => (
-                      <div key={subtask.id} className="group flex items-baseline gap-2">
+                  {subtasks &&
+                    subtasks.length > 0 &&
+                    subtasks.map((subtask) => (
+                      <div key={subtask.id} className="group flex items-center gap-2 pl-7">
                         <TaskCheckbox
                           checked={subtask.isCompleted}
                           onCheckedChange={(checked) => handleToggleSubtask(subtask.id, checked)}
@@ -711,51 +588,59 @@ function TaskDialogContent({
                             type="text"
                             value={subtask.title}
                             onChange={(e) => handleEditSubtask(subtask.id, e.target.value)}
-                            className={`w-full bg-transparent text-sm font-medium focus:outline-none ${
-                              subtask.isCompleted ? 'text-muted-foreground line-through' : ''
-                            }`}
+                            onKeyDown={(e) => handleSubtaskKeyDown(e, subtask.id)}
+                            onBlur={() => {
+                              // Ensure any edited subtask is saved on blur
+                              // We don't need to do anything special here since onChange already updates the value
+                              // This is just to be explicit
+                              console.log(`Subtask ${subtask.id} saved on blur`);
+                            }}
+                            className={cn(
+                              'w-full bg-transparent py-0.5 text-sm font-normal focus:outline-none',
+                              subtask.isCompleted && 'text-muted-foreground line-through',
+                            )}
+                            placeholder="Subtask description..."
                           />
                         </div>
-                        <button
-                          onClick={() => handleDeleteSubtask(subtask.id)}
-                          className="invisible text-xs text-muted-foreground opacity-0 transition-opacity group-hover:visible group-hover:opacity-100"
-                          aria-label="Delete subtask"
-                        >
-                          ×
-                        </button>
                       </div>
                     ))}
 
                   {isAddingSubtask ? (
-                    <div className="flex items-center gap-2">
-                      <div className="ml-6 flex-1">
+                    <div className="flex items-center gap-2 pl-7">
+                      <TaskCheckbox
+                        checked={false}
+                        onCheckedChange={() => {}}
+                        size="sm"
+                        className="mt-0.5 opacity-50"
+                        ariaLabel="New subtask checkbox"
+                      />
+                      <div className="flex-1">
                         <input
                           ref={subtaskInputRef}
                           type="text"
                           value={newSubtaskTitle}
                           onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                          onKeyDown={handleSubtaskKeyDown}
+                          onKeyDown={(e) => handleSubtaskKeyDown(e)}
                           onBlur={() => {
-                            // Create subtask if there's text, but don't hide the input field
-                            if (newSubtaskTitle.trim()) {
+                            // Always create a subtask on blur, even if empty
+                            if (isAddingSubtask) {
                               handleCreateSubtask();
                             }
                           }}
-                          placeholder="New subtask..."
-                          className="w-full bg-transparent text-sm font-medium focus:outline-none"
+                          placeholder="Subtask description..."
+                          className="w-full bg-transparent py-0.5 text-sm font-normal focus:outline-none"
                         />
                       </div>
                     </div>
                   ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                    <button
                       onClick={startAddingSubtask}
-                      className="mt-1 flex w-full items-center justify-start gap-1 px-2 text-xs text-muted-foreground"
+                      className="flex w-full items-center gap-1.5 py-1 pl-7 text-xs text-zinc-400 transition-colors hover:text-zinc-200"
+                      aria-label="Add subtask"
                     >
-                      <Plus className="h-3 w-3" />
+                      <Plus className="h-3.5 w-3.5" />
                       Add subtask
-                    </Button>
+                    </button>
                   )}
                 </div>
               </div>
@@ -766,166 +651,49 @@ function TaskDialogContent({
 
       {/* Fixed footer */}
       <div className="border-t border-border bg-card p-4">
-        <TaskScheduler
-          className="text-muted-foreground"
-          taskId={editingTaskId || undefined}
-          isDraft={mode === 'create' && hasDraftTask}
-        />
+        <TaskScheduler className="text-muted-foreground" taskId={editingTaskId || undefined} />
         <div className="mt-2 flex items-center gap-1">
-          {editingTaskId ? (
-            // Editing an existing task
-            <>
-              <Select
-                value={categoryData.category}
-                onValueChange={(value: TaskCategory) => updateTaskCategory(editingTaskId, value)}
-              >
-                <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
-                  <div className="flex items-center">
-                    {categoryData.category === 'work' && <Hash className="mr-1 h-3.5 w-3.5" />}
-                    {(categoryData.category === 'passion' || categoryData.category === 'play') && (
-                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                    )}
-                    <SelectValue>
-                      {categoryData.category === 'work'
-                        ? 'Work'
-                        : categoryData.category === 'passion'
-                          ? 'Passion'
-                          : 'Play'}
-                    </SelectValue>
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="work">
-                    <div className="flex items-center">
-                      <Hash className="mr-1 h-3.5 w-3.5" />
-                      Work
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="passion">
-                    <div className="flex items-center">
-                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                      Passion
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="play">
-                    <div className="flex items-center">
-                      <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                      Play
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+          <Select
+            value={category}
+            onValueChange={(value: TaskCategory) => updateField('category', value)}
+          >
+            <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
+              <div className="flex items-center">
+                {category === 'work' && <Hash className="mr-1 h-3.5 w-3.5" />}
+                {(category === 'passion' || category === 'play') && (
+                  <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                )}
+                <SelectValue>
+                  {category === 'work' ? 'Work' : category === 'passion' ? 'Passion' : 'Play'}
+                </SelectValue>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="work">
+                <div className="flex items-center">
+                  <Hash className="mr-1 h-3.5 w-3.5" />
+                  Work
+                </div>
+              </SelectItem>
+              <SelectItem value="passion">
+                <div className="flex items-center">
+                  <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                  Passion
+                </div>
+              </SelectItem>
+              <SelectItem value="play">
+                <div className="flex items-center">
+                  <ClipboardList className="mr-1 h-3.5 w-3.5" />
+                  Play
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
 
-              <PriorityPicker
-                value={categoryData.priority}
-                onValueChange={(priority) => updateTaskPriority(editingTaskId, priority)}
-              />
-            </>
-          ) : (
-            // Creating a new task
-            <>
-              {hasDraftTask ? (
-                // Use the draft task data
-                <>
-                  <Select
-                    value={categoryData.category}
-                    onValueChange={(value: TaskCategory) => updateDraftTaskCategory(value)}
-                  >
-                    <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
-                      <div className="flex items-center">
-                        {categoryData.category === 'work' && <Hash className="mr-1 h-3.5 w-3.5" />}
-                        {(categoryData.category === 'passion' ||
-                          categoryData.category === 'play') && (
-                          <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                        )}
-                        <SelectValue>
-                          {categoryData.category === 'work'
-                            ? 'Work'
-                            : categoryData.category === 'passion'
-                              ? 'Passion'
-                              : 'Play'}
-                        </SelectValue>
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="work">
-                        <div className="flex items-center">
-                          <Hash className="mr-1 h-3.5 w-3.5" />
-                          Work
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="passion">
-                        <div className="flex items-center">
-                          <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                          Passion
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="play">
-                        <div className="flex items-center">
-                          <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                          Play
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <PriorityPicker
-                    value={categoryData.priority}
-                    onValueChange={(priority) => updateDraftTaskPriority(priority)}
-                  />
-                </>
-              ) : (
-                // Fall back to form context for compatibility
-                <>
-                  <Select
-                    value={values.category || 'work'}
-                    onValueChange={(value: TaskCategory) => updateValue('category', value)}
-                  >
-                    <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
-                      <div className="flex items-center">
-                        {values.category === 'work' && <Hash className="mr-1 h-3.5 w-3.5" />}
-                        {(values.category === 'passion' || values.category === 'play') && (
-                          <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                        )}
-                        <SelectValue>
-                          {values.category === 'work'
-                            ? 'Work'
-                            : values.category === 'passion'
-                              ? 'Passion'
-                              : 'Play'}
-                        </SelectValue>
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="work">
-                        <div className="flex items-center">
-                          <Hash className="mr-1 h-3.5 w-3.5" />
-                          Work
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="passion">
-                        <div className="flex items-center">
-                          <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                          Passion
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="play">
-                        <div className="flex items-center">
-                          <ClipboardList className="mr-1 h-3.5 w-3.5" />
-                          Play
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <PriorityPicker
-                    value={values.priority || 'medium'}
-                    onValueChange={(priority) => updateValue('priority', priority)}
-                  />
-                </>
-              )}
-            </>
-          )}
+          <PriorityPicker
+            value={priority}
+            onValueChange={(priority) => updateField('priority', priority)}
+          />
         </div>
       </div>
     </DialogContent>

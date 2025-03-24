@@ -46,7 +46,6 @@ export interface TasksState {
   selectedDate: string;
   focusedTaskId: string | null;
   editingTaskId: string | null;
-  draftTask: Partial<OptimalTask> | null;
   highlightedTaskId: string | null;
 }
 

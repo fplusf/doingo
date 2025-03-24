@@ -38,3 +38,7 @@ Follow these rules when you write code:
 - Never create components or folders within the src/components/ui folder.
 - Always use milliseconds for time calculations, and storing time in milliseconds. Use date-fns to format convert time to human readable format.
 - Never import directly from radix ui, instead use the components from the @/shared/components/ui folder.
+
+# Commands to know
+
+The project starts with - `npm start`

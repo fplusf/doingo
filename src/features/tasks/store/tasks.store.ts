@@ -5,7 +5,7 @@ import {
 import { LocalStorageAdapter } from '@/shared/store/adapters/local-storage-adapter';
 import { StorageAdapter } from '@/shared/store/adapters/storage-adapter';
 import { Store } from '@tanstack/react-store';
-import { addMilliseconds, format, parse, parseISO, startOfDay } from 'date-fns';
+import { addMilliseconds, format, parse, parseISO } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import {
   ONE_HOUR_IN_MS,
@@ -32,7 +32,6 @@ const initialState: TasksState = {
   selectedDate: today,
   focusedTaskId: null,
   editingTaskId: null,
-  draftTask: null,
   highlightedTaskId: null,
 };
 
@@ -188,7 +187,6 @@ export const clearTasks = () => {
     selectedDate: today,
     focusedTaskId: null,
     editingTaskId: null,
-    draftTask: null,
     highlightedTaskId: null,
   }));
 };
@@ -302,73 +300,8 @@ export const updateTaskDuration = (taskId: string, durationMs: number) => {
   });
 };
 
-// Function to get current task scheduling info for the scheduler component
-export const getTaskSchedulingInfo = (taskId: string | 'draft') => {
-  if (taskId === 'draft') {
-    const draftTask = tasksStore.state.draftTask;
-    if (!draftTask) return null;
-
-    return {
-      startDate: draftTask.startTime || startOfDay(new Date()),
-      startTime: draftTask.time?.split('—')[0] || '',
-      dueDate: draftTask.dueDate,
-      dueTime: draftTask.dueTime || '',
-      duration: draftTask.duration || 60 * 60 * 1000,
-      repetition: (draftTask.repetition as RepetitionOption) || 'once',
-    };
-  }
-
-  const task = tasksStore.state.tasks.find((t: OptimalTask) => t.id === taskId);
-  if (!task) return null;
-
-  return {
-    startDate: task.startTime || startOfDay(new Date()),
-    startTime: task.time?.split('—')[0] || '',
-    dueDate: task.dueDate,
-    dueTime: task.dueTime || '',
-    duration: task.duration || 60 * 60 * 1000,
-    repetition: (task.repetition as RepetitionOption) || 'once',
-  };
-};
-
-// Function to update task priority
-export const updateTaskPriority = (taskId: string, priority: TaskPriority) => {
-  updateStateAndStorage((state) => {
-    const task = state.tasks.find((t) => t.id === taskId);
-    if (!task) return state;
-
-    return {
-      ...state,
-      tasks: state.tasks.map((t) => (t.id === taskId ? { ...t, priority } : t)),
-    };
-  });
-};
-
-// Function to update task category
-export const updateTaskCategory = (taskId: string, category: TaskCategory) => {
-  updateStateAndStorage((state) => {
-    const task = state.tasks.find((t) => t.id === taskId);
-    if (!task) return state;
-
-    return {
-      ...state,
-      tasks: state.tasks.map((t) => (t.id === taskId ? { ...t, category } : t)),
-    };
-  });
-};
-
 // Function to get task's current category and priority
-export const getTaskCategoryAndPriority = (taskId: string | 'draft') => {
-  if (taskId === 'draft') {
-    const draftTask = tasksStore.state.draftTask;
-    if (!draftTask) return { category: 'work' as TaskCategory, priority: 'medium' as TaskPriority };
-
-    return {
-      category: (draftTask.category as TaskCategory) || 'work',
-      priority: (draftTask.priority as TaskPriority) || 'medium',
-    };
-  }
-
+export const getTaskCategoryAndPriority = (taskId: string) => {
   const task = tasksStore.state.tasks.find((t: OptimalTask) => t.id === taskId);
   if (!task) return { category: 'work' as TaskCategory, priority: 'medium' as TaskPriority };
 
@@ -376,339 +309,6 @@ export const getTaskCategoryAndPriority = (taskId: string | 'draft') => {
     category: task.category || 'work',
     priority: task.priority || 'medium',
   };
-};
-
-// Draft task management
-export const createDraftTask = () => {
-  // Use proper helper for next 15-minute interval
-  const startTimeString = getDefaultStartTime();
-  // Parse the time string into a Date
-  const [hours, minutes] = startTimeString.split(':').map(Number);
-  const now = new Date();
-  now.setHours(hours, minutes, 0, 0);
-
-  tasksStore.setState((state) => ({
-    ...state,
-    draftTask: {
-      title: '',
-      emoji: '',
-      time: startTimeString,
-      startTime: now,
-      nextStartTime: addMilliseconds(now, 60 * 60 * 1000), // 1 hour later
-      duration: 60 * 60 * 1000, // Default 1 hour
-      completed: false,
-      priority: 'medium' as TaskPriority,
-      category: 'work' as TaskCategory,
-      isFocused: false,
-      taskDate: format(now, 'yyyy-MM-dd'),
-      progress: 0,
-      repetition: 'once' as RepetitionOption,
-    },
-  }));
-};
-
-export const updateDraftTaskField = <K extends keyof OptimalTask>(
-  field: K,
-  value: OptimalTask[K],
-) => {
-  tasksStore.setState((state) => {
-    if (!state.draftTask) return state;
-
-    return {
-      ...state,
-      draftTask: {
-        ...state.draftTask,
-        [field]: value,
-      },
-    };
-  });
-};
-
-export const clearDraftTask = () => {
-  tasksStore.setState((state) => ({
-    ...state,
-    draftTask: null,
-  }));
-};
-
-// Creates a fresh draft task with default values, replacing any existing draft
-export const resetDraftTask = () => {
-  // Use proper helper for next 15-minute interval
-  const startTimeString = getDefaultStartTime();
-  // Parse the time string into a Date
-  const [hours, minutes] = startTimeString.split(':').map(Number);
-  const now = new Date();
-  now.setHours(hours, minutes, 0, 0);
-
-  // First clear any existing draft completely
-  tasksStore.setState((state) => ({
-    ...state,
-    draftTask: null,
-  }));
-
-  // Then create a fresh draft with default values
-  tasksStore.setState((state) => ({
-    ...state,
-    draftTask: {
-      // Explicitly set all fields to their default values
-      id: 'draft',
-      title: '',
-      emoji: '',
-      time: startTimeString,
-      startTime: now,
-      nextStartTime: addMilliseconds(now, 60 * 60 * 1000), // 1 hour later
-      duration: 60 * 60 * 1000, // Default 1 hour
-      completed: false,
-      priority: 'medium' as TaskPriority,
-      category: 'work' as TaskCategory,
-      isFocused: false,
-      taskDate: format(now, 'yyyy-MM-dd'),
-      progress: 0,
-      repetition: 'once' as RepetitionOption,
-      dueDate: undefined,
-      dueTime: '',
-      notes: '',
-      subtasks: [],
-    },
-  }));
-
-  console.log('Draft task has been reset to default values with empty title');
-};
-
-// Update draft task schedule functions
-export const updateDraftTaskRepetition = (repetition: RepetitionOption) => {
-  tasksStore.setState((state) => {
-    if (!state.draftTask) return state;
-
-    return {
-      ...state,
-      draftTask: {
-        ...state.draftTask,
-        repetition,
-      },
-    };
-  });
-};
-
-export const updateDraftTaskStartDateTime = (date: Date, time: string) => {
-  tasksStore.setState((state) => {
-    if (!state.draftTask) return state;
-
-    // Format taskDate from the provided date
-    const taskDate = format(date, 'yyyy-MM-dd');
-
-    // Parse the start time
-    const startTime = parse(time, 'HH:mm', date);
-
-    // Update time string - preserve due time if it exists
-    let timeString = time;
-    if (state.draftTask.time && state.draftTask.time.includes('—')) {
-      const timeParts = state.draftTask.time.split('—');
-      if (timeParts.length > 1) {
-        timeString = `${time}—${timeParts[1]}`;
-      }
-    }
-
-    // Calculate next start time based on current duration
-    const duration = state.draftTask.duration || 60 * 60 * 1000;
-    const nextStartTime = addMilliseconds(startTime, duration);
-
-    return {
-      ...state,
-      draftTask: {
-        ...state.draftTask,
-        taskDate,
-        startTime,
-        nextStartTime,
-        time: timeString,
-      },
-    };
-  });
-};
-
-export const updateDraftTaskDueDateTime = (date: Date, time: string) => {
-  console.log('updateDraftTaskDueDateTime called with:', { date, time });
-
-  if (!tasksStore.state.draftTask) {
-    console.warn('No draft task exists for due date update');
-    return;
-  }
-
-  // Validate the date is a proper Date object
-  const safeDate = date instanceof Date && !isNaN(date.getTime()) ? date : new Date();
-
-  tasksStore.setState((state) => {
-    if (!state.draftTask) return state;
-
-    // Update time string - preserve start time
-    let timeString = state.draftTask.time || '';
-    if (timeString.includes('—')) {
-      const timeParts = timeString.split('—');
-      timeString = `${timeParts[0]}—${time}`;
-    } else if (timeString) {
-      timeString = `${timeString}—${time}`;
-    } else {
-      // If no time string exists yet, just set the due time
-      timeString = `—${time}`;
-    }
-
-    const updatedDraft = {
-      ...state.draftTask,
-      dueDate: safeDate,
-      dueTime: time,
-      time: timeString,
-    };
-
-    console.log('Updated draft with due date/time:', updatedDraft);
-
-    return {
-      ...state,
-      draftTask: updatedDraft,
-    };
-  });
-
-  // Verify the update
-  setTimeout(() => {
-    console.log('Draft immediately after due date update:', tasksStore.state.draftTask);
-  }, 10);
-};
-
-export const updateDraftTaskDuration = (durationMs: number) => {
-  console.log('updateDraftTaskDuration called with:', { durationMs });
-
-  if (!tasksStore.state.draftTask) {
-    console.warn('No draft task exists for duration update');
-    return;
-  }
-
-  // Ensure we're working with a number for the duration
-  const safeValue =
-    typeof durationMs === 'number' && !isNaN(durationMs) ? durationMs : 60 * 60 * 1000;
-
-  tasksStore.setState((state) => {
-    if (!state.draftTask) return state;
-
-    // Calculate the new next start time based on the start time and new duration
-    const nextStartTime = state.draftTask.startTime
-      ? addMilliseconds(state.draftTask.startTime as Date, safeValue)
-      : addMilliseconds(new Date(), safeValue);
-
-    const updatedDraft = {
-      ...state.draftTask,
-      duration: safeValue,
-      nextStartTime,
-    };
-
-    console.log('Updated draft with duration:', updatedDraft);
-
-    return {
-      ...state,
-      draftTask: updatedDraft,
-    };
-  });
-
-  // Verify the update
-  setTimeout(() => {
-    console.log('Draft immediately after duration update:', tasksStore.state.draftTask);
-  }, 10);
-};
-
-export const updateDraftTaskCategory = (category: TaskCategory) => {
-  updateDraftTaskField('category', category);
-};
-
-export const updateDraftTaskPriority = (priority: TaskPriority) => {
-  updateDraftTaskField('priority', priority);
-};
-
-// Convert draft task to a real task and add it to the list
-export const createTaskFromDraft = () => {
-  let newTaskId = '';
-
-  console.log('Draft before creating task:', tasksStore.state.draftTask);
-
-  if (!tasksStore.state.draftTask) {
-    console.error('Attempted to create task from non-existent draft');
-    return '';
-  }
-
-  const draftTask = tasksStore.state.draftTask;
-
-  // Pre-validate essential fields
-  const duration =
-    typeof draftTask.duration === 'number' && !isNaN(draftTask.duration)
-      ? draftTask.duration
-      : 60 * 60 * 1000;
-
-  const dueDate =
-    draftTask.dueDate instanceof Date && !isNaN(draftTask.dueDate?.getTime?.())
-      ? draftTask.dueDate
-      : undefined;
-
-  console.log('Pre-validated fields:', { duration, dueDate });
-
-  tasksStore.setState((state) => {
-    if (!state.draftTask) return state;
-
-    // Generate an ID for the new task
-    newTaskId = uuidv4();
-
-    const currentDate = new Date();
-    const taskDate = state.draftTask.taskDate || format(currentDate, 'yyyy-MM-dd');
-    const startTimeDate = state.draftTask.startTime
-      ? new Date(state.draftTask.startTime)
-      : currentDate;
-    const nextStartTimeDate = state.draftTask.nextStartTime
-      ? new Date(state.draftTask.nextStartTime)
-      : addMilliseconds(startTimeDate, duration);
-
-    // Create a new task from the draft with validated fields
-    const newTask: OptimalTask = {
-      id: newTaskId,
-      title: state.draftTask.title || '',
-      time: state.draftTask.time || '',
-      startTime: startTimeDate,
-      nextStartTime: nextStartTimeDate,
-      duration,
-      completed: false,
-      priority: (state.draftTask.priority as TaskPriority) || 'medium',
-      category: (state.draftTask.category as TaskCategory) || 'work',
-      taskDate,
-      isFocused: false,
-      notes: state.draftTask.notes || '',
-      emoji: state.draftTask.emoji || '',
-      dueDate: dueDate,
-      dueTime: state.draftTask.dueTime || '',
-      progress: state.draftTask.progress || 0,
-      subtasks: (state.draftTask.subtasks || []) as Subtask[],
-      repetition: (state.draftTask.repetition as RepetitionOption) || 'once',
-    };
-
-    console.log('New task being created:', newTask);
-
-    // Add the new task to the list
-    const updatedTasks = [...state.tasks, newTask];
-
-    // Save to storage
-    storageAdapter.saveTasks(updatedTasks);
-
-    return {
-      ...state,
-      tasks: updatedTasks,
-      draftTask: null, // Clear the draft
-    };
-  });
-
-  const createdTaskId =
-    tasksStore.state.tasks.find((t: OptimalTask) => t.id === newTaskId)?.id ||
-    tasksStore.state.tasks[tasksStore.state.tasks.length - 1].id;
-  console.log('Created task ID:', createdTaskId);
-
-  // Log the created task to verify duration and dueDate
-  const createdTask = tasksStore.state.tasks.find((t: OptimalTask) => t.id === createdTaskId);
-  console.log('Created task:', createdTask);
-
-  return createdTaskId;
 };
 
 // Helper functions for time management
@@ -751,6 +351,7 @@ export const createNewTask = (
     category?: TaskCategory;
     subtasks?: any[];
     progress?: number;
+    repetition?: RepetitionOption;
   },
   category: TaskCategory = 'work',
 ) => {
@@ -805,6 +406,7 @@ export const createNewTask = (
       progress: values.progress || 0,
       startTime,
       nextStartTime,
+      repetition: values.repetition || 'once',
     };
 
     addTask(task);
@@ -830,6 +432,7 @@ export const editExistingTask = (
     category?: TaskCategory;
     subtasks?: Subtask[];
     progress?: number;
+    repetition?: RepetitionOption;
   },
 ) => {
   try {
@@ -889,6 +492,7 @@ export const editExistingTask = (
         dueTime: values.dueTime,
         startTime,
         nextStartTime,
+        repetition: values.repetition || task.repetition || 'once',
       };
 
       updateTask(task.id, finalUpdatedValues);
@@ -931,19 +535,16 @@ export const highlightTask = (taskId: string) => {
 
 // Push forward affected tasks after a task's duration changes
 export const pushForwardAffectedTasks = (
-  taskId: string | 'draft',
+  taskId: string,
   startTime: string,
   duration: number,
   date: Date,
 ) => {
   const taskDate = format(date, 'yyyy-MM-dd');
 
-  // For draft tasks, use a temporary ID
-  const effectiveTaskId = taskId === 'draft' ? 'draft-temp' : taskId;
-
   // Get tasks on the selected date
   const tasksOnDate = tasksStore.state.tasks.filter(
-    (task) => task.taskDate === taskDate && task.id !== effectiveTaskId,
+    (task) => task.taskDate === taskDate && task.id !== taskId,
   );
 
   if (tasksOnDate.length === 0) return;

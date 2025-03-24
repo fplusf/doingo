@@ -5,23 +5,17 @@ import {
   hasTimeOverlapWithExistingTasks,
 } from '@/shared/helpers/date/next-feefteen-minutes';
 import { useStore } from '@tanstack/react-store';
-import { format, parse } from 'date-fns';
+import { format } from 'date-fns';
 import { AlertCircle, ArrowLeftRight, Clock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
-  getDefaultStartTime,
-  getTaskSchedulingInfo,
-  pushForwardAffectedTasks,
-  tasksStore,
-  updateDraftTaskDueDateTime,
-  updateDraftTaskDuration,
-  updateDraftTaskRepetition,
-  updateDraftTaskStartDateTime,
-  updateTaskDueDateTime,
-  updateTaskDuration,
-  updateTaskRepetition,
-  updateTaskStartDateTime,
-} from '../../store/tasks.store';
+  taskFormStore,
+  updateDueDateTime,
+  updateDuration,
+  updateRepetition,
+  updateStartDateTime,
+} from '../../store/task-form.store';
+import { pushForwardAffectedTasks } from '../../store/tasks.store';
 import { DateTimePicker } from './date-time-picker';
 import { DurationPicker } from './duration-picker';
 import { RepetitionPicker } from './repetition-picker';
@@ -30,145 +24,75 @@ export type RepetitionOption = 'once' | 'daily' | 'weekly' | 'custom';
 
 interface TaskSchedulerProps {
   className?: string;
-  taskId?: string; // ID of the task being edited, or "draft" for new tasks
-  isDraft?: boolean; // Whether we're working with a draft task
+  // Optional taskId only for checking overlaps with existing tasks
+  taskId?: string;
 }
 
-export function TaskScheduler({ className, taskId, isDraft = false }: TaskSchedulerProps) {
-  // Determine the appropriate taskId to use
-  const effectiveTaskId = isDraft ? 'draft' : taskId;
+export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
+  // Use the store for all form values
+  const startDate = useStore(taskFormStore, (state) => state.startDate);
+  const startTime = useStore(taskFormStore, (state) => state.startTime);
+  const duration = useStore(taskFormStore, (state) => state.duration);
+  const dueDate = useStore(taskFormStore, (state) => state.dueDate);
+  const dueTime = useStore(taskFormStore, (state) => state.dueTime);
+  const repetition = useStore(taskFormStore, (state) => state.repetition);
+
   const [hasOverlap, setHasOverlap] = useState(false);
   const [showPushForwardPrompt, setShowPushForwardPrompt] = useState(false);
   const [freeTimeSlots, setFreeTimeSlots] = useState<string[]>([]);
 
-  // Add debug logging of the full draft task
-  useEffect(() => {
-    if (isDraft) {
-      const draftTask = tasksStore.state.draftTask;
-      console.log('Current draft task in TaskScheduler:', draftTask);
-    }
-  }, [isDraft, tasksStore.state.draftTask]);
-
-  // Use store for getting task data - avoid conditional hook calls
-  const taskData = useStore(tasksStore, (state) => {
-    // If no taskId and not a draft, return null
-    if (!effectiveTaskId) return null;
-
-    return getTaskSchedulingInfo(effectiveTaskId);
-  });
-
-  // Get the editingTaskId from the store (used as fallback if no taskId provided)
-  const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
-
-  // Determine the active task ID (either the provided taskId, draft, or the one being edited)
-  const activeTaskId = effectiveTaskId || editingTaskId;
-
-  // Generate the proper default time values using the helper functions
-  const defaultStartTimeString = getDefaultStartTime();
-  // Parse the default start time string into a Date
-  const defaultStartTime = parse(defaultStartTimeString, 'HH:mm', new Date());
-
-  // Extract values from task data or use defaults
-  const startDate = taskData?.startDate || defaultStartTime;
-  const startTime = taskData?.startTime || defaultStartTimeString;
-  const dueDate = taskData?.dueDate;
-  const dueTime = taskData?.dueTime || '';
-  const duration = taskData?.duration || 60 * 60 * 1000; // Default to 1 hour
-  const repetition = taskData?.repetition || 'once';
-
   // Check for time overlap when start time or duration changes
   useEffect(() => {
-    if (!activeTaskId) return;
-
     const taskDate = format(startDate, 'yyyy-MM-dd');
     const { hasOverlap: hasTimeOverlap } = hasTimeOverlapWithExistingTasks(
       startTime,
       duration,
       taskDate,
-      isDraft ? undefined : activeTaskId,
+      taskId,
     );
 
     setHasOverlap(hasTimeOverlap);
-  }, [activeTaskId, startTime, duration, startDate, isDraft]);
+  }, [startTime, duration, startDate, taskId]);
 
   // Check for available free time slots when duration changes
   useEffect(() => {
-    if (!activeTaskId) return;
-
     const taskDate = format(startDate, 'yyyy-MM-dd');
 
-    // Only look for free slots when creating a new task (draft mode)
-    if (isDraft) {
+    // Only look for free slots when we don't have a taskId (creating new task)
+    if (!taskId) {
       const availableSlots = findFreeTimeSlots(taskDate, duration);
       setFreeTimeSlots(availableSlots);
     } else {
       setFreeTimeSlots([]);
     }
-  }, [activeTaskId, duration, startDate, isDraft]);
-
-  const handleRepetitionChange = (value: RepetitionOption) => {
-    if (!activeTaskId) return;
-
-    if (isDraft || activeTaskId === 'draft') {
-      updateDraftTaskRepetition(value);
-    } else if (typeof activeTaskId === 'string') {
-      updateTaskRepetition(activeTaskId, value);
-    }
-  };
-
-  const handleStartDateSelection = (date: Date, time: string) => {
-    if (!activeTaskId) return;
-
-    if (isDraft || activeTaskId === 'draft') {
-      updateDraftTaskStartDateTime(date, time);
-    } else if (typeof activeTaskId === 'string') {
-      updateTaskStartDateTime(activeTaskId, date, time);
-    }
-  };
-
-  const handleDueDateSelection = (date: Date, time: string) => {
-    if (!activeTaskId) return;
-
-    console.log('handleDueDateSelection called with:', { date, time, isDraft, activeTaskId });
-
-    if (isDraft || activeTaskId === 'draft') {
-      updateDraftTaskDueDateTime(date, time);
-      // Verify the update worked
-      setTimeout(() => {
-        console.log('Draft after due date update:', tasksStore.state.draftTask);
-      }, 100);
-    } else if (typeof activeTaskId === 'string') {
-      updateTaskDueDateTime(activeTaskId, date, time);
-    }
-  };
-
-  const handleDurationChange = (durationMs: number) => {
-    if (!activeTaskId) return;
-
-    console.log('handleDurationChange called with:', { durationMs, isDraft, activeTaskId });
-
-    if (isDraft || activeTaskId === 'draft') {
-      updateDraftTaskDuration(durationMs);
-      // Verify the update worked
-      setTimeout(() => {
-        console.log('Draft after duration update:', tasksStore.state.draftTask);
-      }, 100);
-    } else if (typeof activeTaskId === 'string') {
-      updateTaskDuration(activeTaskId, durationMs);
-    }
-  };
+  }, [duration, startDate, taskId]);
 
   // Add a helper function to apply free time slot
   const applyFreeTimeSlot = (time: string) => {
-    if (!activeTaskId) return;
-
     // Create a date object for the selected time
     const [hours, minutes] = time.split(':').map(Number);
     const newDate = new Date(startDate);
     newDate.setHours(hours, minutes, 0, 0);
 
-    // Apply the new time
-    handleStartDateSelection(newDate, time);
+    // Apply the new time directly
+    updateStartDateTime(newDate, time);
+  };
+
+  // Handlers for the component inputs
+  const handleStartDateTimeChange = (date: Date, time: string) => {
+    updateStartDateTime(date, time);
+  };
+
+  const handleDurationChange = (durationMs: number) => {
+    updateDuration(durationMs);
+  };
+
+  const handleDueDateTimeChange = (date: Date | undefined, time: string) => {
+    updateDueDateTime(date, time);
+  };
+
+  const handleRepetitionChange = (repetitionValue: RepetitionOption) => {
+    updateRepetition(repetitionValue);
   };
 
   return (
@@ -177,7 +101,7 @@ export function TaskScheduler({ className, taskId, isDraft = false }: TaskSchedu
         <DateTimePicker
           date={startDate}
           time={startTime}
-          onChange={handleStartDateSelection}
+          onChange={handleStartDateTimeChange}
           buttonLabel="Start"
         />
 
@@ -186,7 +110,7 @@ export function TaskScheduler({ className, taskId, isDraft = false }: TaskSchedu
         <DateTimePicker
           date={dueDate}
           time={dueTime}
-          onChange={handleDueDateSelection}
+          onChange={handleDueDateTimeChange}
           buttonLabel="Due"
           showBellIcon={true}
           isDue={true}
@@ -262,8 +186,8 @@ export function TaskScheduler({ className, taskId, isDraft = false }: TaskSchedu
             <button
               onClick={() => {
                 // Call the push forward function and then hide the prompt
-                if (activeTaskId) {
-                  pushForwardAffectedTasks(activeTaskId, startTime, duration, startDate);
+                if (taskId) {
+                  pushForwardAffectedTasks(taskId, startTime, duration, startDate);
                   setShowPushForwardPrompt(false);
                   setHasOverlap(false); // Reset the overlap state since we've resolved it
                 }
