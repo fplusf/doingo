@@ -286,6 +286,7 @@ export function TimelineNode({
         )}
         style={{
           height: nodeHeight,
+          transition: 'height 0.2s ease-in-out',
           minHeight: '48px',
           zIndex: 20, // Higher z-index to ensure it's above connector
           position: 'relative' as 'relative', // Fix TypeScript error

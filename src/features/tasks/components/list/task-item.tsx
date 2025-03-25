@@ -186,7 +186,7 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
           }}
           style={{
             border: '1px solid transparent',
-            transition: 'border-color 0.2s ease-in-out',
+            transition: 'border-color 0.2s ease-in-out, height 0.2s ease-in-out',
           }}
           role="button"
           tabIndex={0}
