@@ -18,6 +18,7 @@ export interface Subtask {
   id: string;
   title: string;
   isCompleted: boolean;
+  order?: number;
 }
 
 export interface OptimalTask {

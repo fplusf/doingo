@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import BulletList from '@tiptap/extension-bullet-list';
@@ -16,9 +17,10 @@ import React, { memo } from 'react';
 interface TaskNotesProps {
   initialContent: string;
   onContentChange: (content: string) => void;
+  className?: string;
 }
 
-function TaskNotes({ initialContent, onContentChange }: TaskNotesProps) {
+function TaskNotes({ initialContent, onContentChange, className }: TaskNotesProps) {
   const debouncedContentChange = React.useCallback(
     debounce({ delay: 1000 }, (content: string) => {
       onContentChange(content);
@@ -87,7 +89,7 @@ function TaskNotes({ initialContent, onContentChange }: TaskNotesProps) {
   });
 
   return (
-    <div className="h-full min-h-[300px] flex-1 cursor-text">
+    <div className={cn('h-full min-h-[300px] flex-1 cursor-text', className)}>
       {editor && (
         <BubbleMenu
           className="flex overflow-hidden rounded-md border border-border bg-popover shadow-md"

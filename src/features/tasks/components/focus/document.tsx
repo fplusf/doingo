@@ -1,9 +1,8 @@
 import { EmojiPicker } from '@/features/tasks/components/schedule/emoji-picker';
-import { OptimalTask, Subtask } from '@/features/tasks/types';
+import { OptimalTask } from '@/features/tasks/types';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import React, { useCallback } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { toggleTaskCompletion, updateTask } from '../../store/tasks.store';
 import { TaskScheduler } from '../schedule/task-scheduler';
@@ -61,52 +60,21 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
     [taskId, task, onEdit],
   );
 
-  // Handler for adding a subtask
-  const handleAddSubtask = useCallback(
-    (title: string) => {
-      const newSubtask: Subtask = {
-        id: uuidv4(),
-        title,
-        isCompleted: false,
-      };
-
-      // Get current subtasks and add the new one
-      const updatedSubtasks = [...(task.subtasks || []), newSubtask];
-
-      // Calculate new progress
-      const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
-      const progress =
-        updatedSubtasks.length > 0
-          ? Math.round((completedCount / updatedSubtasks.length) * 100)
-          : 0;
-
-      // Update the task
-      updateTask(taskId, {
-        subtasks: updatedSubtasks,
-        progress,
-      });
-
-      // Call onEdit for backward compatibility if provided
-      if (onEdit) onEdit({ ...task, subtasks: updatedSubtasks, progress });
-    },
-    [taskId, task, onEdit],
-  );
-
   return (
     <div className={cn(className, 'flex h-full flex-col')}>
       {/* Schedule Information - Sticky Header */}
-      <div className="z-8 sticky top-0 flex bg-background pb-6 pt-5">
+      <div className="z-8 sticky top-0 flex bg-background pb-6 pl-3 pt-5">
         <div className="flex-1">
           <EmojiPicker emoji={task.emoji} onEmojiSelect={handleEmojiSelect} className="text-3xl" />
         </div>
-        <TaskScheduler className="flex-1 text-muted-foreground" taskId={taskId} isDraft={false} />
+        <TaskScheduler className="flex-1 text-muted-foreground" taskId={taskId} />
       </div>
 
       <ScrollArea
         className="flex flex-1 items-start will-change-scroll"
         preserveScrollPosition={true}
       >
-        <section className="mb-2 flex items-baseline justify-between border-b border-gray-700/40 pb-2">
+        <section className="mb-6 flex items-baseline justify-between border-b border-gray-700/40 pb-2 pl-5">
           <TaskCheckbox
             checked={task.completed}
             onCheckedChange={handleTaskCompletedChange}
@@ -121,15 +89,10 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
           />
         </section>
 
-        <TaskNotes initialContent={task.notes || ''} onContentChange={handleNotesChange} />
-
         <SubtaskList
+          className="z-40 mb-6"
           subtasks={task.subtasks || []}
-          onToggle={(subtaskId, isCompleted) => {
-            const updatedSubtasks = (task.subtasks || []).map((subtask) =>
-              subtask.id === subtaskId ? { ...subtask, isCompleted } : subtask,
-            );
-
+          onSubtasksChange={(updatedSubtasks) => {
             const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
             const progress =
               updatedSubtasks.length > 0
@@ -139,28 +102,12 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
             updateTask(taskId, { subtasks: updatedSubtasks, progress });
             if (onEdit) onEdit({ ...task, subtasks: updatedSubtasks, progress });
           }}
-          onEdit={(subtaskId, title) => {
-            const updatedSubtasks = (task.subtasks || []).map((subtask) =>
-              subtask.id === subtaskId ? { ...subtask, title } : subtask,
-            );
-            updateTask(taskId, { subtasks: updatedSubtasks });
-            if (onEdit) onEdit({ ...task, subtasks: updatedSubtasks });
-          }}
-          onDelete={(subtaskId) => {
-            const updatedSubtasks = (task.subtasks || []).filter(
-              (subtask) => subtask.id !== subtaskId,
-            );
+        />
 
-            const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
-            const progress =
-              updatedSubtasks.length > 0
-                ? Math.round((completedCount / updatedSubtasks.length) * 100)
-                : 0;
-
-            updateTask(taskId, { subtasks: updatedSubtasks, progress });
-            if (onEdit) onEdit({ ...task, subtasks: updatedSubtasks, progress });
-          }}
-          onAdd={handleAddSubtask}
+        <TaskNotes
+          className="pl-7"
+          initialContent={task.notes || ''}
+          onContentChange={handleNotesChange}
         />
       </ScrollArea>
     </div>

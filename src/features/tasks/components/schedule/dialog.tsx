@@ -3,6 +3,11 @@ import { OptimalTask, Subtask, TaskCategory, TaskPriority } from '@/features/tas
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/shared/components/ui/collapsible';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -19,12 +24,10 @@ import {
 } from '@/shared/components/ui/select';
 import { useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
-import { Hash, ListPlus, Maximize2, Plus, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Hash, ListPlus, Maximize2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import {
-  addSubtask,
-  deleteSubtask,
   loadTaskForEditing,
   resetForm,
   submitForm,
@@ -32,9 +35,9 @@ import {
   taskFormStore,
   updateField,
   updateFields,
-  updateSubtask,
 } from '../../store/task-form.store';
 import { setEditingTaskId, tasksStore, updateTask } from '../../store/tasks.store';
+import { SubtaskList } from '../focus/subtasks';
 import { PriorityPicker } from './priority-picker';
 import { TaskScheduler } from './task-scheduler';
 
@@ -153,15 +156,15 @@ function TaskDialogContent({
   const progress = useStore(taskFormStore, (state) => state.progress);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const subtaskInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const showActionButtons = title && title.length > 0;
   const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
 
+  // Collapsible state - closed by default
+  const [isSubtasksOpen, setIsSubtasksOpen] = useState(false);
+
   // Show subtasks section automatically if there are existing subtasks
   const [showSubtasks, setShowSubtasks] = useState(Boolean(subtasks && subtasks.length > 0));
-  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-  const [isAddingSubtask, setIsAddingSubtask] = useState(false);
 
   // Initialize form when dialog opens
   useEffect(() => {
@@ -240,22 +243,9 @@ function TaskDialogContent({
   useEffect(() => {
     if (subtasks && subtasks.length > 0 && !showSubtasks) {
       setShowSubtasks(true);
+      // Don't automatically open the collapsible when subtasks exist
     }
   }, [subtasks, showSubtasks]);
-
-  // Focus subtask input when adding a new subtask
-  useEffect(() => {
-    if (isAddingSubtask && subtaskInputRef.current) {
-      subtaskInputRef.current.focus();
-    }
-  }, [isAddingSubtask]);
-
-  // Maintain focus on the input when the subtask title is cleared
-  useEffect(() => {
-    if (isAddingSubtask && newSubtaskTitle === '' && subtaskInputRef.current) {
-      subtaskInputRef.current.focus();
-    }
-  }, [newSubtaskTitle, isAddingSubtask]);
 
   // Create a unified batch submission function for clean submission
   const submitFormBatch = () => {
@@ -295,6 +285,28 @@ function TaskDialogContent({
         setEditingTaskId(null);
       }
     }
+  };
+
+  const handleAddSubtask = () => {
+    // Always show the subtasks section when clicked
+    setShowSubtasks(true);
+    // Also open the collapsible when the button is clicked
+    setIsSubtasksOpen(true);
+  };
+
+  // Update subtasks in batch form submission
+  const handleSubtasksChange = (newSubtasks: Subtask[]) => {
+    updateField('subtasks', newSubtasks);
+
+    // If subtasks are added for the first time, open the collapsible
+    if (newSubtasks.length > 0 && (!subtasks || subtasks.length === 0)) {
+      setIsSubtasksOpen(true);
+    }
+  };
+
+  // Update title field in the form store
+  const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    updateField('title', e.target.value);
   };
 
   // Replace handleSubmit with the batch submission
@@ -343,86 +355,6 @@ function TaskDialogContent({
     }
   };
 
-  const handleAddSubtask = () => {
-    // Toggle visibility of subtasks section
-    setShowSubtasks(!showSubtasks);
-
-    // If we're showing the subtasks section now, immediately start adding a subtask
-    if (!showSubtasks) {
-      setIsAddingSubtask(true);
-      // Focus will be handled by the useEffect that watches isAddingSubtask
-    } else {
-      // If we're hiding the subtasks section, make sure we're not in adding mode
-      setIsAddingSubtask(false);
-    }
-  };
-
-  const handleCreateSubtask = () => {
-    // Create subtask even if empty
-    addSubtask(newSubtaskTitle);
-
-    // Clear input but keep focus for the next subtask
-    setNewSubtaskTitle('');
-
-    // Keep input field open - don't set isAddingSubtask to false
-    // Focus the input field after rendering for the next subtask
-    setTimeout(() => {
-      subtaskInputRef.current?.focus();
-    }, 0);
-  };
-
-  const handleEditSubtask = (subtaskId: string, title: string) => {
-    updateSubtask(subtaskId, { title });
-  };
-
-  const handleToggleSubtask = (subtaskId: string, isCompleted: boolean) => {
-    updateSubtask(subtaskId, { isCompleted });
-  };
-
-  const handleSubtaskKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, subtaskId?: string) => {
-    // For adding new subtasks
-    if (!subtaskId) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        // Create subtask unconditionally on Enter press
-        handleCreateSubtask();
-      } else if (e.key === 'Escape') {
-        setIsAddingSubtask(false);
-        setNewSubtaskTitle('');
-      }
-      return;
-    }
-
-    // For existing subtasks
-    if (e.key === 'Delete' || e.key === 'Backspace') {
-      const inputElement = e.target as HTMLInputElement;
-      if (inputElement.value === '') {
-        e.preventDefault();
-        deleteSubtask(subtaskId);
-
-        // After deleting a subtask, focus the new subtask input field
-        setTimeout(() => {
-          if (isAddingSubtask && subtaskInputRef.current) {
-            subtaskInputRef.current.focus();
-          }
-        }, 0);
-      }
-    }
-  };
-
-  const startAddingSubtask = () => {
-    setIsAddingSubtask(true);
-    // Focus the input field after rendering
-    setTimeout(() => {
-      subtaskInputRef.current?.focus();
-    }, 0);
-  };
-
-  // Update title field in the form store
-  const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    updateField('title', e.target.value);
-  };
-
   return (
     <DialogContent
       overlayClassName="bg-black/10"
@@ -463,7 +395,7 @@ function TaskDialogContent({
                 onClick={handleAddSubtask}
                 className={cn(
                   'h-8 w-8 p-0 text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                  (showSubtasks || isAddingSubtask) && 'bg-accent text-accent-foreground',
+                  showSubtasks && isSubtasksOpen && 'bg-accent text-accent-foreground',
                 )}
                 aria-label="Add subtask"
                 tabIndex={0}
@@ -539,91 +471,39 @@ function TaskDialogContent({
               </div>
             </div>
 
-            {/* Subtasks section */}
+            {/* Subtasks section as a collapsible */}
             {showSubtasks && (
               <div className="mb-1 mt-2">
-                <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-muted-foreground">Subtasks</h3>
-                  {subtasks && subtasks.length > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      {subtasks.filter((s) => s.isCompleted).length}/{subtasks.length} completed
-                    </span>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  {/* Show subtasks if they exist */}
-                  {subtasks &&
-                    subtasks.length > 0 &&
-                    subtasks.map((subtask) => (
-                      <div key={subtask.id} className="group flex items-center gap-2 pl-7">
-                        <TaskCheckbox
-                          checked={subtask.isCompleted}
-                          onCheckedChange={(checked) => handleToggleSubtask(subtask.id, checked)}
-                          size="sm"
-                          className="mt-0.5"
-                          ariaLabel={`Toggle subtask: ${subtask.title}`}
-                        />
-                        <div className="flex-1">
-                          <input
-                            type="text"
-                            value={subtask.title}
-                            onChange={(e) => handleEditSubtask(subtask.id, e.target.value)}
-                            onKeyDown={(e) => handleSubtaskKeyDown(e, subtask.id)}
-                            onBlur={() => {
-                              // Ensure any edited subtask is saved on blur
-                              // We don't need to do anything special here since onChange already updates the value
-                              // This is just to be explicit
-                              console.log(`Subtask ${subtask.id} saved on blur`);
-                            }}
-                            className={cn(
-                              'w-full bg-transparent py-0.5 text-sm font-normal focus:outline-none',
-                              subtask.isCompleted && 'text-muted-foreground line-through',
-                            )}
-                            placeholder="Subtask description..."
-                          />
-                        </div>
+                <Collapsible
+                  open={isSubtasksOpen}
+                  onOpenChange={setIsSubtasksOpen}
+                  className="w-full"
+                >
+                  <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-muted-foreground hover:bg-sidebar/30 hover:text-accent-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex h-4 w-4 items-center justify-center">
+                        {isSubtasksOpen ? (
+                          <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 transition-transform duration-200" />
+                        )}
                       </div>
-                    ))}
-
-                  {isAddingSubtask ? (
-                    <div className="flex items-center gap-2 pl-7">
-                      <TaskCheckbox
-                        checked={false}
-                        onCheckedChange={() => {}}
-                        size="sm"
-                        className="mt-0.5 opacity-50"
-                        ariaLabel="New subtask checkbox"
-                      />
-                      <div className="flex-1">
-                        <input
-                          ref={subtaskInputRef}
-                          type="text"
-                          value={newSubtaskTitle}
-                          onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                          onKeyDown={(e) => handleSubtaskKeyDown(e)}
-                          onBlur={() => {
-                            // Always create a subtask on blur, even if empty
-                            if (isAddingSubtask) {
-                              handleCreateSubtask();
-                            }
-                          }}
-                          placeholder="Subtask description..."
-                          className="w-full bg-transparent py-0.5 text-sm font-normal focus:outline-none"
-                        />
-                      </div>
+                      <h3 className="text-sm font-medium">Subtasks</h3>
                     </div>
-                  ) : (
-                    <button
-                      onClick={startAddingSubtask}
-                      className="flex w-full items-center gap-1.5 py-1 pl-7 text-xs text-zinc-400 transition-colors hover:text-zinc-200"
-                      aria-label="Add subtask"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Add subtask
-                    </button>
-                  )}
-                </div>
+                    {subtasks && subtasks.length > 0 && (
+                      <span className="text-xs">
+                        {subtasks.filter((s) => s.isCompleted).length}/{subtasks.length} completed
+                      </span>
+                    )}
+                  </CollapsibleTrigger>
+
+                  <CollapsibleContent className="overflow-hidden px-2 pt-3">
+                    <SubtaskList
+                      subtasks={subtasks || []}
+                      onSubtasksChange={handleSubtasksChange}
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
             )}
           </div>
