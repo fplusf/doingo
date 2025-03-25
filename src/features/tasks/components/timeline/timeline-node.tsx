@@ -197,7 +197,7 @@ export function TimelineNode({
   const getBackgroundStyles = () => {
     // Default background for future tasks
     const defaultBg = {
-      backgroundColor: '#4b5563', // Softer gray background color
+      backgroundColor: '#323236', // Softer gray background color
     };
 
     // Past tasks should be filled with priority color
@@ -210,7 +210,7 @@ export function TimelineNode({
     // For ongoing tasks, we'll use the sand effect
     if (timeStatus === 'present' && !completed) {
       return {
-        backgroundColor: '#4b5563', // Softer background for present tasks
+        backgroundColor: '#323236', // Softer background for present tasks
         overflow: 'hidden', // Ensure particles don't overflow
       };
     }
