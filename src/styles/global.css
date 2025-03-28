@@ -265,3 +265,8 @@ body {
 .animate-double-jump {
   animation: double-jump 1s ease-in-out;
 }
+
+.lucide {
+  /* all icons are set to this size unless defined otherwise */
+  @apply h-4 w-4;
+}

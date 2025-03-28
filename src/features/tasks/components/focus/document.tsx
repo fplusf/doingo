@@ -5,6 +5,7 @@ import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import React, { useCallback } from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { toggleTaskCompletion, updateTask } from '../../store/tasks.store';
+import CollapsedContainer from '../schedule/collapsed-container';
 import { TaskScheduler } from '../schedule/task-scheduler';
 import TaskNotes from './notes';
 import { SubtaskList } from './subtasks';
@@ -67,7 +68,9 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
         <div className="flex-1">
           <EmojiPicker emoji={task.emoji} onEmojiSelect={handleEmojiSelect} className="text-3xl" />
         </div>
-        <TaskScheduler className="flex-1 text-muted-foreground" taskId={taskId} />
+        <CollapsedContainer>
+          <TaskScheduler className="flex-1 text-muted-foreground" taskId={taskId} />
+        </CollapsedContainer>
       </div>
 
       <ScrollArea
@@ -79,7 +82,7 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
             checked={task.completed}
             onCheckedChange={handleTaskCompletedChange}
             size="lg"
-            ariaLabel={`Toggle subtask: ${task.title}`}
+            ariaLabel={`Toggle task: ${task.title}`}
           />
           <textarea
             placeholder="Task Title"

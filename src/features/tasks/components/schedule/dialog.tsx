@@ -160,6 +160,8 @@ function TaskDialogContent({
   const showActionButtons = title && title.length > 0;
   const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
 
+  console.log('subtasks: ', subtasks, mode);
+
   // Collapsible state - closed by default
   const [isSubtasksOpen, setIsSubtasksOpen] = useState(false);
 
@@ -171,11 +173,10 @@ function TaskDialogContent({
     if (open) {
       // Initialize form for create or edit mode
       if (mode === 'create') {
-        // Set form mode
-        updateField('mode', 'create');
-
         // Reset form to default values
         resetForm();
+
+        setShowSubtasks(false);
 
         // Apply any initial values passed to the component
         if (initialValues) {
@@ -245,7 +246,7 @@ function TaskDialogContent({
       setShowSubtasks(true);
       // Don't automatically open the collapsible when subtasks exist
     }
-  }, [subtasks, showSubtasks]);
+  }, [mode, subtasks, showSubtasks]);
 
   // Create a unified batch submission function for clean submission
   const submitFormBatch = () => {
