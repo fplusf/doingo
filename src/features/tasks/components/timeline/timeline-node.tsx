@@ -14,6 +14,7 @@ interface TimelineNodeProps {
   startTime?: Date;
   duration?: number;
   prevTaskEndTime?: Date; // Previous task's end time
+  nextTaskStartTime?: Date; // Next task's start time
   hideStartTime?: boolean; // Flag to hide start time (when it matches previous task's end time)
   hideEndTime?: boolean; // Flag to hide end time (when it matches next task's start time)
 }
@@ -37,6 +38,7 @@ export function TimelineNode({
   startTime,
   duration,
   prevTaskEndTime,
+  nextTaskStartTime,
   hideStartTime = false,
   hideEndTime = false,
 }: TimelineNodeProps) {
@@ -58,9 +60,9 @@ export function TimelineNode({
   // Calculate end time
   const endTime = startTime && duration ? addMilliseconds(startTime, duration) : undefined;
 
-  // Check if start time should be shown as a shared time between tasks
-  const showSharedStartTime =
-    startTime && prevTaskEndTime && startTime.getTime() === prevTaskEndTime.getTime();
+  // Check if times should be merged
+  const shouldMergeTimes =
+    endTime && nextTaskStartTime && endTime.getTime() === nextTaskStartTime.getTime();
 
   // Get priority color
   const getPriorityColor = (): string => {
@@ -255,24 +257,24 @@ export function TimelineNode({
 
   return (
     <div className="relative">
-      {/* Render start time only if it's not shared with previous task or if we should show it */}
-      {startTime && !hideStartTime && !showSharedStartTime && (
-        <div className="absolute -left-12 top-0 text-xs text-gray-300">
+      {/* Render start time */}
+      {startTime && !hideStartTime && !shouldMergeTimes && (
+        <div className="absolute -left-12 top-0 text-xs text-muted-foreground">
           {format(startTime, 'HH:mm')}
         </div>
       )}
 
-      {/* Render end time only if not hidden */}
-      {endTime && !hideEndTime && (
-        <div className="absolute -left-12 bottom-0 text-xs text-gray-300">
+      {/* Render end time */}
+      {endTime && !hideEndTime && !shouldMergeTimes && (
+        <div className="absolute -left-12 bottom-0 text-xs text-muted-foreground">
           {format(endTime, 'HH:mm')}
         </div>
       )}
 
-      {/* Render shared time in the middle of the connector line */}
-      {showSharedStartTime && (
-        <div className="absolute -left-12 -top-10 text-xs text-gray-300">
-          {format(startTime, 'HH:mm')}
+      {/* Render merged time */}
+      {shouldMergeTimes && (
+        <div className="absolute -left-12 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+          {format(endTime, 'HH:mm')}
         </div>
       )}
 

@@ -96,8 +96,8 @@ body {
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 220 40% 100%;
+    --muted-foreground: 220 30% 90%;
 
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
@@ -142,7 +142,7 @@ body {
 
     /* Muted elements remain the same */
     --muted: 220 6% 25%;
-    --muted-foreground: 220 5% 65%;
+    --muted-foreground: 220 5% 55%;
 
     /* Soften Accent to match primary */
     --accent: 217 45% 55%; /* Same as new primary */
