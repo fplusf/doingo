@@ -10,6 +10,8 @@ import { SortableTimelineTaskItem } from './sortable-timeline-task-item';
 
 // Define 15 minutes in milliseconds
 const FIFTEEN_MINUTES_IN_MS = 15 * 60 * 1000;
+// Define 20 minutes in milliseconds
+const TWENTY_MINUTES_IN_MS = 20 * 60 * 1000; // Added constant
 
 interface ConnectorSegment {
   top: string;
@@ -28,6 +30,7 @@ interface ConnectorSegment {
   isPastGap?: boolean;
   isCurrentGap?: boolean;
   isFutureGap?: boolean;
+  isBreakGap?: boolean; // Added flag for break gap
 }
 
 export function CategorySection({
@@ -40,6 +43,7 @@ export function CategorySection({
 }: CategorySectionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [connectorSegments, setConnectorSegments] = useState<ConnectorSegment[]>([]);
+  const nowRef = useRef(new Date()); // Use ref to keep 'now' consistent across renders
 
   // Get color for a task based on its priority
   const getTaskColor = (task?: OptimalTask): string => {
@@ -64,6 +68,10 @@ export function CategorySection({
     }
 
     if (!containerRef.current) return;
+
+    // Update 'now' time on each effect run
+    nowRef.current = new Date();
+    const now = nowRef.current;
 
     const updateConnectorSegments = () => {
       const container = containerRef.current;
@@ -127,12 +135,10 @@ export function CategorySection({
             ? addMilliseconds(currentTask.startTime, currentTask.duration)
             : currentTask.startTime;
 
-        const now = new Date();
-
-        // Check if tasks are from a past date by comparing full dates, not just components
-        const isCurrentTaskInPast = currentTaskEnd && currentTaskEnd < now;
-        const isNextTaskInPast = nextTask.startTime && nextTask.startTime < now;
-        const isNextTaskInFuture = nextTask.startTime && nextTask.startTime > now;
+        // Check if tasks are from a past date by comparing full dates
+        const isCurrentTaskEndInPast = currentTaskEnd && currentTaskEnd < now;
+        const isNextTaskStartInPast = nextTask.startTime && nextTask.startTime < now;
+        const isNextTaskStartInFuture = nextTask.startTime && nextTask.startTime > now;
 
         // Calculate gap duration - original full duration between tasks
         const fullGapDuration =
@@ -147,15 +153,18 @@ export function CategorySection({
             : 0;
 
         // Determine gap type based on task positions relative to current time
-        const isPastGap = isCurrentTaskInPast && isNextTaskInPast;
-        const isCurrentGap = isCurrentTaskInPast && isNextTaskInFuture;
-        const isFutureGap = !isCurrentTaskInPast && !isPastGap;
+        const isPastGap = isCurrentTaskEndInPast && isNextTaskStartInPast;
+        const isCurrentGap = isCurrentTaskEndInPast && isNextTaskStartInFuture;
+        const isFutureGap = !isCurrentTaskEndInPast && !isNextTaskStartInPast; // Simplified future gap logic
 
         // Determine gap size categories
         const hasLargeGap = fullGapDuration > ONE_HOUR_IN_MS && fullGapDuration > 0;
         const hasFreeSlot = fullGapDuration >= FIFTEEN_MINUTES_IN_MS && fullGapDuration > 0;
         const hasSmallGap = fullGapDuration > 0 && fullGapDuration < FIFTEEN_MINUTES_IN_MS;
         const hasOverlap = fullGapDuration < 0;
+
+        // Determine if it's a "Break" gap (past and > 20 minutes)
+        const isBreakGap = isPastGap && fullGapDuration > TWENTY_MINUTES_IN_MS;
 
         // Calculate the bottom edge of current node and top edge of next node
         const currentBottom = currentRect.bottom - containerRect.top;
@@ -166,13 +175,13 @@ export function CategorySection({
 
         // Calculate segment height based on gap
         const baseHeight = nextTop - currentBottom;
-        // Make connectors taller with different multipliers based on gap size
+        // Make connectors taller for larger gaps (consider break gaps like large gaps for height)
         const segmentHeight =
-          hasLargeGap && !hasOverlap
-            ? baseHeight * 1.5 // Reduce multiplier for large gaps from 3 to 1.5
-            : hasFreeSlot && !hasOverlap
-              ? baseHeight * 1.2 // Reduce multiplier for free slots from 1.5 to 1.2
-              : baseHeight; // Default height for small gaps and overlaps
+          (isBreakGap || (hasLargeGap && !hasOverlap && !isPastGap)) && baseHeight > 0
+            ? baseHeight * 1.5 // Increase height for breaks and large future gaps
+            : hasFreeSlot && !hasOverlap && !isPastGap && baseHeight > 0
+              ? baseHeight * 1.2 // Slightly increase height for free slots
+              : baseHeight; // Default height
 
         segments.push({
           top: `${currentBottom}px`,
@@ -180,7 +189,8 @@ export function CategorySection({
           startColor: getTaskColor(currentTask),
           endColor: getTaskColor(nextTask),
           left: `${centerX}px`,
-          isDotted: hasLargeGap && !hasOverlap,
+          // Dotted line for break gaps OR large future gaps
+          isDotted: isBreakGap || (hasLargeGap && !hasOverlap && isFutureGap),
           timeGap: fullGapDuration > 0 ? fullGapDuration : undefined,
           remainingDuration: remainingDuration > 0 ? remainingDuration : undefined,
           hasFreeSlot: hasFreeSlot && !hasOverlap,
@@ -191,6 +201,7 @@ export function CategorySection({
           isPastGap: isPastGap,
           isCurrentGap: isCurrentGap,
           isFutureGap: isFutureGap,
+          isBreakGap: isBreakGap, // Pass break gap flag
         });
       }
 
@@ -212,7 +223,7 @@ export function CategorySection({
       }
       resizeObserver.disconnect();
     };
-  }, [tasks, category]);
+  }, [tasks, category]); // Rerun effect when tasks or category change
 
   return (
     <div className="relative mb-16 min-h-8" id={`category-${category}`}>
@@ -240,8 +251,9 @@ export function CategorySection({
                 left: segment.left,
                 background: 'transparent',
                 ...(segment.isDotted
-                  ? {}
+                  ? {} // If dotted, background is handled below
                   : {
+                      // Solid gradient line
                       background: `linear-gradient(to bottom, ${segment.startColor}, ${segment.endColor})`,
                     }),
                 opacity: 0.85,
@@ -251,9 +263,9 @@ export function CategorySection({
               {/* For dotted lines, create individual dots with gradient color interpolation */}
               {segment.isDotted && (
                 <>
-                  {Array.from({ length: 10 }).map((_, i) => {
+                  {Array.from({ length: 20 }).map((_, i) => {
                     // Calculate position percentage (0 to 1)
-                    const position = i / 9;
+                    const position = i / 19;
                     // Interpolate between the two colors based on position
                     const color = interpolateColor(segment.startColor, segment.endColor, position);
 
@@ -275,27 +287,30 @@ export function CategorySection({
               )}
             </div>
 
-            {/* "Free slot" or "Get ready" label */}
+            {/* Label for the gap */}
             {segment.timeGap && segment.timeGap > 0 && (
               <div
                 className={cn(
                   'absolute left-20 flex items-center gap-1.5 whitespace-nowrap text-xs text-gray-400',
                   'rounded-md px-2 py-1',
+                  // Use darker background for past gaps (including breaks)
                   segment.isPastGap ? 'bg-gray-800/40' : 'bg-gray-800/20',
                 )}
                 style={{
                   // Position slightly above the exact middle of the connector
-                  top: `calc(${segment.top} + ${parseFloat(segment.height) / 2 - 10}px)`,
+                  top: `calc(${segment.top} + ${parseFloat(segment.height) / 2}px)`,
                   transform: 'translateY(-50%)',
                   zIndex: 10,
                 }}
               >
-                {segment.isPastGap ? (
+                {/* Show "Break" specifically for break gaps */}
+                {segment.isBreakGap ? ( // Use isBreakGap here
                   <>
                     <Coffee className="h-3.5 w-3.5" />
                     <span>Break</span>
                   </>
-                ) : segment.isCurrentGap ? (
+                ) : /* Show "Free slot" or "Get ready" for current/future gaps */
+                segment.isCurrentGap ? (
                   <>
                     <Clock className="h-3.5 w-3.5" />
                     Free slot - {formatDuration(segment.remainingDuration || 0)}
@@ -311,7 +326,7 @@ export function CategorySection({
                       <Plus className="h-3.5 w-3.5" />
                     </Button>
                   </>
-                ) : segment.hasFreeSlot ? (
+                ) : segment.isFutureGap && segment.hasFreeSlot ? ( // Ensure it's a future gap for these labels
                   <>
                     <Clock className="h-3.5 w-3.5" />
                     Free slot - {formatDuration(segment.timeGap || 0)}
@@ -327,7 +342,7 @@ export function CategorySection({
                       <Plus className="h-3.5 w-3.5" />
                     </Button>
                   </>
-                ) : segment.hasSmallGap ? (
+                ) : segment.isFutureGap && segment.hasSmallGap ? ( // Ensure it's a future gap
                   <>
                     <Clock className="h-3.5 w-3.5" />
                     Get ready for the next task!
@@ -343,43 +358,51 @@ export function CategorySection({
           {tasks.map((task, index) => {
             const isFirst = index === 0;
             const isLast = index === tasks.length - 1;
+            const now = nowRef.current; // Get consistent 'now' time
 
-            // Calculate gap with PREVIOUS task instead of next task
-            const prevTask = index > 0 ? tasks[index - 1] : undefined;
-
-            // For the current task, check if there's a large gap with the previous task
+            // Calculate gap properties with PREVIOUS task for spacing
+            let isBreakGapWithPrevious = false;
             let hasLargeGapWithPrevious = false;
             let hasFreeSlotWithPrevious = false;
+            let isPreviousGapInPast = false; // Flag to check if the gap itself is in the past
 
+            const prevTask = index > 0 ? tasks[index - 1] : undefined;
             if (prevTask && prevTask.startTime && task.startTime) {
-              const prevTaskEnd =
-                prevTask.startTime && prevTask.duration
-                  ? addMilliseconds(prevTask.startTime, prevTask.duration)
-                  : prevTask.startTime;
+              const prevTaskEnd = prevTask.duration
+                ? addMilliseconds(prevTask.startTime, prevTask.duration)
+                : prevTask.startTime;
 
               const timeGapWithPrevious = prevTaskEnd
                 ? differenceInMilliseconds(task.startTime, prevTaskEnd)
                 : 0;
 
+              // Check if the gap period is entirely in the past
+              const isPrevTaskEndInPast = prevTaskEnd && prevTaskEnd < now;
+              const isCurrentTaskStartInPast = task.startTime && task.startTime < now;
+              isPreviousGapInPast = isPrevTaskEndInPast && isCurrentTaskStartInPast;
+
+              // Determine gap sizes with previous task
               hasLargeGapWithPrevious =
                 timeGapWithPrevious > ONE_HOUR_IN_MS && timeGapWithPrevious >= 0;
               hasFreeSlotWithPrevious =
                 timeGapWithPrevious >= FIFTEEN_MINUTES_IN_MS && timeGapWithPrevious >= 0;
+
+              // Check if the gap with previous is a "Break" gap
+              isBreakGapWithPrevious =
+                isPreviousGapInPast && timeGapWithPrevious > TWENTY_MINUTES_IN_MS;
             }
 
+            // Determine spacing class based on the gap with the previous task
+            const marginTopClass = isBreakGapWithPrevious
+              ? 'mt-12' // Past break gap > 20min
+              : hasLargeGapWithPrevious && !isPreviousGapInPast
+                ? 'mt-12' // Future/current large gap > 1hr
+                : hasFreeSlotWithPrevious && !hasLargeGapWithPrevious && !isPreviousGapInPast
+                  ? 'mt-8' // Future/current free slot >= 15min
+                  : 'mt-5'; // Default small gap or overlap
+
             // For connector segments, still calculate gap with next task (this is correct)
-            const nextTask = !isLast ? tasks[index + 1] : undefined;
-            const currentTaskEnd =
-              task.startTime && task.duration
-                ? addMilliseconds(task.startTime, task.duration)
-                : task.startTime;
-
-            const timeGapWithNext =
-              currentTaskEnd && nextTask?.startTime
-                ? differenceInMilliseconds(nextTask.startTime, currentTaskEnd)
-                : 0;
-
-            const hasLargeGapWithNext = timeGapWithNext > ONE_HOUR_IN_MS && timeGapWithNext >= 0;
+            // (This calculation is done within the useEffect hook above)
 
             return (
               <div
@@ -387,11 +410,8 @@ export function CategorySection({
                 className={cn(
                   'rounded-3xl transition-colors duration-300',
                   highlightedTaskId === task.id && 'bg-muted ring-2 ring-border/50',
-                  // Base spacing between items
-                  'mt-5',
-                  // Increase spacing based on gap size with PREVIOUS task
-                  hasLargeGapWithPrevious && 'mt-12', // Reduce spacing for large gaps (was mt-20)
-                  !hasLargeGapWithPrevious && hasFreeSlotWithPrevious && 'mt-8', // Reduce spacing for free slots (was mt-10)
+                  // Apply calculated margin top class
+                  marginTopClass,
                 )}
                 style={{
                   // Add margin to the first item to match the timeline start
@@ -424,6 +444,8 @@ export function CategorySection({
 
 // Format duration in milliseconds to a readable format (e.g., "2h 30m")
 function formatDuration(ms: number): string {
+  if (ms <= 0) return '0m'; // Handle zero or negative duration
+
   const totalMinutes = Math.floor(ms / 60000);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
@@ -439,6 +461,9 @@ function formatDuration(ms: number): string {
 
 // Function to interpolate between two hex colors
 function interpolateColor(colorA: string, colorB: string, amount: number): string {
+  // Ensure amount is between 0 and 1
+  const clampedAmount = Math.max(0, Math.min(1, amount));
+
   const ah = parseInt(colorA.replace(/#/g, ''), 16);
   const ar = ah >> 16;
   const ag = (ah >> 8) & 0xff;
@@ -449,11 +474,19 @@ function interpolateColor(colorA: string, colorB: string, amount: number): strin
   const bg = (bh >> 8) & 0xff;
   const bb = bh & 0xff;
 
-  const rr = ar + amount * (br - ar);
-  const rg = ag + amount * (bg - ag);
-  const rb = ab + amount * (bb - ab);
+  const rr = ar + clampedAmount * (br - ar);
+  const rg = ag + clampedAmount * (bg - ag);
+  const rb = ab + clampedAmount * (bb - ab);
 
-  return `#${((1 << 24) + (Math.round(rr) << 16) + (Math.round(rg) << 8) + Math.round(rb))
-    .toString(16)
-    .slice(1)}`;
+  // Ensure components are within [0, 255] and round them
+  const r = Math.round(Math.max(0, Math.min(255, rr)));
+  const g = Math.round(Math.max(0, Math.min(255, rg)));
+  const b = Math.round(Math.max(0, Math.min(255, rb)));
+
+  // Convert back to hex, ensuring 6 digits with padding if necessary
+  const hexR = r.toString(16).padStart(2, '0');
+  const hexG = g.toString(16).padStart(2, '0');
+  const hexB = b.toString(16).padStart(2, '0');
+
+  return `#${hexR}${hexG}${hexB}`;
 }

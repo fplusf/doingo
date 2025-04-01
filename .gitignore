@@ -12,3 +12,5 @@ optimal-adhd-react-3
 .DS_Store
 */DS_Store
 .vscode
+playwright-report
+test-results

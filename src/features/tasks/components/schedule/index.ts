@@ -1,3 +1,4 @@
+export * from './collapsed-container';
 export * from './dialog';
 export { DurationPicker as DurationSelector } from './duration-picker';
 export * from './emoji-picker';
