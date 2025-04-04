@@ -256,7 +256,7 @@ export function TimelineNode({
   };
 
   return (
-    <div className="relative">
+    <div className="relative h-full">
       {/* Render start time */}
       {startTime && !shouldMergeTimes && (
         <div className="absolute -left-12 top-0 text-xs text-muted-foreground">
@@ -281,13 +281,12 @@ export function TimelineNode({
       <div
         ref={containerRef}
         className={cn(
-          'timeline-node relative flex items-center justify-center',
+          'timeline-node relative flex h-full items-center justify-center',
           'w-11 overflow-hidden rounded-3xl px-2',
           'cursor-pointer shadow-sm',
           className,
         )}
         style={{
-          height: nodeHeight,
           transition: 'height 0.2s ease-in-out',
           minHeight: '48px',
           zIndex: 20, // Higher z-index to ensure it's above connector

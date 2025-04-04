@@ -144,7 +144,7 @@ export const TimelineItem = ({
   return (
     <div
       ref={contentRef}
-      className={cn('group relative flex w-full', dynamicHeight)}
+      className={cn('group relative flex h-full w-full')}
       onClick={handleNodeClick}
     >
       {/* Continuous vertical connector line - now handled at the CategorySection level */}
@@ -152,7 +152,7 @@ export const TimelineItem = ({
 
       {/* Timeline node with emoji */}
       <div
-        className="absolute left-0 top-0 z-10 cursor-pointer"
+        className="absolute left-0 top-0 z-10 h-full cursor-pointer"
         onClick={(e) => {
           e.stopPropagation();
           handleNodeClick();
@@ -162,7 +162,6 @@ export const TimelineItem = ({
           completed={completed}
           emoji={emoji}
           priority={priority}
-          height={nodeHeight}
           onClick={handleNodeClick}
           startTime={startTime}
           duration={duration}
