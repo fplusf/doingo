@@ -167,7 +167,6 @@ export const TimelineItem = ({
           startTime={startTime}
           duration={duration}
           prevTaskEndTime={isLastItem ? undefined : nextStartTime}
-          hideEndTime={!isLastItem}
         />
       </div>
     </div>

@@ -258,15 +258,15 @@ export function TimelineNode({
   return (
     <div className="relative">
       {/* Render start time */}
-      {startTime && !hideStartTime && !shouldMergeTimes && (
+      {startTime && !shouldMergeTimes && (
         <div className="absolute -left-12 top-0 text-xs text-muted-foreground">
           {format(startTime, 'HH:mm')}
         </div>
       )}
 
       {/* Render end time */}
-      {endTime && !hideEndTime && !shouldMergeTimes && (
-        <div className="absolute -left-12 bottom-0 text-xs text-muted-foreground">
+      {endTime && !shouldMergeTimes && (
+        <div className="absolute -left-12 bottom-0 text-xs text-muted-foreground/60">
           {format(endTime, 'HH:mm')}
         </div>
       )}

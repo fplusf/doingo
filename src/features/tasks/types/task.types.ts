@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 
 export const ONE_HOUR_IN_MS = 3600000;
+export const FIFTEEN_MINUTES_IN_MS = 15 * 60 * 1000;
+export const TWENTY_MINUTES_IN_MS = 20 * 60 * 1000;
 export const CARD_MARGIN_BOTTOM = 30;
 
 export type RepetitionOption = 'once' | 'daily' | 'weekly' | 'custom';
@@ -13,6 +15,8 @@ export type TaskPriority =
   | 'not-urgent-not-important'
   | undefined;
 export type TaskCategory = 'work' | 'passion' | 'play';
+
+export type GapType = 'break' | 'free-slot' | 'get-ready' | 'major-strides';
 
 export interface Subtask {
   id: string;
@@ -40,6 +44,11 @@ export interface OptimalTask {
   subtasks?: Subtask[];
   progress?: number;
   repetition?: RepetitionOption;
+  // Gap-specific properties
+  isGap?: boolean;
+  gapType?: GapType;
+  gapStartTime?: Date;
+  gapEndTime?: Date;
 }
 
 export interface TasksState {

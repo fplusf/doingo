@@ -6,12 +6,17 @@ import { addMilliseconds, differenceInMilliseconds } from 'date-fns';
 import { Clock, Coffee, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { CategorySectionProps, ONE_HOUR_IN_MS, OptimalTask } from '../../types';
+
+import { DottedConnector } from '../timeline/dotted-connector';
 import { SortableTimelineTaskItem } from './sortable-timeline-task-item';
 
 // Define 15 minutes in milliseconds
 const FIFTEEN_MINUTES_IN_MS = 15 * 60 * 1000;
 // Define 20 minutes in milliseconds
-const TWENTY_MINUTES_IN_MS = 20 * 60 * 1000; // Added constant
+const TWENTY_MINUTES_IN_MS = 20 * 60 * 1000;
+
+// 7 hours in milliseconds - for detecting very long gaps
+const SEVEN_HOURS_IN_MS = 7 * 60 * 60 * 1000;
 
 interface ConnectorSegment {
   top: string;
@@ -22,15 +27,9 @@ interface ConnectorSegment {
   isDotted?: boolean;
   timeGap?: number;
   remainingDuration?: number;
-  hasFreeSlot?: boolean;
-  hasSmallGap?: boolean;
-  hasLargeGap?: boolean;
   startTime?: Date;
   endTime?: Date;
-  isPastGap?: boolean;
-  isCurrentGap?: boolean;
-  isFutureGap?: boolean;
-  isBreakGap?: boolean; // Added flag for break gap
+  isForGap?: boolean;
 }
 
 export function CategorySection({
@@ -79,13 +78,16 @@ export function CategorySection({
 
       // Find all timeline nodes within the container
       const timelineNodes = container.querySelectorAll('.timeline-node');
-      if (timelineNodes.length === 0) {
+
+      // Don't create connector segments if there are no nodes or only one node
+      if (timelineNodes.length <= 1) {
         setConnectorSegments([]);
         return;
       }
 
-      // Don't create connector segments if there's only a single node
-      if (timelineNodes.length === 1) {
+      // Count the number of real tasks (not gaps) - if there's only one, don't add connectors
+      const realTaskCount = tasks.filter((task) => !task.isGap).length;
+      if (realTaskCount <= 1) {
         setConnectorSegments([]);
         return;
       }
@@ -96,113 +98,198 @@ export function CategorySection({
       // Calculate segments between each pair of nodes
       const segments: ConnectorSegment[] = [];
 
-      // Only if we have at least one node - add segment before first node
+      // Find the last non-gap task index for later use
+      const lastTaskIndex = [...tasks].reverse().findIndex((task) => !task.isGap);
+      const lastRealTaskIndex = lastTaskIndex >= 0 ? tasks.length - 1 - lastTaskIndex : -1;
+
+      // Only if we have at least one real task node - add segment before first node
+      // Skip gap items for this initial segment
       if (timelineNodes.length > 0) {
-        const firstNode = timelineNodes[0];
-        const firstRect = firstNode.getBoundingClientRect();
-        const firstTask = tasks[0];
+        // Find first non-gap item to get its node
+        const firstNodeIndex = tasks.findIndex((task) => !task.isGap);
+        if (firstNodeIndex >= 0) {
+          const firstNode = timelineNodes[firstNodeIndex];
+          const firstRect = firstNode.getBoundingClientRect();
+          const firstTask = tasks[firstNodeIndex];
 
-        // Add segment before the first node (using category color)
-        const centerX = firstRect.left + firstRect.width / 2 - containerRect.left;
-        const categoryColor = TIMELINE_CATEGORIES[category].color;
+          // Add segment before the first node (using category color)
+          const centerX = firstRect.left + firstRect.width / 2 - containerRect.left;
+          const categoryColor = TIMELINE_CATEGORIES[category].color;
 
-        segments.push({
-          top: '24px', // Start 24px from the top
-          height: `${firstRect.top - containerRect.top - 24}px`,
-          startColor: categoryColor,
-          endColor: getTaskColor(firstTask),
-          left: `${centerX}px`,
-        });
+          segments.push({
+            top: '24px', // Start 24px from the top
+            height: `${firstRect.top - containerRect.top - 24}px`,
+            startColor: categoryColor,
+            endColor: getTaskColor(firstTask),
+            left: `${centerX}px`,
+          });
+        }
       }
 
-      // Add segments between nodes
-      for (let i = 0; i < timelineNodes.length - 1; i++) {
-        const currentNode = timelineNodes[i];
-        const nextNode = timelineNodes[i + 1];
-
-        const currentRect = currentNode.getBoundingClientRect();
-        const nextRect = nextNode.getBoundingClientRect();
-
+      // Process all tasks to create connector segments
+      for (let i = 0; i < tasks.length - 1; i++) {
         const currentTask = tasks[i];
         const nextTask = tasks[i + 1];
 
         // Skip if either task is missing
         if (!currentTask || !nextTask) continue;
 
-        // Calculate time gap between tasks using date-fns
-        const currentTaskEnd =
-          currentTask.startTime && currentTask.duration
-            ? addMilliseconds(currentTask.startTime, currentTask.duration)
-            : currentTask.startTime;
+        // If the current task is the last real task, don't add any more connectors after it
+        if (i === lastRealTaskIndex) continue;
 
-        // Check if tasks are from a past date by comparing full dates
-        const isCurrentTaskEndInPast = currentTaskEnd && currentTaskEnd < now;
-        const isNextTaskStartInPast = nextTask.startTime && nextTask.startTime < now;
-        const isNextTaskStartInFuture = nextTask.startTime && nextTask.startTime > now;
+        // For gap items, we'll create a special dotted connector
+        const isGapItem = currentTask.isGap || nextTask.isGap;
 
-        // Calculate gap duration - original full duration between tasks
-        const fullGapDuration =
-          currentTaskEnd && nextTask.startTime
-            ? differenceInMilliseconds(nextTask.startTime, currentTaskEnd)
-            : 0;
+        // Find the corresponding DOM nodes
+        // Note: For gap items, we'll need to manually calculate positions
+        // since they don't have actual nodes
+        const currentNodeIndex = tasks.findIndex((t) => t.id === currentTask.id);
+        const nextNodeIndex = tasks.findIndex((t) => t.id === nextTask.id);
 
-        // Calculate remaining duration from now to next task start
-        const remainingDuration =
-          nextTask.startTime && nextTask.startTime > now
-            ? differenceInMilliseconds(nextTask.startTime, now)
-            : 0;
+        // If either task is missing a DOM node (should not happen), skip
+        if (currentNodeIndex < 0 || nextNodeIndex < 0) continue;
 
-        // Determine gap type based on task positions relative to current time
-        const isPastGap = isCurrentTaskEndInPast && isNextTaskStartInPast;
-        const isCurrentGap = isCurrentTaskEndInPast && isNextTaskStartInFuture;
-        const isFutureGap = !isCurrentTaskEndInPast && !isNextTaskStartInPast; // Simplified future gap logic
+        // For non-gap items, get the actual DOM node
+        let currentRect: DOMRect | null = null;
+        let nextRect: DOMRect | null = null;
 
-        // Determine gap size categories
-        const hasLargeGap = fullGapDuration > ONE_HOUR_IN_MS && fullGapDuration > 0;
-        const hasFreeSlot = fullGapDuration >= FIFTEEN_MINUTES_IN_MS && fullGapDuration > 0;
-        const hasSmallGap = fullGapDuration > 0 && fullGapDuration < FIFTEEN_MINUTES_IN_MS;
-        const hasOverlap = fullGapDuration < 0;
+        if (!currentTask.isGap) {
+          // Count only non-gap nodes to find the correct DOM element
+          const realNodeIndex =
+            tasks.slice(0, currentNodeIndex + 1).filter((t) => !t.isGap).length - 1;
+          if (realNodeIndex >= 0 && realNodeIndex < timelineNodes.length) {
+            currentRect = timelineNodes[realNodeIndex].getBoundingClientRect();
+          }
+        }
 
-        // Determine if it's a "Break" gap (past and > 20 minutes)
-        const isBreakGap = isPastGap && fullGapDuration > TWENTY_MINUTES_IN_MS;
+        if (!nextTask.isGap) {
+          // Count only non-gap nodes to find the correct DOM element
+          const realNodeIndex =
+            tasks.slice(0, nextNodeIndex + 1).filter((t) => !t.isGap).length - 1;
+          if (realNodeIndex >= 0 && realNodeIndex < timelineNodes.length) {
+            nextRect = timelineNodes[realNodeIndex].getBoundingClientRect();
+          }
+        }
 
-        // Calculate the bottom edge of current node and top edge of next node
-        const currentBottom = currentRect.bottom - containerRect.top;
-        const nextTop = nextRect.top - containerRect.top;
+        // Special handling for gap items
+        if (currentTask.isGap || nextTask.isGap) {
+          // Calculate positions for gap connectors
+          let currentBottom: number;
+          let nextTop: number;
+          let centerX: number;
 
-        // For consistent positioning of the connector line
-        const centerX = currentRect.left + currentRect.width / 2 - containerRect.left;
+          if (currentTask.isGap) {
+            // For a gap item, get the previous non-gap node's bottom position
+            const prevNonGapIndex = tasks
+              .slice(0, currentNodeIndex)
+              .reverse()
+              .findIndex((t) => !t.isGap);
+            const prevRealNodeIndex =
+              prevNonGapIndex >= 0 ? currentNodeIndex - 1 - prevNonGapIndex : -1;
 
-        // Calculate segment height based on gap
-        const baseHeight = nextTop - currentBottom;
-        // Make connectors taller for larger gaps (consider break gaps like large gaps for height)
-        const segmentHeight =
-          (isBreakGap || (hasLargeGap && !hasOverlap && !isPastGap)) && baseHeight > 0
-            ? baseHeight * 1.5 // Increase height for breaks and large future gaps
-            : hasFreeSlot && !hasOverlap && !isPastGap && baseHeight > 0
-              ? baseHeight * 1.2 // Slightly increase height for free slots
-              : baseHeight; // Default height
+            if (prevRealNodeIndex >= 0) {
+              const prevNonGapTask = tasks[prevRealNodeIndex];
+              const realPrevNodeIndex =
+                tasks.slice(0, prevRealNodeIndex + 1).filter((t) => !t.isGap).length - 1;
 
-        segments.push({
-          top: `${currentBottom}px`,
-          height: `${segmentHeight}px`,
-          startColor: getTaskColor(currentTask),
-          endColor: getTaskColor(nextTask),
-          left: `${centerX}px`,
-          // Dotted line for break gaps OR large future gaps
-          isDotted: isBreakGap || (hasLargeGap && !hasOverlap && isFutureGap),
-          timeGap: fullGapDuration > 0 ? fullGapDuration : undefined,
-          remainingDuration: remainingDuration > 0 ? remainingDuration : undefined,
-          hasFreeSlot: hasFreeSlot && !hasOverlap,
-          hasSmallGap: hasSmallGap && !hasOverlap,
-          hasLargeGap: hasLargeGap && !hasOverlap,
-          startTime: currentTaskEnd,
-          endTime: nextTask.startTime,
-          isPastGap: isPastGap,
-          isCurrentGap: isCurrentGap,
-          isFutureGap: isFutureGap,
-          isBreakGap: isBreakGap, // Pass break gap flag
-        });
+              if (realPrevNodeIndex >= 0 && realPrevNodeIndex < timelineNodes.length) {
+                const prevRect = timelineNodes[realPrevNodeIndex].getBoundingClientRect();
+                currentBottom = prevRect.bottom - containerRect.top;
+                centerX = prevRect.left + prevRect.width / 2 - containerRect.left;
+              } else {
+                // Fallback: Use some reasonable defaults
+                currentBottom = 0;
+                centerX = 20;
+              }
+            } else {
+              // Fallback: Use some reasonable defaults
+              currentBottom = 0;
+              centerX = 20;
+            }
+
+            // For the next item (if it's not a gap)
+            if (nextRect) {
+              nextTop = nextRect.top - containerRect.top;
+            } else {
+              // If next item is also a gap, approximate the position
+              // based on gap duration
+              const gapHeight = currentTask.duration
+                ? Math.min(100, currentTask.duration / 600000)
+                : 50;
+              nextTop = currentBottom + gapHeight;
+            }
+          } else {
+            // Current task is not a gap, but next task is
+            if (currentRect) {
+              currentBottom = currentRect.bottom - containerRect.top;
+              centerX = currentRect.left + currentRect.width / 2 - containerRect.left;
+            } else {
+              // Fallback: Use some reasonable defaults
+              currentBottom = 0;
+              centerX = 20;
+            }
+
+            // Approximate the next position for a gap
+            const gapHeight = nextTask.duration ? Math.min(100, nextTask.duration / 600000) : 50;
+            nextTop = currentBottom + gapHeight;
+          }
+
+          // Calculate gap duration for determining if it's a very long gap
+          const gapDuration = currentTask.isGap ? currentTask.duration : nextTask.duration || 0;
+          const isVeryLongGap = gapDuration >= SEVEN_HOURS_IN_MS;
+
+          // Create a dotted connector segment for the gap
+          segments.push({
+            top: `${currentBottom}px`,
+            height: `${nextTop - currentBottom}px`,
+            startColor: getTaskColor(currentTask),
+            endColor: getTaskColor(nextTask),
+            left: `${centerX}px`,
+            isDotted: true,
+            timeGap: gapDuration,
+            startTime: currentTask.startTime,
+            endTime: nextTask.startTime,
+            isForGap: true,
+          });
+
+          continue;
+        }
+
+        // Regular processing for non-gap items
+        if (currentRect && nextRect) {
+          // Calculate segment parameters for regular tasks
+          const currentBottom = currentRect.bottom - containerRect.top;
+          const nextTop = nextRect.top - containerRect.top;
+          const centerX = currentRect.left + currentRect.width / 2 - containerRect.left;
+
+          // Calculate time gap between tasks
+          const currentTaskEnd =
+            currentTask.startTime && currentTask.duration
+              ? addMilliseconds(currentTask.startTime, currentTask.duration)
+              : currentTask.startTime;
+
+          // Calculate gap duration
+          const fullGapDuration =
+            currentTaskEnd && nextTask.startTime
+              ? differenceInMilliseconds(nextTask.startTime, currentTaskEnd)
+              : 0;
+
+          // Determine if it should have a dotted line (large gaps)
+          const hasLargeGap = fullGapDuration > ONE_HOUR_IN_MS && fullGapDuration > 0;
+          const isVeryLongGap = fullGapDuration >= SEVEN_HOURS_IN_MS;
+
+          segments.push({
+            top: `${currentBottom}px`,
+            height: `${nextTop - currentBottom}px`,
+            startColor: getTaskColor(currentTask),
+            endColor: getTaskColor(nextTask),
+            left: `${centerX}px`,
+            isDotted: hasLargeGap,
+            timeGap: fullGapDuration > 0 ? fullGapDuration : undefined,
+            startTime: currentTaskEnd,
+            endTime: nextTask.startTime,
+          });
+        }
       }
 
       setConnectorSegments(segments);
@@ -224,6 +311,62 @@ export function CategorySection({
       resizeObserver.disconnect();
     };
   }, [tasks, category]); // Rerun effect when tasks or category change
+
+  // Function to render gap content based on gap type
+  const renderGapContent = (task: OptimalTask) => {
+    if (!task.isGap || !task.gapType) return null;
+
+    const gapType = task.gapType;
+    const duration = task.duration || 0;
+
+    switch (gapType) {
+      case 'break':
+        return (
+          <div className="flex items-center gap-1.5">
+            <Coffee className="h-3.5 w-3.5" />
+            <span>
+              Need a break of <em className="font-medium">{formatDuration(duration)}</em>?
+            </span>
+          </div>
+        );
+      case 'free-slot':
+        return (
+          <div className="flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5" />
+            <span>Free slot - {formatDuration(duration)}</span>
+            {task.gapStartTime && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-2 h-5 w-5 p-0 text-gray-400 hover:bg-transparent hover:text-gray-600"
+                onClick={() => onAddTask(task.gapStartTime)}
+                aria-label="Add task in free slot"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+        );
+      case 'get-ready':
+        return (
+          <div className="flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5" />
+            <span>Get ready for the next task!</span>
+          </div>
+        );
+      case 'major-strides':
+        return (
+          <div className="flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5" />
+            <span>
+              Major strides in <em className="font-medium">{formatDuration(duration)}</em>?
+            </span>
+          </div>
+        );
+      default:
+        return <span>{task.title}</span>;
+    }
+  };
 
   return (
     <div className="relative mb-16 min-h-8" id={`category-${category}`}>
@@ -260,96 +403,17 @@ export function CategorySection({
                 zIndex: 0,
               }}
             >
-              {/* For dotted lines, create individual dots with gradient color interpolation */}
+              {/* For dotted lines, use the new DottedConnector component */}
               {segment.isDotted && (
-                <>
-                  {Array.from({ length: 20 }).map((_, i) => {
-                    // Calculate position percentage (0 to 1)
-                    const position = i / 19;
-                    // Interpolate between the two colors based on position
-                    const color = interpolateColor(segment.startColor, segment.endColor, position);
-
-                    return (
-                      <div
-                        key={i}
-                        className="absolute left-0 w-full rounded-full"
-                        style={{
-                          backgroundColor: color,
-                          height: '4px',
-                          width: '3px',
-                          top: `calc(${position * 100}% - 2px)`,
-                          opacity: 0.85,
-                        }}
-                      />
-                    );
-                  })}
-                </>
+                <DottedConnector
+                  startColor={segment.startColor}
+                  endColor={segment.endColor}
+                  segmentHeight={parseFloat(segment.height)}
+                  isLongGap={segment.timeGap ? segment.timeGap >= SEVEN_HOURS_IN_MS : false}
+                  timeGap={segment.timeGap}
+                />
               )}
             </div>
-
-            {/* Label for the gap */}
-            {segment.timeGap && segment.timeGap > 0 && (
-              <div
-                className={cn(
-                  'absolute left-20 flex items-center gap-1.5 whitespace-nowrap text-xs text-gray-400',
-                  'rounded-md px-2 py-1',
-                  // Use darker background for past gaps (including breaks)
-                  segment.isPastGap ? 'bg-gray-800/40' : 'bg-gray-800/20',
-                )}
-                style={{
-                  // Position slightly above the exact middle of the connector
-                  top: `calc(${segment.top} + ${parseFloat(segment.height) / 2}px)`,
-                  transform: 'translateY(-50%)',
-                  zIndex: 10,
-                }}
-              >
-                {/* Show "Break" specifically for break gaps */}
-                {segment.isBreakGap ? ( // Use isBreakGap here
-                  <>
-                    <Coffee className="h-3.5 w-3.5" />
-                    <span>Break</span>
-                  </>
-                ) : /* Show "Free slot" or "Get ready" for current/future gaps */
-                segment.isCurrentGap ? (
-                  <>
-                    <Clock className="h-3.5 w-3.5" />
-                    Free slot - {formatDuration(segment.remainingDuration || 0)}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="ml-2 h-5 w-5 p-0 text-gray-400 hover:bg-transparent hover:text-gray-600"
-                      onClick={() =>
-                        segment.startTime ? onAddTask(segment.startTime) : onAddTask()
-                      }
-                      aria-label="Add task in free slot"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  </>
-                ) : segment.isFutureGap && segment.hasFreeSlot ? ( // Ensure it's a future gap for these labels
-                  <>
-                    <Clock className="h-3.5 w-3.5" />
-                    Free slot - {formatDuration(segment.timeGap || 0)}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="ml-2 h-5 w-5 p-0 text-gray-400 hover:bg-transparent hover:text-gray-600"
-                      onClick={() =>
-                        segment.startTime ? onAddTask(segment.startTime) : onAddTask()
-                      }
-                      aria-label="Add task in free slot"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  </>
-                ) : segment.isFutureGap && segment.hasSmallGap ? ( // Ensure it's a future gap
-                  <>
-                    <Clock className="h-3.5 w-3.5" />
-                    Get ready for the next task!
-                  </>
-                ) : null}
-              </div>
-            )}
           </div>
         ))}
 
@@ -360,49 +424,26 @@ export function CategorySection({
             const isLast = index === tasks.length - 1;
             const now = nowRef.current; // Get consistent 'now' time
 
-            // Calculate gap properties with PREVIOUS task for spacing
-            let isBreakGapWithPrevious = false;
-            let hasLargeGapWithPrevious = false;
-            let hasFreeSlotWithPrevious = false;
-            let isPreviousGapInPast = false; // Flag to check if the gap itself is in the past
-
-            const prevTask = index > 0 ? tasks[index - 1] : undefined;
-            if (prevTask && prevTask.startTime && task.startTime) {
-              const prevTaskEnd = prevTask.duration
-                ? addMilliseconds(prevTask.startTime, prevTask.duration)
-                : prevTask.startTime;
-
-              const timeGapWithPrevious = prevTaskEnd
-                ? differenceInMilliseconds(task.startTime, prevTaskEnd)
-                : 0;
-
-              // Check if the gap period is entirely in the past
-              const isPrevTaskEndInPast = prevTaskEnd && prevTaskEnd < now;
-              const isCurrentTaskStartInPast = task.startTime && task.startTime < now;
-              isPreviousGapInPast = isPrevTaskEndInPast && isCurrentTaskStartInPast;
-
-              // Determine gap sizes with previous task
-              hasLargeGapWithPrevious =
-                timeGapWithPrevious > ONE_HOUR_IN_MS && timeGapWithPrevious >= 0;
-              hasFreeSlotWithPrevious =
-                timeGapWithPrevious >= FIFTEEN_MINUTES_IN_MS && timeGapWithPrevious >= 0;
-
-              // Check if the gap with previous is a "Break" gap
-              isBreakGapWithPrevious =
-                isPreviousGapInPast && timeGapWithPrevious > TWENTY_MINUTES_IN_MS;
+            // Don't calculate margins for gap items - they will be styled differently
+            if (task.isGap) {
+              // Render a special gap item instead of a task card
+              return (
+                <div key={task.id} className="relative mb-2 ml-16 mt-2 flex items-center">
+                  {/* Gap content */}
+                  <div className="rounded-md bg-gray-800/20 px-3 py-2 text-xs text-gray-400">
+                    {renderGapContent(task)}
+                  </div>
+                </div>
+              );
             }
 
-            // Determine spacing class based on the gap with the previous task
-            const marginTopClass = isBreakGapWithPrevious
-              ? 'mt-12' // Past break gap > 20min
-              : hasLargeGapWithPrevious && !isPreviousGapInPast
-                ? 'mt-12' // Future/current large gap > 1hr
-                : hasFreeSlotWithPrevious && !hasLargeGapWithPrevious && !isPreviousGapInPast
-                  ? 'mt-8' // Future/current free slot >= 15min
-                  : 'mt-5'; // Default small gap or overlap
+            // Handle regular task items (not gaps)
+            const prevTask = index > 0 ? tasks[index - 1] : undefined;
 
-            // For connector segments, still calculate gap with next task (this is correct)
-            // (This calculation is done within the useEffect hook above)
+            // Calculate margin, skipping gap items in the calculation
+            // We only want margins between real tasks
+            const shouldApplyMargin = !task.isGap && (!prevTask || !prevTask.isGap);
+            const marginTopClass = shouldApplyMargin ? 'mt-5' : '';
 
             return (
               <div
@@ -410,7 +451,7 @@ export function CategorySection({
                 className={cn(
                   'rounded-3xl transition-colors duration-300',
                   highlightedTaskId === task.id && 'bg-muted ring-2 ring-border/50',
-                  // Apply calculated margin top class
+                  // Apply margin only for non-gap items when needed
                   marginTopClass,
                 )}
                 style={{
@@ -428,6 +469,7 @@ export function CategorySection({
               </div>
             );
           })}
+
           <Button
             onClick={() => onAddTask()}
             variant="ghost"
@@ -457,36 +499,4 @@ function formatDuration(ms: number): string {
   } else {
     return `${hours}h ${minutes}m`;
   }
-}
-
-// Function to interpolate between two hex colors
-function interpolateColor(colorA: string, colorB: string, amount: number): string {
-  // Ensure amount is between 0 and 1
-  const clampedAmount = Math.max(0, Math.min(1, amount));
-
-  const ah = parseInt(colorA.replace(/#/g, ''), 16);
-  const ar = ah >> 16;
-  const ag = (ah >> 8) & 0xff;
-  const ab = ah & 0xff;
-
-  const bh = parseInt(colorB.replace(/#/g, ''), 16);
-  const br = bh >> 16;
-  const bg = (bh >> 8) & 0xff;
-  const bb = bh & 0xff;
-
-  const rr = ar + clampedAmount * (br - ar);
-  const rg = ag + clampedAmount * (bg - ag);
-  const rb = ab + clampedAmount * (bb - ab);
-
-  // Ensure components are within [0, 255] and round them
-  const r = Math.round(Math.max(0, Math.min(255, rr)));
-  const g = Math.round(Math.max(0, Math.min(255, rg)));
-  const b = Math.round(Math.max(0, Math.min(255, rb)));
-
-  // Convert back to hex, ensuring 6 digits with padding if necessary
-  const hexR = r.toString(16).padStart(2, '0');
-  const hexG = g.toString(16).padStart(2, '0');
-  const hexB = b.toString(16).padStart(2, '0');
-
-  return `#${hexR}${hexG}${hexB}`;
 }
