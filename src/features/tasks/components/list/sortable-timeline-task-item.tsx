@@ -1,6 +1,6 @@
-import { toggleTaskCompletion, updateTask } from '@/features/tasks/store/tasks.store';
+import { tasksStore, toggleTaskCompletion, updateTask } from '@/features/tasks/store/tasks.store';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
-import { formatDistanceStrict } from 'date-fns';
+import { addMilliseconds, format, formatDistanceStrict } from 'date-fns';
 import { gsap } from 'gsap';
 import { Draggable } from 'gsap/Draggable';
 import { Blend } from 'lucide-react';
@@ -25,6 +25,44 @@ interface SortableTimelineTaskItemProps {
   nextTask?: OptimalTask;
   overlapsWithNext?: boolean;
 }
+
+// Helper function to get tasks sorted by start time for a given date
+const getSortedTasksForDate = (tasks: OptimalTask[], date: string): OptimalTask[] => {
+  return tasks
+    .filter((t) => t.taskDate === date)
+    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+};
+
+// Helper function to update subsequent tasks
+const updateSubsequentTasks = (
+  tasks: OptimalTask[],
+  currentTaskId: string,
+  newEndTime: Date,
+): void => {
+  const taskDate = format(newEndTime, 'yyyy-MM-dd');
+  const sortedTasks = getSortedTasksForDate(tasks, taskDate);
+
+  // Find the index of the current task
+  const currentIndex = sortedTasks.findIndex((t) => t.id === currentTaskId);
+  if (currentIndex === -1) return;
+
+  // Update all subsequent tasks
+  let lastEndTime = newEndTime;
+  for (let i = currentIndex + 1; i < sortedTasks.length; i++) {
+    const task = sortedTasks[i];
+    const newStartTime = new Date(lastEndTime);
+    const newNextStartTime = addMilliseconds(newStartTime, task.duration || ONE_HOUR_IN_MS);
+
+    // Update the task's times
+    updateTask(task.id, {
+      startTime: newStartTime,
+      nextStartTime: newNextStartTime,
+      time: format(newStartTime, 'HH:mm'),
+    });
+
+    lastEndTime = newNextStartTime;
+  }
+};
 
 export const SortableTimelineTaskItem = ({
   task,
@@ -114,8 +152,18 @@ export const SortableTimelineTaskItem = ({
         const finalHeight = gsap.getProperty(containerRef.current, 'height') as number;
         const newDuration = heightToDuration(finalHeight);
 
-        // Update task in store
-        updateTask(task.id, { duration: newDuration });
+        // Calculate new end time
+        const newEndTime = new Date(task.startTime.getTime() + newDuration);
+
+        // Update current task duration
+        updateTask(task.id, {
+          duration: newDuration,
+          nextStartTime: newEndTime,
+        });
+
+        // Update subsequent tasks
+        updateSubsequentTasks(tasksStore.state.tasks, task.id, newEndTime);
+
         setCurrentDuration(newDuration);
         setResizing(false);
       },
@@ -133,83 +181,100 @@ export const SortableTimelineTaskItem = ({
       : undefined;
 
   return (
-    <div
-      ref={containerRef}
-      className="group relative mb-0"
-      data-id={task.id}
-      style={{
-        height: MIN_HEIGHT_PX + (task.duration || FIVE_MINUTES_MS) / (60 * 1000),
-        zIndex: resizing ? 50 : 'auto',
-      }}
-    >
-      {/* Timeline Item */}
-      <div ref={timelineNodeRef} className="absolute left-2 -ml-4 flex h-full w-full">
-        <div className="h-full w-full">
-          <TimelineItem
-            priority={task.priority}
-            startTime={task.startTime}
-            nextStartTime={
-              currentEndTime || new Date(Date.now() + (task.duration || ONE_HOUR_IN_MS))
-            }
-            completed={task.completed}
-            strikethrough={task.completed}
-            onPriorityChange={(priority) => updateTask(task.id, { priority })}
-            onCompletedChange={() => toggleTaskCompletion(task.id)}
-            isLastItem={isLastItem}
-            fixedHeight={false}
-            emoji={task.emoji}
-            onEditTask={() => onEdit(task)}
-            taskId={task.id}
-            duration={task.duration}
-            nextTaskPriority={nextTask?.priority}
-          />
+    <>
+      <div
+        ref={containerRef}
+        className="group relative mb-0"
+        data-id={task.id}
+        style={{
+          height: MIN_HEIGHT_PX + (task.duration || FIVE_MINUTES_MS) / (60 * 1000),
+          zIndex: resizing ? 50 : 'auto',
+        }}
+      >
+        {/* Timeline Item */}
+        <div ref={timelineNodeRef} className="absolute left-2 -ml-4 flex h-full w-full">
+          <div className="h-full w-full">
+            <TimelineItem
+              priority={task.priority}
+              startTime={task.startTime}
+              nextStartTime={
+                currentEndTime || new Date(Date.now() + (task.duration || ONE_HOUR_IN_MS))
+              }
+              completed={task.completed}
+              strikethrough={task.completed}
+              onPriorityChange={(priority) => updateTask(task.id, { priority })}
+              onCompletedChange={() => toggleTaskCompletion(task.id)}
+              isLastItem={isLastItem}
+              fixedHeight={false}
+              emoji={task.emoji}
+              onEditTask={() => onEdit(task)}
+              taskId={task.id}
+              duration={task.duration}
+              nextTaskPriority={nextTask?.priority}
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Task Card */}
-      <div ref={taskCardRef} className="ml-16 h-full w-full">
-        <TaskItem task={task} onEdit={onEdit} />
+        {/* Task Card */}
+        <div ref={taskCardRef} className="ml-16 h-full w-full">
+          <TaskItem task={task} onEdit={onEdit} />
 
-        {/* Overlap indicator */}
-        {overlapsWithNext && !task.completed && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className={`-bottom-18 absolute right-10 z-10 flex items-center gap-1 text-xs text-yellow-500`}
-              >
-                <Blend className="h-4 w-4" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent className="px-1.5 py-1">
-              <span className="text-[10px]">Time overlap</span>
-            </TooltipContent>
-          </Tooltip>
+          {/* Overlap indicator */}
+          {overlapsWithNext && !task.completed && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className={`-bottom-18 absolute right-10 z-10 flex items-center gap-1 text-xs text-yellow-500`}
+                >
+                  <Blend className="h-4 w-4" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="px-1.5 py-1">
+                <span className="text-[10px]">Time overlap</span>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+
+        {/* Bottom resize handle */}
+        <div className="absolute inset-x-0 -bottom-1 z-30 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+          <div
+            ref={bottomHandleRef}
+            className="relative h-[4px] w-[50px] cursor-col-resize rounded-full bg-blue-500/50 transition-colors duration-150 hover:bg-blue-500"
+            style={{ transform: 'translateY(50%)' }}
+          >
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-[6px] w-[2px] rounded-full bg-blue-500/80" />
+            </div>
+          </div>
+        </div>
+
+        {/* Invisible proxy element for GSAP dragging */}
+        <div ref={bottomProxyRef} className="hidden" />
+
+        {/* Tooltip showing duration while resizing */}
+        {resizing && (
+          <div className="absolute -bottom-6 right-0 z-50 rounded bg-black/70 px-2 py-1 text-xs text-white">
+            <div className="flex flex-col">
+              <span>
+                {formatTime(task.startTime)} → {formatTime(currentEndTime)}
+              </span>
+              <span className="text-[10px] text-gray-300">{formatDuration(currentDuration)}</span>
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Bottom resize handle */}
-      <div className="absolute inset-x-0 -bottom-1 z-30 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+      {/* Invisible placeholder for last item */}
+      {isLastItem && (
         <div
-          ref={bottomHandleRef}
-          className="h-[3px] w-[30px] cursor-col-resize rounded-full bg-blue-500/50 transition-colors duration-150 hover:bg-blue-500"
-          style={{ transform: 'translateY(50%)' }}
+          className="pointer-events-none h-[200px]"
+          aria-hidden="true"
+          style={{
+            opacity: 0,
+          }}
         />
-      </div>
-
-      {/* Invisible proxy element for GSAP dragging */}
-      <div ref={bottomProxyRef} className="hidden" />
-
-      {/* Tooltip showing duration while resizing */}
-      {resizing && (
-        <div className="absolute -bottom-6 right-0 z-50 rounded bg-black/70 px-2 py-1 text-xs text-white">
-          <div className="flex flex-col">
-            <span>
-              {formatTime(task.startTime)} → {formatTime(currentEndTime)}
-            </span>
-            <span className="text-[10px] text-gray-300">{formatDuration(currentDuration)}</span>
-          </div>
-        </div>
       )}
-    </div>
+    </>
   );
 };
