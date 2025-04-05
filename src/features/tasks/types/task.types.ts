@@ -57,6 +57,11 @@ export interface TasksState {
   focusedTaskId: string | null;
   editingTaskId: string | null;
   highlightedTaskId: string | null;
+  resizingState: {
+    taskId: string | null;
+    temporaryDuration: number | null;
+    temporaryEndTime: Date | null;
+  };
 }
 
 export interface DragHandleProps {

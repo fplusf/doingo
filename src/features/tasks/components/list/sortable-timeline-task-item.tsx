@@ -1,4 +1,10 @@
-import { tasksStore, toggleTaskCompletion, updateTask } from '@/features/tasks/store/tasks.store';
+import {
+  clearResizingState,
+  setResizingState,
+  tasksStore,
+  toggleTaskCompletion,
+  updateTask,
+} from '@/features/tasks/store/tasks.store';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { addMilliseconds, format, formatDistanceStrict } from 'date-fns';
 import { gsap } from 'gsap';
@@ -76,10 +82,22 @@ export const SortableTimelineTaskItem = ({
   const taskCardRef = useRef<HTMLDivElement>(null);
   const bottomHandleRef = useRef<HTMLDivElement>(null);
   const bottomProxyRef = useRef<HTMLDivElement>(null);
+  const scrollStartPositionRef = useRef(0);
 
   const [resizing, setResizing] = useState(false);
-  const [currentDuration, setCurrentDuration] = useState<number | undefined>(task.duration);
   const lastBottomY = useRef(0);
+
+  // Get current resizing state from store
+  const resizingState = tasksStore.state.resizingState;
+  const isCurrentlyResizing = resizingState.taskId === task.id;
+
+  // Get the effective duration and end time (either from resizing state or task)
+  const effectiveDuration = isCurrentlyResizing
+    ? resizingState.temporaryDuration || task.duration
+    : task.duration;
+  const effectiveEndTime = isCurrentlyResizing
+    ? resizingState.temporaryEndTime || task.nextStartTime
+    : task.nextStartTime;
 
   // Format time for display
   const formatTime = (date?: Date): string => {
@@ -124,14 +142,28 @@ export const SortableTimelineTaskItem = ({
     const updateBottom = function (this: Draggable) {
       if (!containerRef.current) return;
 
-      const diffY = this.y - lastBottomY.current;
+      // Get the current scroll position
+      const scrollContainer = document.querySelector('.scroll-area-viewport') as HTMLDivElement;
+      const scrollTop = scrollContainer?.scrollTop || 0;
+
+      // Adjust the drag calculation by the scroll offset
+      const adjustedY = this.y + (scrollTop - scrollStartPositionRef.current);
+      const diffY = adjustedY - lastBottomY.current;
       const currentHeight = gsap.getProperty(containerRef.current, 'height') as number;
       const newHeight = Math.max(MIN_HEIGHT_PX, Math.min(MAX_HEIGHT_PX, currentHeight + diffY));
 
       gsap.set(containerRef.current, { height: newHeight });
-      setCurrentDuration(heightToDuration(newHeight));
+      const newDuration = heightToDuration(newHeight);
 
-      lastBottomY.current = this.y;
+      // Calculate new end time
+      if (task.startTime) {
+        const newEndTime = new Date(task.startTime.getTime() + newDuration);
+
+        // Update resizing state in store
+        setResizingState(task.id, newDuration, newEndTime);
+      }
+
+      lastBottomY.current = adjustedY;
     };
 
     // Create bottom handle dragger
@@ -141,30 +173,48 @@ export const SortableTimelineTaskItem = ({
       cursor: 'ns-resize',
       onPress: function (this: Draggable) {
         setResizing(true);
+        // Store the initial scroll position
+        const scrollContainer = document.querySelector('.scroll-area-viewport') as HTMLDivElement;
+        scrollStartPositionRef.current = scrollContainer?.scrollTop || 0;
         lastBottomY.current = this.y;
-        setCurrentDuration(task.duration);
+
+        // Initialize resizing state with current task values from the store
+        const currentTask = tasksStore.state.tasks.find((t) => t.id === task.id);
+        if (currentTask) {
+          setResizingState(task.id, currentTask.duration, currentTask.nextStartTime);
+        }
+
+        // Disable scrolling
+        if (scrollContainer) {
+          scrollContainer.style.overflow = 'hidden';
+        }
       },
       onDrag: updateBottom,
       onRelease: function () {
         if (!containerRef.current || !task.startTime) return;
 
-        // Calculate final duration from height
-        const finalHeight = gsap.getProperty(containerRef.current, 'height') as number;
-        const newDuration = heightToDuration(finalHeight);
+        // Re-enable scrolling
+        const scrollContainer = document.querySelector('.scroll-area-viewport') as HTMLDivElement;
+        if (scrollContainer) {
+          scrollContainer.style.overflow = '';
+        }
 
-        // Calculate new end time
-        const newEndTime = new Date(task.startTime.getTime() + newDuration);
+        // Get final values from resizing state
+        const { temporaryDuration, temporaryEndTime } = tasksStore.state.resizingState;
 
-        // Update current task duration
-        updateTask(task.id, {
-          duration: newDuration,
-          nextStartTime: newEndTime,
-        });
+        if (temporaryDuration && temporaryEndTime) {
+          // Update task with final values
+          updateTask(task.id, {
+            duration: temporaryDuration,
+            nextStartTime: temporaryEndTime,
+          });
 
-        // Update subsequent tasks
-        updateSubsequentTasks(tasksStore.state.tasks, task.id, newEndTime);
+          // Update subsequent tasks
+          updateSubsequentTasks(tasksStore.state.tasks, task.id, temporaryEndTime);
+        }
 
-        setCurrentDuration(newDuration);
+        // Clear resizing state
+        clearResizingState();
         setResizing(false);
       },
     });
@@ -174,12 +224,6 @@ export const SortableTimelineTaskItem = ({
     };
   }, [task.id, task.startTime]);
 
-  // Calculate current end time based on current duration
-  const currentEndTime =
-    task.startTime && currentDuration
-      ? new Date(task.startTime.getTime() + currentDuration)
-      : undefined;
-
   return (
     <>
       <div
@@ -187,7 +231,7 @@ export const SortableTimelineTaskItem = ({
         className="group relative mb-0"
         data-id={task.id}
         style={{
-          height: MIN_HEIGHT_PX + (task.duration || FIVE_MINUTES_MS) / (60 * 1000),
+          height: MIN_HEIGHT_PX + (effectiveDuration || FIVE_MINUTES_MS) / (60 * 1000),
           zIndex: resizing ? 50 : 'auto',
         }}
       >
@@ -197,9 +241,7 @@ export const SortableTimelineTaskItem = ({
             <TimelineItem
               priority={task.priority}
               startTime={task.startTime}
-              nextStartTime={
-                currentEndTime || new Date(Date.now() + (task.duration || ONE_HOUR_IN_MS))
-              }
+              nextStartTime={effectiveEndTime}
               completed={task.completed}
               strikethrough={task.completed}
               onPriorityChange={(priority) => updateTask(task.id, { priority })}
@@ -209,7 +251,7 @@ export const SortableTimelineTaskItem = ({
               emoji={task.emoji}
               onEditTask={() => onEdit(task)}
               taskId={task.id}
-              duration={task.duration}
+              duration={effectiveDuration}
               nextTaskPriority={nextTask?.priority}
             />
           </div>
@@ -217,7 +259,14 @@ export const SortableTimelineTaskItem = ({
 
         {/* Task Card */}
         <div ref={taskCardRef} className="ml-16 h-full w-full">
-          <TaskItem task={task} onEdit={onEdit} />
+          <TaskItem
+            task={{
+              ...task,
+              duration: effectiveDuration,
+              nextStartTime: effectiveEndTime,
+            }}
+            onEdit={onEdit}
+          />
 
           {/* Overlap indicator */}
           {overlapsWithNext && !task.completed && (
@@ -236,36 +285,23 @@ export const SortableTimelineTaskItem = ({
           )}
         </div>
 
-        {/* Bottom resize handle */}
-        <div className="absolute inset-x-0 -bottom-1 z-30 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+        {/* Bottom resize handle with hover area */}
+        <div className="group/resize absolute inset-x-0 bottom-0 z-30 -mb-2 h-4">
           <div
             ref={bottomHandleRef}
-            className="relative h-[4px] w-[50px] cursor-col-resize rounded-full bg-blue-500/50 transition-colors duration-150 hover:bg-blue-500"
-            style={{ transform: 'translateY(50%)' }}
+            className={`absolute inset-x-[10px] bottom-1 h-1 cursor-ns-resize transition-all duration-200 ${resizing ? 'bg-gray-500/60 opacity-100' : 'opacity-0 group-hover/resize:bg-gray-500/40 group-hover/resize:opacity-100'}`}
           >
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="h-[6px] w-[2px] rounded-full bg-blue-500/80" />
-            </div>
+            <div
+              className={`absolute inset-x-0 -bottom-px h-px bg-gray-500/50 ${resizing ? 'opacity-100' : 'opacity-0 group-hover/resize:opacity-100'}`}
+            />
           </div>
         </div>
 
         {/* Invisible proxy element for GSAP dragging */}
         <div ref={bottomProxyRef} className="hidden" />
-
-        {/* Tooltip showing duration while resizing */}
-        {resizing && (
-          <div className="absolute -bottom-6 right-0 z-50 rounded bg-black/70 px-2 py-1 text-xs text-white">
-            <div className="flex flex-col">
-              <span>
-                {formatTime(task.startTime)} → {formatTime(currentEndTime)}
-              </span>
-              <span className="text-[10px] text-gray-300">{formatDuration(currentDuration)}</span>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Invisible placeholder for last item */}
+      {/* Invisible placeholder for last item for proper  */}
       {isLastItem && (
         <div
           className="pointer-events-none h-[200px]"

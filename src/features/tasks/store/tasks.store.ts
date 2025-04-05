@@ -33,6 +33,11 @@ const initialState: TasksState = {
   focusedTaskId: null,
   editingTaskId: null,
   highlightedTaskId: null,
+  resizingState: {
+    taskId: null,
+    temporaryDuration: null,
+    temporaryEndTime: null,
+  },
 };
 
 export const tasksStore = new Store<TasksState>(initialState);
@@ -188,6 +193,11 @@ export const clearTasks = () => {
     focusedTaskId: null,
     editingTaskId: null,
     highlightedTaskId: null,
+    resizingState: {
+      taskId: null,
+      temporaryDuration: null,
+      temporaryEndTime: null,
+    },
   }));
 };
 
@@ -645,4 +655,31 @@ export const pushForwardAffectedTasks = (
 
 const parseDateTime = (dateStr: string, timeStr: string): Date => {
   return parse(`${dateStr} ${timeStr}`, 'yyyy-MM-dd HH:mm', new Date());
+};
+
+// Resizing state management functions
+export const setResizingState = (
+  taskId: string | null,
+  temporaryDuration: number | null = null,
+  temporaryEndTime: Date | null = null,
+) => {
+  tasksStore.setState((state) => ({
+    ...state,
+    resizingState: {
+      taskId,
+      temporaryDuration,
+      temporaryEndTime,
+    },
+  }));
+};
+
+export const clearResizingState = () => {
+  tasksStore.setState((state) => ({
+    ...state,
+    resizingState: {
+      taskId: null,
+      temporaryDuration: null,
+      temporaryEndTime: null,
+    },
+  }));
 };
