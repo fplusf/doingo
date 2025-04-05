@@ -418,7 +418,7 @@ export function CategorySection({
         ))}
 
         {/* Task Cards with Timeline Items */}
-        <div className="flex flex-col">
+        <div className="flex h-full flex-col">
           {tasks.map((task, index) => {
             const isFirst = index === 0;
             const isLast = index === tasks.length - 1;
@@ -449,13 +449,11 @@ export function CategorySection({
               <div
                 key={task.id}
                 className={cn(
-                  'rounded-3xl transition-colors duration-300',
+                  'h-full rounded-3xl transition-colors duration-300',
                   highlightedTaskId === task.id && 'bg-muted ring-2 ring-border/50',
-                  // Apply margin only for non-gap items when needed
                   marginTopClass,
                 )}
                 style={{
-                  // Add margin to the first item to match the timeline start
                   ...(isFirst && { marginTop: '24px' }),
                 }}
               >

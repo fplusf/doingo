@@ -9,3 +9,15 @@ export const weeklyCalendarSchema = z.object({
 });
 
 export type WeeklyCalendarSearch = z.infer<typeof weeklyCalendarSchema>;
+
+export const TabEnum = z.enum(['document', 'both', 'canvas']).default('both');
+
+export const globalSearchParamsSchema = z.object({
+  tab: z.optional(TabEnum),
+});
+
+export const tasksSearchParamsSchema = z.object({
+  week: z.optional(z.string()),
+  date: z.optional(z.string()),
+  highlight: z.optional(z.string()),
+});

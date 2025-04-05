@@ -14,20 +14,17 @@ import {
   FIFTEEN_MINUTES_IN_MS,
   ONE_HOUR_IN_MS,
   OptimalTask,
+  TWENTY_MINUTES_IN_MS,
   TaskCategory,
   TaskPriority,
-  TWENTY_MINUTES_IN_MS,
 } from '@/features/tasks/types/task.types';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
-// Temporarily removed DnD imports and functionality for stability and performance optimization
-// To re-enable, restore the following imports and their related components:
-// import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
-// import { restrictToWindowEdges } from '@dnd-kit/modifiers';
-// import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { DndContext, DragEndEvent, closestCenter } from '@dnd-kit/core';
+import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { addMilliseconds, differenceInMilliseconds, format, parse } from 'date-fns';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { ForwardedRef, useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { TasksRoute } from '../../../../routes/routes';
 import { TaskDialog } from '../schedule/dialog';
@@ -35,110 +32,79 @@ import { CategorySection } from './category-section';
 import { TaskMoveToast } from './task-move-toast';
 
 interface DayContainerProps {
-  ref?: React.RefObject<{ setIsCreating: (value: boolean) => void }>;
+  // Props if any
 }
 
 // Helper function to check if two time ranges overlap
 const hasTimeOverlap = (task1: OptimalTask, task2: OptimalTask) => {
   if (!task1.time || !task2.time) return false;
-
   const [start1] = task1.time.split('—');
   const [start2] = task2.time.split('—');
-
+  if (!start1 || !start2) return false; // Ensure start times exist
   const [hours1, minutes1] = start1.split(':').map(Number);
   const [hours2, minutes2] = start2.split(':').map(Number);
-
+  if (isNaN(hours1) || isNaN(minutes1) || isNaN(hours2) || isNaN(minutes2)) return false; // Validate numbers
   const startTime1 = hours1 * 60 + minutes1;
   const startTime2 = hours2 * 60 + minutes2;
-
   const duration1 = task1.duration || ONE_HOUR_IN_MS;
   const duration2 = task2.duration || ONE_HOUR_IN_MS;
-
-  const endTime1 = startTime1 + duration1 / (60 * 1000); // Convert ms to minutes
-  const endTime2 = startTime2 + duration2 / (60 * 1000);
-
+  const endTime1 = startTime1 + duration1 / 60000; // Convert ms to minutes
+  const endTime2 = startTime2 + duration2 / 60000;
   return startTime1 < endTime2 && endTime1 > startTime2;
 };
 
 // Sort tasks within each category by start time
 const sortByStartTime = (tasks: OptimalTask[]) => {
-  return tasks.sort((a, b) => {
-    const aTime = a.time?.split('—')[0] || '00:00';
-    const bTime = b.time?.split('—')[0] || '00:00';
-    const [aHours, aMinutes] = aTime.split(':').map(Number);
-    const [bHours, bMinutes] = bTime.split(':').map(Number);
-
-    // Convert to minutes for easier comparison
-    const aInMinutes = aHours * 60 + aMinutes;
-    const bInMinutes = bHours * 60 + bMinutes;
-
-    return aInMinutes - bInMinutes;
+  return [...tasks].sort((a, b) => {
+    // Use spread to avoid mutating original
+    const aTime = a.startTime || new Date(0); // Use startTime Date object
+    const bTime = b.startTime || new Date(0);
+    return aTime.getTime() - bTime.getTime();
   });
 };
 
 // Function to process tasks and insert gap items
 const processTasksWithGaps = (tasks: OptimalTask[]): OptimalTask[] => {
-  if (tasks.length <= 1) return tasks;
+  if (!tasks || tasks.length === 0) return []; // Handle empty or null input
 
   const now = new Date();
   const result: OptimalTask[] = [];
+  const sortedTasks = sortByStartTime(tasks.filter((t) => t?.startTime)); // Filter tasks without startTime
 
-  // Sort tasks by start time
-  const sortedTasks = sortByStartTime([...tasks]);
+  if (sortedTasks.length === 0) return []; // Return empty if no valid tasks
 
-  // Add first task
-  if (sortedTasks.length > 0) {
-    result.push(sortedTasks[0]);
-  }
+  result.push(sortedTasks[0]);
 
-  // Analyze gaps between tasks and insert gap items where needed
   for (let i = 0; i < sortedTasks.length - 1; i++) {
     const currentTask = sortedTasks[i];
     const nextTask = sortedTasks[i + 1];
 
-    if (!currentTask.startTime || !nextTask.startTime) {
-      result.push(nextTask);
-      continue;
-    }
+    // Ensure startTimes exist
+    if (!currentTask.startTime || !nextTask.startTime) continue;
 
-    const currentTaskEnd = currentTask.duration
-      ? addMilliseconds(currentTask.startTime, currentTask.duration)
-      : currentTask.startTime;
-
+    const currentTaskEnd = addMilliseconds(currentTask.startTime, currentTask.duration || 0);
     const gapDuration = differenceInMilliseconds(nextTask.startTime, currentTaskEnd);
 
-    // Check if the gap is in the past, present, or future
     const isCurrentTaskEndInPast = currentTaskEnd < now;
     const isNextTaskStartInPast = nextTask.startTime < now;
     const isNextTaskStartInFuture = nextTask.startTime > now;
-
     const isPastGap = isCurrentTaskEndInPast && isNextTaskStartInPast;
-    const isCurrentGap = isCurrentTaskEndInPast && isNextTaskStartInFuture;
     const isFutureGap = !isCurrentTaskEndInPast && !isNextTaskStartInPast;
-
-    // Check gap size
-    const hasLargeGap = gapDuration > ONE_HOUR_IN_MS && gapDuration > 0;
     const hasFreeSlot = gapDuration >= FIFTEEN_MINUTES_IN_MS && gapDuration > 0;
     const hasSmallGap = gapDuration > 0 && gapDuration < FIFTEEN_MINUTES_IN_MS;
     const isBreakGap = isPastGap && gapDuration > TWENTY_MINUTES_IN_MS;
 
-    // Only insert gap for significant gaps (15+ minutes)
     if (hasFreeSlot) {
-      // Determine gap type
       let gapType: 'break' | 'free-slot' | 'get-ready' | 'major-strides' = 'free-slot';
+      if (isBreakGap) gapType = 'break';
+      else if (hasSmallGap && isFutureGap) gapType = 'get-ready';
 
-      if (isBreakGap) {
-        gapType = 'break';
-      } else if (hasSmallGap && isFutureGap) {
-        gapType = 'get-ready';
-      }
-
-      // Create a virtual gap item
+      const gapEndTime = new Date(currentTaskEnd.getTime() + gapDuration);
       const gapItem: OptimalTask = {
         id: `gap-${uuidv4()}`,
         title: `Gap - ${gapType}`,
         startTime: currentTaskEnd,
-        nextStartTime: nextTask.startTime,
+        nextStartTime: nextTask.startTime, // Should be gapEndTime? Let's keep nextTask.startTime for now
         duration: gapDuration,
         completed: false,
         isFocused: false,
@@ -149,371 +115,400 @@ const processTasksWithGaps = (tasks: OptimalTask[]): OptimalTask[] => {
         isGap: true,
         gapType: gapType,
         gapStartTime: currentTaskEnd,
-        gapEndTime: nextTask.startTime,
+        gapEndTime: nextTask.startTime, // Matches nextStartTime
       };
-
       result.push(gapItem);
     }
-
-    // Add the next task
     result.push(nextTask);
   }
 
-  // Check for "major strides" gap after the last task
-  if (sortedTasks.length > 0) {
-    const lastTask = sortedTasks[sortedTasks.length - 1];
+  // Add major strides gap (logic seems okay, ensure lastTask exists)
+  const lastTask = sortedTasks[sortedTasks.length - 1];
+  if (lastTask && lastTask.startTime && lastTask.duration) {
+    const lastTaskEnd = addMilliseconds(lastTask.startTime, lastTask.duration);
+    const endOfDay = new Date(lastTaskEnd);
+    endOfDay.setHours(22, 0, 0, 0);
+    const remainingTime = differenceInMilliseconds(endOfDay, lastTaskEnd);
 
-    if (lastTask.startTime && lastTask.duration) {
-      const lastTaskEnd = addMilliseconds(lastTask.startTime, lastTask.duration);
-      const endOfDay = new Date(lastTaskEnd);
-      endOfDay.setHours(22, 0, 0, 0); // Set to 10:00 PM
-
-      const remainingTime = differenceInMilliseconds(endOfDay, lastTaskEnd);
-      if (remainingTime > ONE_HOUR_IN_MS) {
-        const majorStridesGap: OptimalTask = {
-          id: `gap-${uuidv4()}`,
-          title: 'Gap - major-strides',
-          startTime: lastTaskEnd,
-          nextStartTime: endOfDay,
-          duration: remainingTime,
-          completed: false,
-          isFocused: false,
-          taskDate: lastTask.taskDate,
-          time: `${format(lastTaskEnd, 'HH:mm')}—${format(endOfDay, 'HH:mm')}`,
-          priority: 'none',
-          category: lastTask.category || 'work',
-          isGap: true,
-          gapType: 'major-strides',
-          gapStartTime: lastTaskEnd,
-          gapEndTime: endOfDay,
-        };
-
-        result.push(majorStridesGap);
-      }
+    if (remainingTime > ONE_HOUR_IN_MS) {
+      const majorStridesGap: OptimalTask = {
+        id: `gap-${uuidv4()}`,
+        title: 'Gap - major-strides',
+        startTime: lastTaskEnd,
+        nextStartTime: endOfDay,
+        duration: remainingTime,
+        completed: false,
+        isFocused: false,
+        taskDate: lastTask.taskDate,
+        time: `${format(lastTaskEnd, 'HH:mm')}—${format(endOfDay, 'HH:mm')}`,
+        priority: 'none',
+        category: lastTask.category || 'work',
+        isGap: true,
+        gapType: 'major-strides',
+        gapStartTime: lastTaskEnd,
+        gapEndTime: endOfDay,
+      };
+      result.push(majorStridesGap);
     }
   }
 
   return result;
 };
 
-export const TasksList = React.forwardRef<
-  { setIsCreating: (value: boolean) => void },
-  Omit<DayContainerProps, 'ref'>
->((props, ref) => {
-  const allTasks = useStore(tasksStore, (state) => state.tasks);
-  const selectedDate = useStore(tasksStore, (state) => state.selectedDate);
-  const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
-  const highlightedTaskId = useStore(tasksStore, (state) => state.highlightedTaskId);
-  const search = useSearch({ from: TasksRoute.fullPath });
+interface TasksListHandle {
+  setIsCreating: (value: boolean) => void;
+}
 
-  const [isCreating, setIsCreating] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<TaskCategory>('work');
-  const [editingTask, setEditingTask] = useState<string | null>(null);
-  const [startTime, setStartTime] = useState(getDefaultStartTime());
-  const [endTime, setEndTime] = useState(getDefaultEndTime());
-  const [duration, setDuration] = useState<number>(ONE_HOUR_IN_MS);
-  const [dueDate, setDueDate] = useState<Date>();
-  const [newTask, setNewTask] = useState({
-    title: '',
-    emoji: '',
-    priority: 'none' as TaskPriority,
-    category: 'work' as TaskCategory,
-  });
-  // Removed activeId state since drag and drop is disabled
-  // Toast state for task moved notification
-  const [showMoveToast, setShowMoveToast] = useState(false);
-  const [movedTaskInfo, setMovedTaskInfo] = useState<{
-    title: string;
-    id: string;
-    destinationDate: string | null;
-  }>({
-    title: '',
-    id: '',
-    destinationDate: null,
-  });
+export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
+  (props, ref: ForwardedRef<TasksListHandle>) => {
+    // Added explicit type for ref
+    const allTasks = useStore(tasksStore, (state) => state.tasks);
+    const selectedDate = useStore(tasksStore, (state) => state.selectedDate);
+    const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
+    const highlightedTaskId = useStore(tasksStore, (state) => state.highlightedTaskId);
+    const search = useSearch({ from: TasksRoute.fullPath });
 
-  // Keep track of the previous tasks to detect changes
-  const prevTasksRef = useRef<OptimalTask[]>([]);
-
-  const navigate = useNavigate();
-  const tasksRef = useRef<HTMLDivElement | null>(null);
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-
-  // Update the selected date when the URL parameter changes
-  React.useEffect(() => {
-    if (search.date && search.date !== selectedDate) {
-      setSelectedDate(search.date);
-    }
-  }, [search.date, selectedDate]);
-
-  // Get basic tasks without gaps
-  const basicTasks = React.useMemo(() => {
-    return getTasksByDate(selectedDate);
-  }, [selectedDate, allTasks]);
-
-  // Process tasks and insert gaps
-  const tasksWithGaps = React.useMemo(() => {
-    return processTasksWithGaps(basicTasks);
-  }, [basicTasks]);
-
-  // Listen for changes in tasks and detect when a date has been changed
-  React.useEffect(() => {
-    // Find the task that's currently being edited
-    if (editingTaskId) {
-      const currentTask = allTasks.find((task) => task.id === editingTaskId);
-      const prevTask = prevTasksRef.current.find((task) => task.id === editingTaskId);
-
-      // If we found both the current and previous versions of the task
-      if (currentTask && prevTask) {
-        const currentDateStr = currentTask.taskDate
-          ? format(new Date(currentTask.taskDate), 'yyyy-MM-dd')
-          : null;
-        const prevDateStr = prevTask.taskDate
-          ? format(new Date(prevTask.taskDate), 'yyyy-MM-dd')
-          : null;
-
-        // If the date has changed and the task is no longer on the current date
-        if (
-          currentDateStr &&
-          prevDateStr &&
-          currentDateStr !== prevDateStr &&
-          prevDateStr === selectedDate
-        ) {
-          // Show toast notification
-          setMovedTaskInfo({
-            title: currentTask.title || 'Task',
-            id: currentTask.id,
-            destinationDate: currentDateStr,
-          });
-          setShowMoveToast(true);
-        }
-      }
-    }
-
-    // Update our reference to the current tasks
-    prevTasksRef.current = [...allTasks];
-  }, [allTasks, editingTaskId, selectedDate]);
-
-  // Remove the local highlightedTaskId state since we're using the store
-  React.useEffect(() => {
-    if (movedTaskInfo.id && movedTaskInfo.destinationDate === selectedDate) {
-      highlightTask(movedTaskInfo.id);
-      setMovedTaskInfo({ title: '', id: '', destinationDate: null });
-    }
-  }, [selectedDate, movedTaskInfo]);
-
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F') {
-        navigate({ to: '..' });
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate]);
-
-  // Expose setIsCreating through ref
-  React.useImperativeHandle(ref, () => ({
-    setIsCreating: (value: boolean) => {
-      setIsCreating(value);
-      if (value) {
-        setNewTask({
-          title: '',
-          emoji: '',
-          priority: 'none',
-          category: 'work',
-        });
-        setStartTime(getDefaultStartTime());
-        setEndTime(getDefaultEndTime());
-        setDuration(ONE_HOUR_IN_MS);
-        setDueDate(undefined);
-        setActiveCategory('work');
-      }
-    },
-  }));
-
-  // Group tasks by category and sort by start time, adding overlap information
-  const tasksByCategory = React.useMemo(() => {
-    // Use the tasks with gaps
-    const sortedTasks = tasksWithGaps;
-
-    // Track overlaps in a Map - exclude gaps from overlap checks
-    const overlaps = new Map<string, boolean>();
-
-    // Check for overlaps between consecutive real tasks (not gaps)
-    const realTasks = sortedTasks.filter((task) => !task.isGap);
-    realTasks.forEach((task, index) => {
-      if (index < realTasks.length - 1) {
-        overlaps.set(task.id, hasTimeOverlap(task, realTasks[index + 1]));
-      }
-    });
-
-    return { tasks: sortedTasks, overlaps };
-  }, [tasksWithGaps]);
-
-  // Update end time when start time changes
-  useEffect(() => {
-    if (startTime) {
-      const start = parse(startTime, 'HH:mm', new Date());
-      const end = new Date(start.getTime() + duration);
-      setEndTime(format(end, 'HH:mm'));
-    }
-  }, [startTime, duration]);
-
-  const handleStartEdit = (task: OptimalTask) => {
-    // Don't allow editing gap items
-    if (task.isGap) return;
-
-    setEditingTask(task.id);
-    setEditingTaskId(task.id);
-  };
-
-  const handleAddTask = (startTime?: Date) => {
-    // Reset the form state before creating a new task
-    resetForm();
-
-    setNewTask({
+    // State hooks...
+    const [isCreating, setIsCreating] = useState(false);
+    const [activeCategory, setActiveCategory] = useState<TaskCategory>('work');
+    const [editingTask, setEditingTask] = useState<string | null>(null);
+    const [startTime, setStartTime] = useState(getDefaultStartTime());
+    const [endTime, setEndTime] = useState(getDefaultEndTime());
+    const [duration, setDuration] = useState<number>(ONE_HOUR_IN_MS);
+    const [dueDate, setDueDate] = useState<Date | undefined>(); // Ensure undefined is allowed
+    const [newTask, setNewTask] = useState({
       title: '',
       emoji: '',
-      priority: 'none',
-      category: 'work',
+      priority: 'none' as TaskPriority,
+      category: 'work' as TaskCategory,
     });
+    const [showMoveToast, setShowMoveToast] = useState(false);
+    const [movedTaskInfo, setMovedTaskInfo] = useState<{
+      title: string;
+      id: string;
+      destinationDate: string | null;
+    }>({ title: '', id: '', destinationDate: null });
 
-    // Format the startTime (if provided) to "HH:mm" string format
-    const formattedStartTime = startTime ? format(startTime, 'HH:mm') : getDefaultStartTime();
-    setStartTime(formattedStartTime);
+    const prevTasksRef = useRef<OptimalTask[]>([]);
+    const navigate = useNavigate();
+    const tasksRef = useRef<HTMLDivElement | null>(null);
+    const viewportRef = useRef<HTMLDivElement | null>(null);
 
-    // For end time, add ONE_HOUR_IN_MS to the start time
-    if (startTime) {
-      const endTimeDate = new Date(startTime.getTime() + ONE_HOUR_IN_MS);
-      setEndTime(format(endTimeDate, 'HH:mm'));
-    } else {
-      setEndTime(getDefaultEndTime());
-    }
+    // Effects for date changes, highlighting, keydown...
+    React.useEffect(() => {
+      if (search.date && search.date !== selectedDate) {
+        setSelectedDate(search.date);
+      }
+    }, [search.date, selectedDate]);
 
-    setDuration(ONE_HOUR_IN_MS);
-    setDueDate(undefined);
-    setIsCreating(true);
-    setActiveCategory('work');
-  };
+    const basicTasks = React.useMemo(() => {
+      return getTasksByDate(selectedDate);
+    }, [selectedDate, allTasks]);
 
-  return (
-    <ScrollArea viewportRef={viewportRef} className="relative h-full w-full">
-      <div ref={tasksRef} className="relative mx-auto w-full max-w-[900px] px-10 pb-16">
-        {/* Single timeline section */}
-        <div className="relative">
-          <CategorySection
-            category="work"
-            tasks={tasksByCategory.tasks}
-            onEditTask={handleStartEdit}
-            onAddTask={handleAddTask}
-            overlaps={tasksByCategory.overlaps}
-            highlightedTaskId={highlightedTaskId}
-          />
-        </div>
-      </div>
+    // Memoize tasks with gaps based on the *basicTasks* derived from the current date
+    const tasksWithGaps = React.useMemo(() => {
+      return processTasksWithGaps(basicTasks);
+    }, [basicTasks]);
 
-      {/* New Task Dialog */}
-      <TaskDialog
-        open={isCreating}
-        onOpenChange={(open) => {
-          if (open) {
-            // When opening the dialog, reset the form
-            resetForm();
-
-            // Also reset the local task state (redundant but safe)
-            setNewTask({
-              title: '',
-              emoji: '',
-              priority: 'none',
-              category: activeCategory,
+    // Effect for detecting date changes on edit...
+    React.useEffect(() => {
+      if (editingTaskId) {
+        const currentTask = allTasks.find((task) => task.id === editingTaskId);
+        const prevTask = prevTasksRef.current.find((task) => task.id === editingTaskId);
+        if (currentTask && prevTask) {
+          const currentDateStr = currentTask.taskDate
+            ? format(new Date(currentTask.taskDate), 'yyyy-MM-dd')
+            : null;
+          const prevDateStr = prevTask.taskDate
+            ? format(new Date(prevTask.taskDate), 'yyyy-MM-dd')
+            : null;
+          if (
+            currentDateStr &&
+            prevDateStr &&
+            currentDateStr !== prevDateStr &&
+            prevDateStr === selectedDate
+          ) {
+            setMovedTaskInfo({
+              title: currentTask.title || 'Task',
+              id: currentTask.id,
+              destinationDate: currentDateStr,
             });
-          } else {
-            setIsCreating(open);
+            setShowMoveToast(true);
           }
-        }}
-        mode="create"
-        initialValues={{
-          // Don't include title to avoid stale values
-          // title: '',
-          // notes: '',
-          // emoji: '',
-          startTime: getDefaultStartTime(),
-          dueTime: '',
-          duration: ONE_HOUR_IN_MS,
-          dueDate: undefined,
-          priority: 'none',
-          category: activeCategory,
-          subtasks: [],
-          repetition: 'once',
-        }}
-        onSubmit={(values) => {
-          const taskId = createNewTask(values);
-          console.log('Task created with ID:', taskId);
-          setIsCreating(false);
-        }}
-      />
+        }
+      }
+      prevTasksRef.current = [...allTasks];
+    }, [allTasks, editingTaskId, selectedDate]);
 
-      {/* Edit Task Dialog */}
-      {editingTask && (
+    // Effect for highlighting after navigation...
+    React.useEffect(() => {
+      if (movedTaskInfo.id && movedTaskInfo.destinationDate === selectedDate) {
+        highlightTask(movedTaskInfo.id);
+        setMovedTaskInfo({ title: '', id: '', destinationDate: null });
+      }
+    }, [selectedDate, movedTaskInfo]);
+
+    // Effect for keyboard shortcut...
+    React.useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'F') navigate({ to: '..' });
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [navigate]);
+
+    // Expose imperative handle...
+    React.useImperativeHandle(ref, () => ({
+      setIsCreating: (value: boolean) => {
+        setIsCreating(value);
+        if (value) {
+          resetForm();
+          setNewTask({ title: '', emoji: '', priority: 'none', category: 'work' });
+          setStartTime(getDefaultStartTime());
+          setEndTime(getDefaultEndTime());
+          setDuration(ONE_HOUR_IN_MS);
+          setDueDate(undefined);
+          setActiveCategory('work');
+        }
+      },
+    }));
+
+    // Memoize tasksByCategory based on tasksWithGaps
+    const tasksByCategory = React.useMemo(() => {
+      const sortedTasks = tasksWithGaps; // Already processed with gaps
+      const overlaps = new Map<string, boolean>();
+      const realTasks = sortedTasks.filter((task) => !task.isGap);
+      realTasks.forEach((task, index) => {
+        if (index < realTasks.length - 1) {
+          overlaps.set(task.id, hasTimeOverlap(task, realTasks[index + 1]));
+        }
+      });
+      return { tasks: sortedTasks, overlaps };
+    }, [tasksWithGaps]);
+
+    // Effect to update end time (ensure safety)...
+    useEffect(() => {
+      if (startTime) {
+        try {
+          const start = parse(startTime, 'HH:mm', new Date());
+          if (!isNaN(start.getTime())) {
+            // Check if parsing was successful
+            const end = new Date(start.getTime() + duration);
+            setEndTime(format(end, 'HH:mm'));
+          } else {
+            console.error('Invalid start time format:', startTime);
+            // Set a default or handle error
+          }
+        } catch (error) {
+          console.error('Error parsing start time:', error);
+        }
+      }
+    }, [startTime, duration]);
+
+    // Event handlers...
+    const handleStartEdit = (task: OptimalTask) => {
+      if (task.isGap) return;
+      setEditingTask(task.id);
+      setEditingTaskId(task.id);
+    };
+
+    const handleAddTask = (gapStartTime?: Date) => {
+      // Renamed for clarity
+      resetForm();
+      setNewTask({ title: '', emoji: '', priority: 'none', category: 'work' });
+      const startTimeToSet = gapStartTime ? format(gapStartTime, 'HH:mm') : getDefaultStartTime();
+      setStartTime(startTimeToSet);
+      const startDate = gapStartTime || parse(getDefaultStartTime(), 'HH:mm', new Date());
+      const endTimeDate = new Date(startDate.getTime() + ONE_HOUR_IN_MS);
+      setEndTime(format(endTimeDate, 'HH:mm'));
+      setDuration(ONE_HOUR_IN_MS);
+      setDueDate(undefined);
+      setIsCreating(true);
+      setActiveCategory('work');
+    };
+
+    // --- Corrected Drag End Logic ---
+    const handleDragEnd = (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      // Use the current tasks from the memoized state, including gaps
+      const currentTasksWithGaps = tasksByCategory.tasks;
+
+      const oldIndex = currentTasksWithGaps.findIndex((task) => task.id === active.id);
+      const newIndex = currentTasksWithGaps.findIndex((task) => task.id === over.id);
+
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const movedTask = currentTasksWithGaps[oldIndex];
+      const targetTask = currentTasksWithGaps[newIndex];
+
+      // Prevent dragging over or involving gap items
+      if (movedTask.isGap || targetTask.isGap) return;
+
+      // 1. Determine the affected range in the current list (with gaps)
+      const startIdx = Math.min(oldIndex, newIndex);
+      const endIdx = Math.max(oldIndex, newIndex);
+
+      // 2. Find the *original* start time of the block
+      //    This is the startTime of the task currently at startIdx
+      const anchorTask = currentTasksWithGaps[startIdx];
+      // Ensure anchorTask and its startTime exist, provide a robust fallback
+      const anchorStartTime = anchorTask?.startTime ? new Date(anchorTask.startTime) : new Date();
+
+      // 3. Perform the array move on a copy of the current list (with gaps)
+      let reorderedTasksWithGaps = arrayMove([...currentTasksWithGaps], oldIndex, newIndex);
+
+      // 4. Recalculate times sequentially within the affected block
+      let currentTimeCursor = new Date(anchorStartTime); // Use a copy for the cursor
+      const finalTasksWithGaps = reorderedTasksWithGaps.map((task, index) => {
+        // Only modify tasks within the affected block range
+        if (index >= startIdx && index <= endIdx) {
+          const updatedTask = { ...task };
+          const taskDuration = task.duration || 0; // Handle potentially missing duration
+
+          updatedTask.startTime = new Date(currentTimeCursor); // Assign current cursor time
+          updatedTask.time = format(currentTimeCursor, 'HH:mm'); // Update time string
+
+          const endTime = new Date(currentTimeCursor.getTime() + taskDuration);
+          updatedTask.nextStartTime = endTime; // Update next start time (end of current task)
+
+          currentTimeCursor = endTime; // Advance the cursor for the next task
+
+          return updatedTask;
+        }
+        // Keep tasks outside the range unchanged
+        return task;
+      });
+
+      // 5. Update the main task store
+      tasksStore.setState((state) => {
+        // Map over the *original* state.tasks (core tasks without gaps)
+        const updatedCoreTasks = state.tasks.map((coreTask) => {
+          // Find the corresponding task in our *fully processed* finalTasks list
+          const processedVersion = finalTasksWithGaps.find(
+            (finalTask) => finalTask.id === coreTask.id,
+          );
+          // If found (and it's not a gap itself), return the processed version
+          // Otherwise, keep the original core task
+          return processedVersion && !processedVersion.isGap ? processedVersion : coreTask;
+        });
+        return { ...state, tasks: updatedCoreTasks };
+      });
+    };
+
+    // --- Component Return (JSX) ---
+    return (
+      <ScrollArea viewportRef={viewportRef} className="relative h-full w-full">
+        <div ref={tasksRef} className="relative mx-auto w-full max-w-[900px] px-10 pb-16">
+          <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <div className="relative">
+              <SortableContext
+                items={tasksByCategory.tasks.map((task) => task.id)} // Use IDs from tasksWithGaps
+                strategy={verticalListSortingStrategy}
+              >
+                <CategorySection
+                  category="work"
+                  tasks={tasksByCategory.tasks} // Pass the list with gaps for rendering
+                  onEditTask={handleStartEdit}
+                  onAddTask={handleAddTask}
+                  overlaps={tasksByCategory.overlaps}
+                  highlightedTaskId={highlightedTaskId}
+                />
+              </SortableContext>
+            </div>
+          </DndContext>
+        </div>
+
+        {/* Dialogs and Toast */}
         <TaskDialog
-          open={!!editingTask}
+          open={isCreating}
           onOpenChange={(open) => {
-            if (!open) {
-              // Clean up state
+            if (!open) setIsCreating(false);
+            else {
+              /* Logic moved to handleAddTask/imperativeHandle */
+            }
+          }}
+          mode="create"
+          initialValues={{
+            startTime: startTime, // Use state for initial time
+            dueTime: '',
+            duration: duration, // Use state for initial duration
+            dueDate: dueDate, // Use state for initial due date
+            priority: newTask.priority,
+            category: newTask.category,
+            subtasks: [],
+            repetition: 'once',
+          }}
+          onSubmit={(values) => {
+            createNewTask(values);
+            setIsCreating(false);
+          }}
+        />
+
+        {editingTask && (
+          <TaskDialog
+            open={!!editingTask}
+            onOpenChange={(open) => {
+              if (!open) {
+                setEditingTask(null);
+                setEditingTaskId(null);
+              }
+            }}
+            mode="edit"
+            initialValues={(() => {
+              const task = basicTasks.find((t) => t.id === editingTask);
+              if (!task) return {};
+              // Populate initial values from the found task
+              return {
+                title: task.title || '',
+                emoji: task.emoji || '',
+                startTime: task.time?.split('—')[0] || '',
+                dueTime: task.dueTime || '',
+                duration: task.duration || ONE_HOUR_IN_MS,
+                dueDate: task.dueDate ? new Date(task.dueDate) : undefined, // Ensure Date object
+                priority: task.priority || 'none',
+                category: task.category || 'work',
+                notes: task.notes || '',
+                subtasks: task.subtasks || [],
+                progress: task.progress || 0,
+                repetition: task.repetition || 'once',
+              };
+            })()}
+            onSubmit={(values) => {
+              const taskToEdit = basicTasks.find((t) => t.id === editingTask);
+              if (taskToEdit) {
+                editExistingTask(taskToEdit, values);
+              }
+              setEditingTask(null);
+              setEditingTaskId(null);
+            }}
+          />
+        )}
+
+        <TaskMoveToast
+          isOpen={showMoveToast}
+          onOpenChange={setShowMoveToast}
+          taskTitle={movedTaskInfo.title}
+          destinationDate={movedTaskInfo.destinationDate}
+          onViewClick={() => {
+            if (movedTaskInfo.id && movedTaskInfo.destinationDate) {
+              navigate({
+                to: '/tasks',
+                search: { date: movedTaskInfo.destinationDate, highlight: movedTaskInfo.id },
+              });
+              // Reset toast info after initiating navigation
+              setMovedTaskInfo({ title: '', id: '', destinationDate: null });
+              setShowMoveToast(false);
+            }
+            // Close edit dialog if open
+            if (editingTask) {
               setEditingTask(null);
               setEditingTaskId(null);
             }
           }}
-          mode="edit"
-          initialValues={(() => {
-            // Find the task in the original task list (not the one with gaps)
-            const task = basicTasks.find((t) => t.id === editingTask);
-            if (!task) return {};
-
-            return {
-              title: task.title || '',
-              emoji: task.emoji || '',
-              startTime: task.time?.split('—')[0] || '',
-              dueTime: task.dueTime || '',
-              duration: task.duration || ONE_HOUR_IN_MS,
-              dueDate: task.dueDate,
-              priority: task.priority || 'none',
-              category: task.category || 'work',
-              notes: task.notes || '',
-              subtasks: task.subtasks || [],
-              progress: task.progress || 0,
-              repetition: task.repetition || 'once',
-            };
-          })()}
-          onSubmit={(values) => {
-            const taskToEdit = basicTasks.find((t) => t.id === editingTask);
-            if (taskToEdit) {
-              editExistingTask(taskToEdit, values);
-            }
-            setEditingTask(null);
-          }}
         />
-      )}
-
-      {/* Task Move Toast */}
-      <TaskMoveToast
-        isOpen={showMoveToast}
-        onOpenChange={setShowMoveToast}
-        taskTitle={movedTaskInfo.title}
-        destinationDate={movedTaskInfo.destinationDate}
-        onViewClick={() => {
-          // Store the task ID and trigger highlight after navigation
-          if (movedTaskInfo.id) {
-            setMovedTaskInfo((prev) => ({ ...prev })); // Keep the info for highlighting after navigation
-          }
-          // Close the dialog if it's open
-          if (editingTask) {
-            setEditingTask(null);
-          }
-        }}
-      />
-    </ScrollArea>
-  );
-});
+      </ScrollArea>
+    );
+  },
+);

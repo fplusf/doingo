@@ -17,16 +17,19 @@ export const SortableTaskItem = ({ task, children }: SortableTaskItemProps) => {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-    width: '100%',
+    height: '100%',
     position: 'relative',
     zIndex: isDragging ? 1 : 0,
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} className="group ml-16 w-full">
-      <div className="flex w-full items-center justify-items-center">
-        <div className="w-full">{children}</div>
-        <div {...listeners} className="flex items-center justify-items-center">
+    <div ref={setNodeRef} style={style} {...attributes} className="group ml-16 h-full w-full">
+      <div className="flex h-full w-full items-center justify-items-center">
+        <div className="h-full w-full">{children}</div>
+        <div
+          {...listeners}
+          className="absolute right-0 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100"
+        >
           <DragHandle />
         </div>
       </div>

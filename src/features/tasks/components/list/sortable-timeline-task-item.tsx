@@ -152,6 +152,7 @@ export const SortableTimelineTaskItem = ({
       const currentHeight = gsap.getProperty(containerRef.current, 'height') as number;
       const newHeight = Math.max(MIN_HEIGHT_PX, Math.min(MAX_HEIGHT_PX, currentHeight + diffY));
 
+      // Update the container height
       gsap.set(containerRef.current, { height: newHeight });
       const newDuration = heightToDuration(newHeight);
 
@@ -161,6 +162,35 @@ export const SortableTimelineTaskItem = ({
 
         // Update resizing state in store
         setResizingState(task.id, newDuration, newEndTime);
+
+        // Update subsequent tasks immediately during drag
+        const allTasks = tasksStore.state.tasks;
+        const taskDate = format(task.startTime, 'yyyy-MM-dd');
+        const sortedTasks = getSortedTasksForDate(allTasks, taskDate);
+        const currentIndex = sortedTasks.findIndex((t) => t.id === task.id);
+
+        if (currentIndex !== -1) {
+          let lastEndTime = newEndTime;
+          for (let i = currentIndex + 1; i < sortedTasks.length; i++) {
+            const nextTask = sortedTasks[i];
+            if (nextTask.isGap) continue; // Skip gap items
+
+            const nextTaskContainer = document.querySelector(`[data-id="${nextTask.id}"]`);
+            if (nextTaskContainer) {
+              // Update position of next task
+              const nextTaskHeight = nextTask.duration
+                ? MIN_HEIGHT_PX + nextTask.duration / (60 * 1000)
+                : MIN_HEIGHT_PX + FIVE_MINUTES_MS / (60 * 1000);
+
+              gsap.set(nextTaskContainer, {
+                height: nextTaskHeight,
+              });
+
+              // Update the last end time for the next iteration
+              lastEndTime = new Date(lastEndTime.getTime() + (nextTask.duration || ONE_HOUR_IN_MS));
+            }
+          }
+        }
       }
 
       lastBottomY.current = adjustedY;
@@ -184,7 +214,7 @@ export const SortableTimelineTaskItem = ({
           setResizingState(task.id, currentTask.duration, currentTask.nextStartTime);
         }
 
-        // Disable scrolling
+        // Disable scrolling during resize
         if (scrollContainer) {
           scrollContainer.style.overflow = 'hidden';
         }
@@ -209,7 +239,7 @@ export const SortableTimelineTaskItem = ({
             nextStartTime: temporaryEndTime,
           });
 
-          // Update subsequent tasks
+          // Update subsequent tasks with final values
           updateSubsequentTasks(tasksStore.state.tasks, task.id, temporaryEndTime);
         }
 
@@ -228,7 +258,7 @@ export const SortableTimelineTaskItem = ({
     <>
       <div
         ref={containerRef}
-        className="group relative mb-0"
+        className="group relative mb-0 h-full"
         data-id={task.id}
         style={{
           height: MIN_HEIGHT_PX + (effectiveDuration || FIVE_MINUTES_MS) / (60 * 1000),
@@ -258,7 +288,7 @@ export const SortableTimelineTaskItem = ({
         </div>
 
         {/* Task Card */}
-        <div ref={taskCardRef} className="ml-16 h-full w-full">
+        <div className="h-full">
           <TaskItem
             task={{
               ...task,

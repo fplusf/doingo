@@ -3,11 +3,12 @@ import InboxPage from '@/features/inbox/pages/inbox-page';
 import StatsOverview from '@/features/stats/components/stats-overview';
 import TodayPage from '@/features/tasks/pages/today-page';
 
-import { createRoute, Outlet, redirect } from '@tanstack/react-router';
+import { createRoute, Outlet, redirect, Route } from '@tanstack/react-router';
 import RemindersPage from '../features/reminders/pages/reminders-page';
 import TaskDetailsPage from '../features/tasks/pages/details-page';
 import { TaskDetailHeader } from '../layouts/headers/task-details-header';
 import { RootRoute } from './__root';
+import { tasksSearchParamsSchema } from './searchParams';
 
 // TODO: Steps to add a new route:
 // 1. Create a new page component in the '../pages/' directory (e.g., NewPage.tsx)
@@ -38,10 +39,11 @@ export const IndexRoute = createRoute({
 });
 
 // Tasks Route - Parent route for all task-related routes
-export const TasksRoute = createRoute({
+export const TasksRoute = new Route({
   getParentRoute: () => RootRoute,
-  path: 'tasks',
-  component: Outlet, // Using Outlet to render child routes
+  path: '/tasks',
+  component: Outlet,
+  validateSearch: tasksSearchParamsSchema,
 });
 
 // Tasks Index Route - The default route when navigating to /tasks

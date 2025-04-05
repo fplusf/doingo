@@ -20,6 +20,7 @@ import { ArrowRight, LucideFocus, Trash2 } from 'lucide-react';
 import React from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { ONE_HOUR_IN_MS, TaskCardProps } from '../../types';
+import { SortableTaskItem } from './sortable-task-item';
 
 export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
   const navigate = useNavigate({ from: '/tasks' });
@@ -220,283 +221,287 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
   const progress = task.progress ?? 0;
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div
-          className={cn(
-            'task-card relative flex h-full w-full flex-col rounded-3xl bg-card sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
-            task.isFocused && isToday && 'bg-gradient-to-r from-orange-300 to-orange-600',
-            task.completed && 'opacity-60 transition-opacity duration-300 hover:opacity-100',
-          )}
-          onMouseEnter={(e) => {
-            setIsHovered(true);
-            e.currentTarget.style.borderColor = '#4d5057';
-          }}
-          onMouseLeave={(e) => {
-            setIsHovered(false);
-            e.currentTarget.style.borderColor = 'transparent';
-          }}
-          onClick={() => onEdit(task)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') onEdit(task);
-          }}
-          style={{
-            border: '1px solid transparent',
-            transition: 'border-color 0.2s ease-in-out, height 0.2s ease-in-out',
-          }}
-          role="button"
-          tabIndex={0}
-        >
-          <div
-            className={cn(
-              task.isFocused && isToday && 'bg-sidebar/95',
-              'relative h-full w-full rounded-3xl',
-              // Adjust padding for short tasks
-              task.duration <= ONE_HOUR_IN_MS ? 'p-0 px-4 py-0' : 'p-2 py-4',
-            )}
-          >
-            {/* Progress bar - only visible for tasks with subtasks */}
-            {hasSubtasks && !task.completed && (
-              <div className="absolute inset-0 h-full w-full overflow-hidden rounded-3xl">
-                <div
-                  className="h-[2px] w-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                  aria-label={`${progress}% complete`}
-                  role="progressbar"
-                  aria-valuenow={progress}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                />
-              </div>
-            )}
-
-            <div className="flex h-full flex-grow cursor-pointer items-center justify-between gap-4">
-              <TaskCheckbox
-                className={cn(task.duration <= ONE_HOUR_IN_MS ? 'mx-1 my-0' : 'm-2')}
-                size="lg"
-                checked={task.completed}
-                onCheckedChange={() => toggleTaskCompletion(task.id)}
-              />
-
+    <div className="h-full">
+      <SortableTaskItem task={task}>
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <div
+              className={cn(
+                'task-card relative flex h-full w-full flex-col rounded-3xl bg-card sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
+                task.isFocused && isToday && 'bg-gradient-to-r from-orange-300 to-orange-600',
+                task.completed && 'opacity-60 transition-opacity duration-300 hover:opacity-100',
+              )}
+              onMouseEnter={(e) => {
+                setIsHovered(true);
+                e.currentTarget.style.borderColor = '#4d5057';
+              }}
+              onMouseLeave={(e) => {
+                setIsHovered(false);
+                e.currentTarget.style.borderColor = 'transparent';
+              }}
+              onClick={() => onEdit(task)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') onEdit(task);
+              }}
+              style={{
+                border: '1px solid transparent',
+                transition: 'border-color 0.2s ease-in-out, height 0.2s ease-in-out',
+              }}
+              role="button"
+              tabIndex={0}
+            >
               <div
                 className={cn(
-                  'flex w-full',
-                  // Maintain vertical layout for all tasks but adjust spacing
-                  'flex-col py-0',
-                  // Adjust vertical alignment based on task size
-                  task.duration <= ONE_HOUR_IN_MS * 2
-                    ? 'h-full justify-center pr-12' // Use center alignment for both 1 and 2 hour tasks
-                    : 'justify-between py-1',
+                  task.isFocused && isToday && 'bg-sidebar/95',
+                  'relative h-full w-full rounded-3xl',
+                  // Adjust padding for short tasks
+                  task.duration <= ONE_HOUR_IN_MS ? 'p-0 px-4 py-0' : 'p-2 py-4',
                 )}
-                ref={titleContainerRef}
               >
-                {/* For all tasks, show title vertically, but adjust size for short tasks */}
-                <h3
-                  className={cn(
-                    // Use consistent text-sm for all task titles
-                    'text-sm font-medium',
-                    // Different spacing based on task size
-                    task.duration <= ONE_HOUR_IN_MS * 2 ? 'mb-1' : '', // Consistent margin for 1-2 hour tasks
-                    task.completed && 'line-through opacity-60',
-                  )}
-                  style={{
-                    display: '-webkit-box',
-                    WebkitLineClamp: titleLineClamp,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {task.title}
-                </h3>
-
-                {/* Show compact time info below title for all tasks */}
-                {task.duration <= ONE_HOUR_IN_MS * 2 && task.time && (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-baseline">
-                      <span className="whitespace-nowrap text-xs opacity-50">
-                        {task.duration <= ONE_HOUR_IN_MS
-                          ? formatCompactTimeRange(
-                              task.time.split('—')[0],
-                              task.duration || ONE_HOUR_IN_MS,
-                            )
-                          : formatTimeRange(
-                              task.time.split('—')[0],
-                              task.duration || ONE_HOUR_IN_MS,
-                            )}
-                      </span>
-                      {task.duration <= ONE_HOUR_IN_MS && (
-                        <span className="ml-1 whitespace-nowrap text-xs opacity-40">
-                          ({formatDurationForDisplay(task.duration || ONE_HOUR_IN_MS)})
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Progress indicator for small and medium tasks with subtasks */}
-                    {hasSubtasks &&
-                      task.subtasks &&
-                      task.subtasks.length > 0 &&
-                      !task.completed && (
-                        <span className="ml-1 text-xs text-muted-foreground">
-                          {Math.round(progress)}%
-                        </span>
-                      )}
+                {/* Progress bar - only visible for tasks with subtasks */}
+                {hasSubtasks && !task.completed && (
+                  <div className="absolute inset-0 h-full w-full overflow-hidden rounded-3xl">
+                    <div
+                      className="h-[2px] w-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-300"
+                      style={{ width: `${progress}%` }}
+                      aria-label={`${progress}% complete`}
+                      role="progressbar"
+                      aria-valuenow={progress}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                    />
                   </div>
                 )}
 
-                {/* Only show detailed time and controls section for tasks longer than 2 hours */}
-                {task.duration > ONE_HOUR_IN_MS * 2 && (
-                  <section className="mt-auto flex items-center justify-between">
-                    <div className="text-xs opacity-50">
-                      {task.time ? (
-                        <span className="whitespace-nowrap">
-                          {formatTimeRange(
-                            task.time.split('—')[0],
-                            task.duration || ONE_HOUR_IN_MS,
-                          )}
-                        </span>
-                      ) : null}
-                    </div>
+                <div className="flex h-full flex-grow cursor-pointer items-center justify-between gap-4">
+                  <TaskCheckbox
+                    className={cn(task.duration <= ONE_HOUR_IN_MS ? 'mx-1 my-0' : 'm-2')}
+                    size="lg"
+                    checked={task.completed}
+                    onCheckedChange={() => toggleTaskCompletion(task.id)}
+                  />
 
-                    <div className="flex items-center">
-                      {/* Subtask progress indicator - only visible for tasks with subtasks */}
-                      {hasSubtasks && task.subtasks && (
-                        <div className="mr-4 text-xs text-muted-foreground">
-                          <span>{Math.round(progress)}%</span>
-                          <span className="ml-1">
-                            ({task.subtasks.filter((st) => st.isCompleted).length}/
-                            {task.subtasks.length})
-                          </span>
-                        </div>
+                  <div
+                    className={cn(
+                      'flex w-full',
+                      // Maintain vertical layout for all tasks but adjust spacing
+                      'flex-col py-0',
+                      // Adjust vertical alignment based on task size
+                      task.duration <= ONE_HOUR_IN_MS * 2
+                        ? 'h-full justify-center pr-12' // Use center alignment for both 1 and 2 hour tasks
+                        : 'justify-between py-1',
+                    )}
+                    ref={titleContainerRef}
+                  >
+                    {/* For all tasks, show title vertically, but adjust size for short tasks */}
+                    <h3
+                      className={cn(
+                        // Use consistent text-sm for all task titles
+                        'text-sm font-medium',
+                        // Different spacing based on task size
+                        task.duration <= ONE_HOUR_IN_MS * 2 ? 'mb-1' : '', // Consistent margin for 1-2 hour tasks
+                        task.completed && 'line-through opacity-60',
                       )}
+                      style={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: titleLineClamp,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {task.title}
+                    </h3>
 
-                      {/* Focus button - always visible but only works for today's tasks */}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={handleFocusClick}
-                              className={cn(
-                                'flex h-7 w-7 bg-transparent p-0 hover:bg-transparent',
-                                task.completed && 'hidden',
-                              )}
-                            >
-                              <LucideFocus
-                                className={cn(
-                                  'h-4 w-4 transition-all duration-200',
-                                  task.isFocused && isToday
-                                    ? 'fill-blue-500 text-blue-500'
-                                    : 'text-muted-foreground',
-                                  'hover:scale-150 hover:fill-blue-500 hover:text-blue-500 hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]',
+                    {/* Show compact time info below title for all tasks */}
+                    {task.duration <= ONE_HOUR_IN_MS * 2 && task.time && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-baseline">
+                          <span className="whitespace-nowrap text-xs opacity-50">
+                            {task.duration <= ONE_HOUR_IN_MS
+                              ? formatCompactTimeRange(
+                                  task.time.split('—')[0],
+                                  task.duration || ONE_HOUR_IN_MS,
+                                )
+                              : formatTimeRange(
+                                  task.time.split('—')[0],
+                                  task.duration || ONE_HOUR_IN_MS,
                                 )}
-                              />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Focus (F)</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                          </span>
+                          {task.duration <= ONE_HOUR_IN_MS && (
+                            <span className="ml-1 whitespace-nowrap text-xs opacity-40">
+                              ({formatDurationForDisplay(task.duration || ONE_HOUR_IN_MS)})
+                            </span>
+                          )}
+                        </div>
 
-                      {/* Details button - always works */}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={handleDetailsClick}
-                              className="flex h-7 w-7 bg-transparent p-0 hover:bg-transparent"
-                            >
-                              <ArrowRight className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Details (D)</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </section>
-                )}
-
-                {/* For small and medium tasks, show compact controls on the right side */}
-                {task.duration <= ONE_HOUR_IN_MS * 2 && (
-                  <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
-                    {/* Focus button for small and medium tasks */}
-                    {!task.completed && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={handleFocusClick}
-                              className="flex h-7 w-7 bg-transparent p-0 hover:bg-transparent"
-                            >
-                              <LucideFocus
-                                className={cn(
-                                  'h-4 w-4 transition-all duration-200',
-                                  task.isFocused && isToday
-                                    ? 'fill-blue-500 text-blue-500'
-                                    : 'text-muted-foreground',
-                                  'hover:scale-150 hover:fill-blue-500 hover:text-blue-500',
-                                )}
-                              />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Focus (F)</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                        {/* Progress indicator for small and medium tasks with subtasks */}
+                        {hasSubtasks &&
+                          task.subtasks &&
+                          task.subtasks.length > 0 &&
+                          !task.completed && (
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              {Math.round(progress)}%
+                            </span>
+                          )}
+                      </div>
                     )}
 
-                    {/* Details button for small and medium tasks */}
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleDetailsClick}
-                            className="flex h-7 w-7 bg-transparent p-0 hover:bg-transparent"
-                          >
-                            <ArrowRight className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Details (D)</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    {/* Only show detailed time and controls section for tasks longer than 2 hours */}
+                    {task.duration > ONE_HOUR_IN_MS * 2 && (
+                      <section className="mt-auto flex items-center justify-between">
+                        <div className="text-xs opacity-50">
+                          {task.time ? (
+                            <span className="whitespace-nowrap">
+                              {formatTimeRange(
+                                task.time.split('—')[0],
+                                task.duration || ONE_HOUR_IN_MS,
+                              )}
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="flex items-center">
+                          {/* Subtask progress indicator - only visible for tasks with subtasks */}
+                          {hasSubtasks && task.subtasks && (
+                            <div className="mr-4 text-xs text-muted-foreground">
+                              <span>{Math.round(progress)}%</span>
+                              <span className="ml-1">
+                                ({task.subtasks.filter((st) => st.isCompleted).length}/
+                                {task.subtasks.length})
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Focus button - always visible but only works for today's tasks */}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={handleFocusClick}
+                                  className={cn(
+                                    'flex h-7 w-7 bg-transparent p-0 hover:bg-transparent',
+                                    task.completed && 'hidden',
+                                  )}
+                                >
+                                  <LucideFocus
+                                    className={cn(
+                                      'h-4 w-4 transition-all duration-200',
+                                      task.isFocused && isToday
+                                        ? 'fill-blue-500 text-blue-500'
+                                        : 'text-muted-foreground',
+                                      'hover:scale-150 hover:fill-blue-500 hover:text-blue-500 hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]',
+                                    )}
+                                  />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Focus (F)</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          {/* Details button - always works */}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={handleDetailsClick}
+                                  className="flex h-7 w-7 bg-transparent p-0 hover:bg-transparent"
+                                >
+                                  <ArrowRight className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Details (D)</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </section>
+                    )}
+
+                    {/* For small and medium tasks, show compact controls on the right side */}
+                    {task.duration <= ONE_HOUR_IN_MS * 2 && (
+                      <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+                        {/* Focus button for small and medium tasks */}
+                        {!task.completed && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={handleFocusClick}
+                                  className="flex h-7 w-7 bg-transparent p-0 hover:bg-transparent"
+                                >
+                                  <LucideFocus
+                                    className={cn(
+                                      'h-4 w-4 transition-all duration-200',
+                                      task.isFocused && isToday
+                                        ? 'fill-blue-500 text-blue-500'
+                                        : 'text-muted-foreground',
+                                      'hover:scale-150 hover:fill-blue-500 hover:text-blue-500',
+                                    )}
+                                  />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Focus (F)</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+
+                        {/* Details button for small and medium tasks */}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleDetailsClick}
+                                className="flex h-7 w-7 bg-transparent p-0 hover:bg-transparent"
+                              >
+                                <ArrowRight className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Details (D)</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      </ContextMenuTrigger>
-      <ContextMenuContent className="w-64">
-        <ContextMenuItem
-          className="text-destructive focus:text-destructive"
-          onClick={() => deleteTask(task.id)}
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete Task
-        </ContextMenuItem>
+          </ContextMenuTrigger>
+          <ContextMenuContent className="w-64">
+            <ContextMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => deleteTask(task.id)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Task
+            </ContextMenuItem>
 
-        <ContextMenuItem className="flex items-center gap-2" onClick={handleFocusClick}>
-          <LucideFocus className="mr-2 h-4 w-4" />
-          Focus
-        </ContextMenuItem>
+            <ContextMenuItem className="flex items-center gap-2" onClick={handleFocusClick}>
+              <LucideFocus className="mr-2 h-4 w-4" />
+              Focus
+            </ContextMenuItem>
 
-        <ContextMenuItem className="flex items-center gap-2" onClick={handleDetailsClick}>
-          <ArrowRight className="mr-2 h-4 w-4" />
-          View Details
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
+            <ContextMenuItem className="flex items-center gap-2" onClick={handleDetailsClick}>
+              <ArrowRight className="mr-2 h-4 w-4" />
+              View Details
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      </SortableTaskItem>
+    </div>
   );
 };
