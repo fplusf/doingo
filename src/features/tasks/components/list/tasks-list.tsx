@@ -19,17 +19,25 @@ import {
   TaskPriority,
 } from '@/features/tasks/types/task.types';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
-import { DndContext, DragEndEvent, closestCenter } from '@dnd-kit/core';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  closestCenter,
+} from '@dnd-kit/core';
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { addMilliseconds, differenceInMilliseconds, format, parse } from 'date-fns';
 import React, { ForwardedRef, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { TasksRoute } from '../../../../routes/routes';
 import { TaskDialog } from '../schedule/dialog';
 import { CategorySection } from './category-section';
 import { TaskMoveToast } from './task-move-toast';
+import { TimelineTaskItemOverlay } from './timeline-task-item-overlay';
 
 interface DayContainerProps {
   // Props if any
@@ -189,6 +197,9 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
       destinationDate: string | null;
     }>({ title: '', id: '', destinationDate: null });
 
+    // Add state for active drag item
+    const [activeDragTask, setActiveDragTask] = useState<OptimalTask | null>(null);
+
     const prevTasksRef = useRef<OptimalTask[]>([]);
     const navigate = useNavigate();
     const tasksRef = useRef<HTMLDivElement | null>(null);
@@ -327,8 +338,25 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
       setActiveCategory('work');
     };
 
-    // --- Corrected Drag End Logic ---
+    // Add handler for drag start
+    const handleDragStart = (event: DragStartEvent) => {
+      const { active } = event;
+      const draggedTaskId = active.id.toString();
+
+      // Find the task being dragged
+      const draggedTask = tasksByCategory.tasks.find((task) => task.id === draggedTaskId);
+
+      // Set it as the active drag task
+      if (draggedTask) {
+        setActiveDragTask(draggedTask);
+      }
+    };
+
+    // Add handler for drag end (keeps existing functionality, just clears active task)
     const handleDragEnd = (event: DragEndEvent) => {
+      // Clear active drag task
+      setActiveDragTask(null);
+
       const { active, over } = event;
       if (!over || active.id === over.id) return;
 
@@ -401,7 +429,11 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
     return (
       <ScrollArea viewportRef={viewportRef} className="relative h-full w-full">
         <div ref={tasksRef} className="relative mx-auto w-full max-w-[900px] px-10 pb-16">
-          <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            onDragStart={handleDragStart}
+          >
             <div className="relative">
               <SortableContext
                 items={tasksByCategory.tasks.map((task) => task.id)} // Use IDs from tasksWithGaps
@@ -417,6 +449,19 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
                 />
               </SortableContext>
             </div>
+
+            {/* Add DragOverlay with TimelineTaskItemOverlay */}
+            {createPortal(
+              <DragOverlay
+                zIndex={1000}
+                dropAnimation={null}
+                adjustScale={false}
+                modifiers={[]} // No modifiers to avoid interfering with our custom positioning
+              >
+                {activeDragTask ? <TimelineTaskItemOverlay task={activeDragTask} /> : null}
+              </DragOverlay>,
+              document.body,
+            )}
           </DndContext>
         </div>
 

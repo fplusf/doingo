@@ -21,7 +21,7 @@ export const TIMELINE_CATEGORIES = {
 const DEFAULT_CATEGORY = 'work';
 const DEFAULT_COLOR = '#9ca3af'; // softer slate color
 
-interface TimelineItemProps {
+interface TimelineItemProps extends React.HTMLAttributes<HTMLDivElement> {
   startTime: Date;
   nextStartTime: Date;
   completed?: boolean;
@@ -57,6 +57,7 @@ export const TimelineItem = ({
   taskId,
   duration = ONE_HOUR_IN_MS,
   nextTaskPriority = 'none',
+  ...rest
 }: TimelineItemProps) => {
   const timeDiffMinutes = React.useMemo(() => {
     return (nextStartTime.getTime() - startTime.getTime()) / (1000 * 60);
@@ -146,6 +147,7 @@ export const TimelineItem = ({
       ref={contentRef}
       className={cn('group relative flex h-full w-full')}
       onClick={handleNodeClick}
+      {...rest}
     >
       {/* Continuous vertical connector line - now handled at the CategorySection level */}
       {/* Keep z-indices consistent: CategorySection line: z-0, TimelineNode: z-10 */}

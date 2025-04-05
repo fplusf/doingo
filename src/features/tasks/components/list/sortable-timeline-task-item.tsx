@@ -6,7 +6,9 @@ import {
   updateTask,
 } from '@/features/tasks/store/tasks.store';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
-import { addMilliseconds, format, formatDistanceStrict } from 'date-fns';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { addMilliseconds, format } from 'date-fns';
 import { gsap } from 'gsap';
 import { Draggable } from 'gsap/Draggable';
 import { Blend } from 'lucide-react';
@@ -15,14 +17,14 @@ import { ONE_HOUR_IN_MS, OptimalTask } from '../../types';
 import { TimelineItem } from '../timeline/timeline';
 import { TaskItem } from './task-item';
 
-// Register GSAP plugins
-gsap.registerPlugin(Draggable);
-
 // Constants
 const FIVE_MINUTES_MS = 5 * 60 * 1000; // 5 minutes in milliseconds
 const EIGHT_HOURS_MS = 8 * ONE_HOUR_IN_MS; // 8 hours in milliseconds
 const MIN_HEIGHT_PX = 58; // Minimum height
 const MAX_HEIGHT_PX = MIN_HEIGHT_PX + EIGHT_HOURS_MS / (60 * 1000); // Maximum height = base height + 8 hours in pixels
+
+// GSAP Plugin Registration
+gsap.registerPlugin(Draggable);
 
 interface SortableTimelineTaskItemProps {
   task: OptimalTask;
@@ -47,25 +49,19 @@ const updateSubsequentTasks = (
 ): void => {
   const taskDate = format(newEndTime, 'yyyy-MM-dd');
   const sortedTasks = getSortedTasksForDate(tasks, taskDate);
-
-  // Find the index of the current task
   const currentIndex = sortedTasks.findIndex((t) => t.id === currentTaskId);
   if (currentIndex === -1) return;
 
-  // Update all subsequent tasks
   let lastEndTime = newEndTime;
   for (let i = currentIndex + 1; i < sortedTasks.length; i++) {
-    const task = sortedTasks[i];
+    const taskToUpdate = sortedTasks[i]; // Renamed to avoid conflict
     const newStartTime = new Date(lastEndTime);
-    const newNextStartTime = addMilliseconds(newStartTime, task.duration || ONE_HOUR_IN_MS);
-
-    // Update the task's times
-    updateTask(task.id, {
+    const newNextStartTime = addMilliseconds(newStartTime, taskToUpdate.duration || ONE_HOUR_IN_MS);
+    updateTask(taskToUpdate.id, {
       startTime: newStartTime,
       nextStartTime: newNextStartTime,
       time: format(newStartTime, 'HH:mm'),
     });
-
     lastEndTime = newNextStartTime;
   }
 };
@@ -77,269 +73,276 @@ export const SortableTimelineTaskItem = ({
   nextTask,
   overlapsWithNext = false,
 }: SortableTimelineTaskItemProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { attributes, listeners, setNodeRef, isDragging, transform, transition, isOver } =
+    useSortable({
+      id: task.id,
+    });
+
+  // Style for the element receiving the dnd-kit transform
+  const transformStyle: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition: transition || 'transform 250ms ease',
+    transformOrigin: '0 0',
+    height: '100%', // Fill the outer container
+    position: 'relative',
+  };
+
   const timelineNodeRef = useRef<HTMLDivElement>(null);
   const taskCardRef = useRef<HTMLDivElement>(null);
   const bottomHandleRef = useRef<HTMLDivElement>(null);
   const bottomProxyRef = useRef<HTMLDivElement>(null);
   const scrollStartPositionRef = useRef(0);
+  const [containerElement, setContainerElement] = useState<HTMLDivElement | null>(null);
 
   const [resizing, setResizing] = useState(false);
   const lastBottomY = useRef(0);
-
-  // Get current resizing state from store
   const resizingState = tasksStore.state.resizingState;
   const isCurrentlyResizing = resizingState.taskId === task.id;
 
-  // Get the effective duration and end time (either from resizing state or task)
   const effectiveDuration = isCurrentlyResizing
-    ? resizingState.temporaryDuration || task.duration
+    ? (resizingState.temporaryDuration ?? task.duration)
     : task.duration;
   const effectiveEndTime = isCurrentlyResizing
-    ? resizingState.temporaryEndTime || task.nextStartTime
+    ? (resizingState.temporaryEndTime ?? task.nextStartTime)
     : task.nextStartTime;
 
-  // Format time for display
-  const formatTime = (date?: Date): string => {
-    if (!date) return '';
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  // Format duration for display
-  const formatDuration = (durationMs?: number): string => {
-    if (!durationMs) return 'No duration';
-    return formatDistanceStrict(new Date(0), new Date(durationMs));
-  };
-
-  // Convert height to duration with 5-minute snapping
   const heightToDuration = (heightPx: number): number => {
-    // Get minutes from pixels (1px = 1 minute after base height)
     const minutes = Math.max(0, heightPx - MIN_HEIGHT_PX);
-
-    // Convert to milliseconds
     let durationMs = minutes * 60 * 1000;
-
-    // Snap to 5-minute increments
     durationMs = Math.round(durationMs / FIVE_MINUTES_MS) * FIVE_MINUTES_MS;
-
-    // Ensure minimum duration is 5 minutes and maximum is 8 hours
     return Math.max(FIVE_MINUTES_MS, Math.min(EIGHT_HOURS_MS, durationMs));
   };
 
-  // Initial setup
+  const handleRefUpdate = (node: HTMLDivElement | null) => {
+    setNodeRef(node);
+    setContainerElement(node);
+  };
+
+  // --- Refs to hold current values for GSAP callbacks ---
+  const taskRef = useRef(task);
+  const containerElementRef = useRef(containerElement);
+  const isDraggingRef = useRef(isDragging);
+  const resizingRef = useRef(resizing);
+
+  // Keep refs updated
   useEffect(() => {
-    if (!containerRef.current) return;
-
-    // Set initial height
-    const initialHeight = MIN_HEIGHT_PX + (task.duration || FIVE_MINUTES_MS) / (60 * 1000);
-    gsap.set(containerRef.current, { height: initialHeight });
-  }, [task.duration]);
-
-  // Setup bottom drag resize
+    taskRef.current = task;
+  }, [task]);
   useEffect(() => {
-    if (!bottomHandleRef.current || !containerRef.current || !bottomProxyRef.current) return;
+    containerElementRef.current = containerElement;
+  }, [containerElement]);
+  useEffect(() => {
+    isDraggingRef.current = isDragging;
+  }, [isDragging]);
+  useEffect(() => {
+    resizingRef.current = resizing;
+  }, [resizing]);
+  // --------------------------------------------------------
 
+  // --- Effect for Initial Height Setting ---
+  useEffect(() => {
+    const currentContainer = containerElementRef.current;
+    // Check refs for dragging and resizing status
+    if (currentContainer && !isDraggingRef.current && !resizingRef.current) {
+      const currentTask = taskRef.current;
+      const initialHeight = MIN_HEIGHT_PX + (currentTask.duration || FIVE_MINUTES_MS) / (60 * 1000);
+      // Use overwrite: 'auto' to prevent potential conflicts if GSAP tries setting height multiple times
+      gsap.set(currentContainer, { height: initialHeight, overwrite: 'auto' });
+    }
+    // Dependencies: containerElement state, task duration (for initial calc), isDragging state, resizing state
+  }, [containerElement, task.duration, isDragging, resizing]);
+  // ------------------------------------------
+
+  // --- Effect for Draggable Setup ---
+  useEffect(() => {
+    const handleEl = bottomHandleRef.current;
+    const proxyEl = bottomProxyRef.current;
+    // Access container via state, not ref, as its change triggers this effect
+    const contEl = containerElement;
+
+    if (!handleEl || !proxyEl || !contEl) return;
+
+    // Define callbacks using refs where necessary to access latest values
     const updateBottom = function (this: Draggable) {
-      if (!containerRef.current) return;
+      const currentContainer = containerElementRef.current; // Use ref
+      if (!currentContainer) return;
 
-      // Get the current scroll position
       const scrollContainer = document.querySelector('.scroll-area-viewport') as HTMLDivElement;
       const scrollTop = scrollContainer?.scrollTop || 0;
-
-      // Adjust the drag calculation by the scroll offset
       const adjustedY = this.y + (scrollTop - scrollStartPositionRef.current);
       const diffY = adjustedY - lastBottomY.current;
-      const currentHeight = gsap.getProperty(containerRef.current, 'height') as number;
+      const currentHeight = gsap.getProperty(currentContainer, 'height') as number;
       const newHeight = Math.max(MIN_HEIGHT_PX, Math.min(MAX_HEIGHT_PX, currentHeight + diffY));
 
-      // Update the container height
-      gsap.set(containerRef.current, { height: newHeight });
+      gsap.set(currentContainer, { height: newHeight, overwrite: 'auto' });
       const newDuration = heightToDuration(newHeight);
+      const currentTask = taskRef.current; // Use ref
 
-      // Calculate new end time
-      if (task.startTime) {
-        const newEndTime = new Date(task.startTime.getTime() + newDuration);
-
-        // Update resizing state in store
-        setResizingState(task.id, newDuration, newEndTime);
-
-        // Update subsequent tasks immediately during drag
-        const allTasks = tasksStore.state.tasks;
-        const taskDate = format(task.startTime, 'yyyy-MM-dd');
-        const sortedTasks = getSortedTasksForDate(allTasks, taskDate);
-        const currentIndex = sortedTasks.findIndex((t) => t.id === task.id);
-
-        if (currentIndex !== -1) {
-          let lastEndTime = newEndTime;
-          for (let i = currentIndex + 1; i < sortedTasks.length; i++) {
-            const nextTask = sortedTasks[i];
-            if (nextTask.isGap) continue; // Skip gap items
-
-            const nextTaskContainer = document.querySelector(`[data-id="${nextTask.id}"]`);
-            if (nextTaskContainer) {
-              // Update position of next task
-              const nextTaskHeight = nextTask.duration
-                ? MIN_HEIGHT_PX + nextTask.duration / (60 * 1000)
-                : MIN_HEIGHT_PX + FIVE_MINUTES_MS / (60 * 1000);
-
-              gsap.set(nextTaskContainer, {
-                height: nextTaskHeight,
-              });
-
-              // Update the last end time for the next iteration
-              lastEndTime = new Date(lastEndTime.getTime() + (nextTask.duration || ONE_HOUR_IN_MS));
-            }
-          }
-        }
+      if (currentTask.startTime) {
+        const newEndTime = new Date(currentTask.startTime.getTime() + newDuration);
+        setResizingState(currentTask.id, newDuration, newEndTime);
       }
-
       lastBottomY.current = adjustedY;
     };
 
-    // Create bottom handle dragger
-    const dragger = Draggable.create(bottomProxyRef.current, {
+    const onPressHandler = function (this: Draggable, event: PointerEvent) {
+      event.stopPropagation();
+      setResizing(true); // Update state
+      const scrollContainer = document.querySelector('.scroll-area-viewport') as HTMLDivElement;
+      scrollStartPositionRef.current = scrollContainer?.scrollTop || 0;
+      lastBottomY.current = this.y;
+
+      const currentTask = taskRef.current; // Use ref
+      if (currentTask) {
+        setResizingState(currentTask.id, currentTask.duration, currentTask.nextStartTime);
+      }
+      if (scrollContainer) {
+        scrollContainer.style.overflow = 'hidden';
+      }
+    };
+
+    const onReleaseHandler = function () {
+      const currentContainer = containerElementRef.current; // Use ref
+      const currentTask = taskRef.current; // Use ref
+      if (!currentContainer || !currentTask.startTime) return;
+
+      const scrollContainer = document.querySelector('.scroll-area-viewport') as HTMLDivElement;
+      if (scrollContainer) {
+        scrollContainer.style.overflow = '';
+      }
+      // Read latest temp state directly from the imported store's state property
+      const tempState = tasksStore.state.resizingState;
+      if (
+        tempState.taskId === currentTask.id &&
+        tempState.temporaryDuration &&
+        tempState.temporaryEndTime
+      ) {
+        updateTask(currentTask.id, {
+          duration: tempState.temporaryDuration,
+          nextStartTime: tempState.temporaryEndTime,
+        });
+        // Access the main tasks array from the store's state property
+        updateSubsequentTasks(tasksStore.state.tasks, currentTask.id, tempState.temporaryEndTime);
+      }
+      clearResizingState();
+      setResizing(false); // Update state
+    };
+
+    const dragger = Draggable.create(proxyEl, {
       type: 'y',
-      trigger: bottomHandleRef.current,
+      trigger: handleEl,
       cursor: 'ns-resize',
-      onPress: function (this: Draggable) {
-        setResizing(true);
-        // Store the initial scroll position
-        const scrollContainer = document.querySelector('.scroll-area-viewport') as HTMLDivElement;
-        scrollStartPositionRef.current = scrollContainer?.scrollTop || 0;
-        lastBottomY.current = this.y;
-
-        // Initialize resizing state with current task values from the store
-        const currentTask = tasksStore.state.tasks.find((t) => t.id === task.id);
-        if (currentTask) {
-          setResizingState(task.id, currentTask.duration, currentTask.nextStartTime);
-        }
-
-        // Disable scrolling during resize
-        if (scrollContainer) {
-          scrollContainer.style.overflow = 'hidden';
-        }
-      },
+      onPress: onPressHandler,
       onDrag: updateBottom,
-      onRelease: function () {
-        if (!containerRef.current || !task.startTime) return;
-
-        // Re-enable scrolling
-        const scrollContainer = document.querySelector('.scroll-area-viewport') as HTMLDivElement;
-        if (scrollContainer) {
-          scrollContainer.style.overflow = '';
-        }
-
-        // Get final values from resizing state
-        const { temporaryDuration, temporaryEndTime } = tasksStore.state.resizingState;
-
-        if (temporaryDuration && temporaryEndTime) {
-          // Update task with final values
-          updateTask(task.id, {
-            duration: temporaryDuration,
-            nextStartTime: temporaryEndTime,
-          });
-
-          // Update subsequent tasks with final values
-          updateSubsequentTasks(tasksStore.state.tasks, task.id, temporaryEndTime);
-        }
-
-        // Clear resizing state
-        clearResizingState();
-        setResizing(false);
-      },
+      onRelease: onReleaseHandler,
     });
 
     return () => {
-      dragger[0].kill();
+      dragger.forEach((d) => d.kill());
     };
-  }, [task.id, task.startTime]);
+    // Dependencies: Only re-run if the container element itself changes or the task ID changes.
+  }, [containerElement, task.id]);
+  // --------------------------------
+
+  const calculatedHeight = MIN_HEIGHT_PX + (effectiveDuration || FIVE_MINUTES_MS) / (60 * 1000);
+  const containerHeightStyle = {
+    height: `${calculatedHeight}px`,
+    minHeight: `${MIN_HEIGHT_PX}px`,
+  };
+
+  const outerContainerStyle: React.CSSProperties = {
+    ...containerHeightStyle,
+    position: 'relative',
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging || isOver || resizing ? 100 : 'auto', // Boost zIndex during resize too
+  };
+  const outerContainerClasses = `group relative ${resizing ? 'z-50' : 'z-auto'}`;
 
   return (
     <>
       <div
-        ref={containerRef}
-        className="group relative mb-0 h-full"
+        ref={handleRefUpdate}
+        style={outerContainerStyle}
+        className={outerContainerClasses}
         data-id={task.id}
-        style={{
-          height: MIN_HEIGHT_PX + (effectiveDuration || FIVE_MINUTES_MS) / (60 * 1000),
-          zIndex: resizing ? 50 : 'auto',
-        }}
       >
-        {/* Timeline Item */}
-        <div ref={timelineNodeRef} className="absolute left-2 -ml-4 flex h-full w-full">
-          <div className="h-full w-full">
-            <TimelineItem
-              priority={task.priority}
-              startTime={task.startTime}
-              nextStartTime={effectiveEndTime}
-              completed={task.completed}
-              strikethrough={task.completed}
-              onPriorityChange={(priority) => updateTask(task.id, { priority })}
-              onCompletedChange={() => toggleTaskCompletion(task.id)}
-              isLastItem={isLastItem}
-              fixedHeight={false}
-              emoji={task.emoji}
-              onEditTask={() => onEdit(task)}
-              taskId={task.id}
-              duration={effectiveDuration}
-              nextTaskPriority={nextTask?.priority}
-            />
-          </div>
-        </div>
-
-        {/* Task Card */}
-        <div className="h-full">
-          <TaskItem
-            task={{
-              ...task,
-              duration: effectiveDuration,
-              nextStartTime: effectiveEndTime,
-            }}
-            onEdit={onEdit}
-          />
-
-          {/* Overlap indicator */}
-          {overlapsWithNext && !task.completed && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className={`-bottom-18 absolute right-10 z-10 flex items-center gap-1 text-xs text-yellow-500`}
-                >
-                  <Blend className="h-4 w-4" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent className="px-1.5 py-1">
-                <span className="text-[10px]">Time overlap</span>
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-
-        {/* Bottom resize handle with hover area */}
-        <div className="group/resize absolute inset-x-0 bottom-0 z-30 -mb-2 h-4">
-          <div
-            ref={bottomHandleRef}
-            className={`absolute inset-x-[10px] bottom-1 h-1 cursor-ns-resize transition-all duration-200 ${resizing ? 'bg-gray-500/60 opacity-100' : 'opacity-0 group-hover/resize:bg-gray-500/40 group-hover/resize:opacity-100'}`}
-          >
+        <div style={transformStyle}>
+          <div className="flex h-full items-stretch">
             <div
-              className={`absolute inset-x-0 -bottom-px h-px bg-gray-500/50 ${resizing ? 'opacity-100' : 'opacity-0 group-hover/resize:opacity-100'}`}
-            />
+              ref={timelineNodeRef}
+              className={`relative z-10 w-11 flex-shrink-0 transition-shadow duration-150 ease-in-out`}
+            >
+              <div className="h-full">
+                <TimelineItem
+                  priority={task.priority}
+                  startTime={task.startTime}
+                  nextStartTime={effectiveEndTime}
+                  completed={task.completed}
+                  strikethrough={task.completed}
+                  emoji={task.emoji}
+                  taskId={task.id}
+                  duration={effectiveDuration}
+                  category={task.category}
+                  onEditTask={() => onEdit(taskRef.current)}
+                  onCompletedChange={() => toggleTaskCompletion(taskRef.current.id)}
+                  onPriorityChange={(priority) => updateTask(taskRef.current.id, { priority })}
+                  isLastItem={isLastItem}
+                  fixedHeight={true}
+                  nextTaskPriority={nextTask?.priority || 'none'}
+                  {...attributes}
+                  data-id={task.id}
+                />
+              </div>
+            </div>
+
+            <div
+              ref={taskCardRef}
+              className={`ml-6 min-w-0 flex-grow pr-2 transition-shadow duration-150 ease-in-out`}
+              style={{
+                position: 'relative',
+              }}
+            >
+              <TaskItem
+                task={taskRef.current}
+                onEdit={() => onEdit(taskRef.current)}
+                effectiveDuration={effectiveDuration}
+                listeners={listeners}
+              />
+
+              {overlapsWithNext && !taskRef.current.completed && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      className={`-bottom-18 absolute right-10 z-10 flex items-center gap-1 text-xs text-yellow-500`}
+                    >
+                      <Blend className="h-4 w-4" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="px-1.5 py-1">
+                    <span className="text-[10px]">Time overlap</span>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Invisible proxy element for GSAP dragging */}
-        <div ref={bottomProxyRef} className="hidden" />
+        <div
+          ref={bottomHandleRef}
+          className={`absolute bottom-0 left-1/2 h-2 w-16 -translate-x-1/2 transform cursor-ns-resize rounded-full transition-colors duration-200 group-hover:bg-gray-600 ${
+            resizing ? 'bg-blue-500' : ''
+          }`}
+          style={{ zIndex: 101 }}
+        />
+        <div
+          ref={bottomProxyRef}
+          className="absolute bottom-0 left-0 h-1 w-full"
+          style={{ pointerEvents: 'none', visibility: 'hidden' }}
+        />
       </div>
 
-      {/* Invisible placeholder for last item for proper  */}
       {isLastItem && (
-        <div
-          className="pointer-events-none h-[200px]"
-          aria-hidden="true"
-          style={{
-            opacity: 0,
-          }}
-        />
+        <div className="pointer-events-none h-[200px]" aria-hidden="true" style={{ opacity: 0 }} />
       )}
     </>
   );

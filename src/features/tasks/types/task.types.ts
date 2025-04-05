@@ -76,6 +76,8 @@ export interface SortableTaskItemProps {
 export interface TaskCardProps {
   task: OptimalTask;
   onEdit: (task: OptimalTask) => void;
+  effectiveDuration?: number;
+  listeners?: Record<string, any>;
 }
 
 export interface CategorySectionProps {
