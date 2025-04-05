@@ -24,6 +24,8 @@ import { ONE_HOUR_IN_MS, TaskCardProps } from '../../types';
 export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
   const navigate = useNavigate({ from: '/tasks' });
   const [isHovered, setIsHovered] = React.useState(false);
+  const [titleLineClamp, setTitleLineClamp] = React.useState(1);
+  const titleContainerRef = React.useRef<HTMLDivElement>(null);
   const today = new Date();
   const isToday = task.taskDate === format(today, 'yyyy-MM-dd');
 
@@ -65,6 +67,95 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isHovered, navigate, task.id, task.completed, isToday]);
+
+  // Get dynamic height and line clamp classes based on task duration
+  const getCardHeightClasses = () => {
+    // 0 to 1 hour: 60px height, 1 line of text
+    if (task.duration <= ONE_HOUR_IN_MS) {
+      return {
+        cardHeight: 'h-[60px]',
+        lineClamp: 'line-clamp-1',
+      };
+    }
+    // 1 to 2 hours: 120px height, 2 lines of text (intermediate size)
+    else if (task.duration <= ONE_HOUR_IN_MS * 2) {
+      return {
+        cardHeight: 'h-[120px]',
+        lineClamp: 'line-clamp-2',
+      };
+    }
+    // 2 to 4 hours: 170px height, 3 lines of text
+    else if (task.duration <= ONE_HOUR_IN_MS * 4) {
+      return {
+        cardHeight: 'h-[170px]',
+        lineClamp: 'line-clamp-3',
+      };
+    }
+    // 4+ hours: 280px height, 6 lines of text
+    else {
+      return {
+        cardHeight: 'h-[280px]',
+        lineClamp: 'line-clamp-6',
+      };
+    }
+  };
+
+  const { cardHeight, lineClamp } = getCardHeightClasses();
+
+  // Add resize observer to adjust title line clamp based on container height
+  React.useEffect(() => {
+    if (!titleContainerRef.current) return;
+
+    const updateTitleLineClamp = () => {
+      const container = titleContainerRef.current;
+      if (!container) return;
+
+      const containerHeight = container.offsetHeight;
+      const lineHeight = 20; // Approximate line height for text-sm (16px) + some spacing
+      const paddingTop = task.duration <= ONE_HOUR_IN_MS ? 0 : 4; // py-1 = 4px
+      const marginBottom = task.duration <= ONE_HOUR_IN_MS ? 2 : 4; // mb-0.5 or mb-1
+      const timeInfoHeight = task.duration <= ONE_HOUR_IN_MS * 2 ? 20 : 24; // Height of time info
+      const controlsHeight = task.duration > ONE_HOUR_IN_MS * 2 ? 32 : 0; // Height of controls section
+
+      // Calculate available height for title
+      const availableHeight =
+        containerHeight - paddingTop * 2 - marginBottom - timeInfoHeight - controlsHeight;
+
+      // Calculate maximum possible lines that could fit
+      const maxPossibleLines = Math.floor(availableHeight / lineHeight);
+
+      // Set line clamp based on task duration
+      let newLineClamp;
+      if (task.duration <= ONE_HOUR_IN_MS) {
+        newLineClamp = 1; // Small tasks: always 1 line
+      } else if (task.duration <= ONE_HOUR_IN_MS * 2) {
+        newLineClamp = Math.min(2, maxPossibleLines); // Medium tasks: up to 2 lines
+      } else if (task.duration <= ONE_HOUR_IN_MS * 4) {
+        newLineClamp = Math.min(3, maxPossibleLines); // Large tasks (2-4 hours): up to 3 lines
+      } else {
+        // Extra large tasks (>4 hours): force 6 lines if space allows
+        newLineClamp = Math.min(6, Math.max(4, maxPossibleLines)); // Minimum 4 lines, maximum 6 lines
+      }
+
+      setTitleLineClamp(newLineClamp);
+    };
+
+    // Run initial calculation after a short delay to ensure container is properly sized
+    const initialTimeout = setTimeout(updateTitleLineClamp, 0);
+
+    // Set up resize observer for subsequent updates
+    const resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(updateTitleLineClamp);
+    });
+    resizeObserver.observe(titleContainerRef.current);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      if (titleContainerRef.current) {
+        resizeObserver.unobserve(titleContainerRef.current);
+      }
+    };
+  }, [task.duration]);
 
   function formatDurationForDisplay(duration: number): string {
     const minutes = duration / 60_000;
@@ -127,40 +218,6 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
   // Calculate if we should show the progress bar
   const hasSubtasks = task.subtasks && task.subtasks.length > 0;
   const progress = task.progress ?? 0;
-
-  // Get dynamic height and line clamp classes based on task duration
-  const getCardHeightClasses = () => {
-    // 0 to 1 hour: 60px height, 1 line of text
-    if (task.duration <= ONE_HOUR_IN_MS) {
-      return {
-        cardHeight: 'h-[60px]',
-        lineClamp: 'line-clamp-1',
-      };
-    }
-    // 1 to 2 hours: 120px height, 2 lines of text (intermediate size)
-    else if (task.duration <= ONE_HOUR_IN_MS * 2) {
-      return {
-        cardHeight: 'h-[120px]',
-        lineClamp: 'line-clamp-2',
-      };
-    }
-    // 2 to 3 hours: 170px height, 4 lines of text
-    else if (task.duration <= ONE_HOUR_IN_MS * 3) {
-      return {
-        cardHeight: 'h-[170px]',
-        lineClamp: 'line-clamp-4',
-      };
-    }
-    // 3+ hours: 230px height, 8 lines of text
-    else {
-      return {
-        cardHeight: 'h-[230px]',
-        lineClamp: 'line-clamp-8',
-      };
-    }
-  };
-
-  const { cardHeight, lineClamp } = getCardHeightClasses();
 
   return (
     <ContextMenu>
@@ -227,26 +284,27 @@ export const TaskItem = ({ task, onEdit }: TaskCardProps) => {
                   // Maintain vertical layout for all tasks but adjust spacing
                   'flex-col py-0',
                   // Adjust vertical alignment based on task size
-                  task.duration <= ONE_HOUR_IN_MS
-                    ? 'h-full justify-center pr-12'
-                    : task.duration <= ONE_HOUR_IN_MS * 2
-                      ? 'h-full justify-between py-1 pr-12'
-                      : 'justify-between py-1',
+                  task.duration <= ONE_HOUR_IN_MS * 2
+                    ? 'h-full justify-center pr-12' // Use center alignment for both 1 and 2 hour tasks
+                    : 'justify-between py-1',
                 )}
+                ref={titleContainerRef}
               >
                 {/* For all tasks, show title vertically, but adjust size for short tasks */}
                 <h3
                   className={cn(
                     // Use consistent text-sm for all task titles
-                    'line-clamp-1 text-sm font-medium',
+                    'text-sm font-medium',
                     // Different spacing based on task size
-                    task.duration <= ONE_HOUR_IN_MS ? 'mb-0.5' : '',
-                    task.duration <= ONE_HOUR_IN_MS * 2 && task.duration > ONE_HOUR_IN_MS
-                      ? 'mb-1'
-                      : '',
-                    task.duration > ONE_HOUR_IN_MS ? lineClamp : 'line-clamp-1',
+                    task.duration <= ONE_HOUR_IN_MS * 2 ? 'mb-1' : '', // Consistent margin for 1-2 hour tasks
                     task.completed && 'line-through opacity-60',
                   )}
+                  style={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: titleLineClamp,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
                 >
                   {task.title}
                 </h3>
