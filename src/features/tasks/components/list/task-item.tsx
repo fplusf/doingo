@@ -459,7 +459,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
       {listeners && (
         <div
           {...listeners}
-          className="absolute right-0 top-1/2 z-50 flex h-10 w-6 -translate-y-1/2 cursor-grab items-center justify-center opacity-0 transition-opacity duration-150 hover:opacity-100 active:cursor-grabbing group-hover:opacity-80"
+          className="absolute right-8 top-1/2 z-50 flex h-10 w-6 -translate-y-1/2 cursor-grab items-center justify-center opacity-0 transition-opacity duration-150 hover:opacity-100 active:cursor-grabbing group-hover:opacity-80"
           aria-label="Drag task"
           onClick={(e) => e.stopPropagation()}
         >
