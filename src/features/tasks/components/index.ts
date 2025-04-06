@@ -1,5 +1,5 @@
-export { TaskDetails } from './focus/details';
-export { TaskDocument } from './focus/document';
+export { TaskDetails } from './details/details';
+export { TaskDocument } from './details/document';
 export { CategorySection } from './list/category-section';
 export { TaskItem as TaskCard } from './list/task-item';
 export { TasksList } from './list/tasks-list';

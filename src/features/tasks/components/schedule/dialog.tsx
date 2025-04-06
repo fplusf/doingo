@@ -37,7 +37,7 @@ import {
   updateFields,
 } from '../../store/task-form.store';
 import { setEditingTaskId, tasksStore, updateTask } from '../../store/tasks.store';
-import { SubtaskList } from '../focus/subtasks';
+import { SubtaskList } from '../details/subtasks';
 import { PriorityPicker } from './priority-picker';
 import { TaskScheduler } from './task-scheduler';
 
