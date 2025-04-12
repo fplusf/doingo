@@ -53,8 +53,8 @@ export function TaskTimer({ taskId, startTime, duration, initialTimeSpent }: Tas
             {formatTime(elapsedTime)}
           </div>
         </TooltipTrigger>
-        <TooltipContent side="left" className="text-xs">
-          <p className="text-[10px] uppercase">actual time spent</p>
+        <TooltipContent side="top" className="p-0.5 text-[10px] uppercase">
+          actual time spent
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
