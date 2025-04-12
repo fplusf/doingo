@@ -48,6 +48,9 @@ export interface OptimalTask {
   isPartOfMultiDay?: boolean;
   originalTaskId?: string;
   multiDaySequence?: number;
+  multiDaySetId?: string;
+  isFirstDayOfSet?: boolean;
+  isLastDayOfSet?: boolean;
   // Gap-specific properties
   isGap?: boolean;
   gapType?: GapType;

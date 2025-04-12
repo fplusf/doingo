@@ -32,7 +32,6 @@ import { useStore } from '@tanstack/react-store';
 import { addMilliseconds, differenceInMilliseconds, format, parse } from 'date-fns';
 import React, { ForwardedRef, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { v4 as uuidv4 } from 'uuid';
 import { TasksRoute } from '../../../../routes/routes';
 import { TaskDialog } from '../schedule/dialog';
 import { CategorySection } from './category-section';
@@ -107,12 +106,14 @@ const processTasksWithGaps = (tasks: OptimalTask[]): OptimalTask[] => {
       if (isBreakGap) gapType = 'break';
       else if (hasSmallGap && isFutureGap) gapType = 'get-ready';
 
+      // Create a deterministic gap ID based on surrounding tasks and gap type
+      const gapId = `gap-${currentTask.id}-${nextTask.id}-${gapType}`;
       const gapEndTime = new Date(currentTaskEnd.getTime() + gapDuration);
       const gapItem: OptimalTask = {
-        id: `gap-${uuidv4()}`,
+        id: gapId,
         title: `Gap - ${gapType}`,
         startTime: currentTaskEnd,
-        nextStartTime: nextTask.startTime, // Should be gapEndTime? Let's keep nextTask.startTime for now
+        nextStartTime: nextTask.startTime,
         duration: gapDuration,
         completed: false,
         isFocused: false,
@@ -123,7 +124,10 @@ const processTasksWithGaps = (tasks: OptimalTask[]): OptimalTask[] => {
         isGap: true,
         gapType: gapType,
         gapStartTime: currentTaskEnd,
-        gapEndTime: nextTask.startTime, // Matches nextStartTime
+        gapEndTime: nextTask.startTime,
+        subtasks: [],
+        progress: 0,
+        timeSpent: 0,
       };
       result.push(gapItem);
     }
@@ -139,8 +143,10 @@ const processTasksWithGaps = (tasks: OptimalTask[]): OptimalTask[] => {
     const remainingTime = differenceInMilliseconds(endOfDay, lastTaskEnd);
 
     if (remainingTime > ONE_HOUR_IN_MS) {
+      // Create a deterministic gap ID for major strides based on the last task
+      const gapId = `gap-${lastTask.id}-end-major-strides`;
       const majorStridesGap: OptimalTask = {
-        id: `gap-${uuidv4()}`,
+        id: gapId,
         title: 'Gap - major-strides',
         startTime: lastTaskEnd,
         nextStartTime: endOfDay,
@@ -155,6 +161,9 @@ const processTasksWithGaps = (tasks: OptimalTask[]): OptimalTask[] => {
         gapType: 'major-strides',
         gapStartTime: lastTaskEnd,
         gapEndTime: endOfDay,
+        subtasks: [],
+        progress: 0,
+        timeSpent: 0,
       };
       result.push(majorStridesGap);
     }

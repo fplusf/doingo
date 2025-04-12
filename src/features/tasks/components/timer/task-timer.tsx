@@ -1,10 +1,12 @@
 import { updateTaskTimeSpent } from '@/features/tasks/store/tasks.store';
+import { Button } from '@/shared/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/components/ui/tooltip';
+import { Pause, Play } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface TaskTimerProps {
@@ -16,25 +18,34 @@ interface TaskTimerProps {
 
 export function TaskTimer({ taskId, startTime, duration, initialTimeSpent }: TaskTimerProps) {
   const [elapsedTime, setElapsedTime] = useState(initialTimeSpent);
+  const [isRunning, setIsRunning] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
 
   useEffect(() => {
-    let lastUpdate = Date.now();
-    const startTime = Date.now() - initialTimeSpent;
+    if (!isRunning) return;
 
+    const startTimeMs = Date.now() - elapsedTime;
     const timer = setInterval(() => {
       const now = Date.now();
-      const newElapsedTime = now - startTime;
+      const newElapsedTime = now - startTimeMs;
       setElapsedTime(newElapsedTime);
 
       // Update task time spent in store every minute
       if (now - lastUpdate >= 60000) {
         updateTaskTimeSpent(taskId, now - lastUpdate);
-        lastUpdate = now;
+        setLastUpdate(now);
       }
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [taskId, initialTimeSpent]);
+    return () => {
+      clearInterval(timer);
+      // Update time spent when stopping timer
+      const now = Date.now();
+      if (now - lastUpdate > 0) {
+        updateTaskTimeSpent(taskId, now - lastUpdate);
+      }
+    };
+  }, [taskId, isRunning, lastUpdate, elapsedTime]);
 
   const formatTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -45,16 +56,42 @@ export function TaskTimer({ taskId, startTime, duration, initialTimeSpent }: Tas
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const toggleTimer = () => {
+    if (isRunning) {
+      // Update time spent when pausing
+      const now = Date.now();
+      if (now - lastUpdate > 0) {
+        updateTaskTimeSpent(taskId, now - lastUpdate);
+      }
+    }
+    setLastUpdate(Date.now());
+    setIsRunning(!isRunning);
+  };
+
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="absolute right-3 top-2 z-10 flex h-6 w-[72px] cursor-default items-center justify-center rounded-md bg-gray-800/80 px-2 py-1 text-xs font-medium tabular-nums text-white">
-            {formatTime(elapsedTime)}
+          <div className="flex items-center gap-2">
+            <div className="flex h-6 items-center justify-center rounded-md bg-gray-800/80 px-2 py-1 text-xs font-medium tabular-nums text-white">
+              {formatTime(elapsedTime)}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleTimer();
+              }}
+            >
+              {isRunning ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+            </Button>
           </div>
         </TooltipTrigger>
         <TooltipContent side="top" className="p-0.5 text-[10px] uppercase">
-          actual time spent
+          time spent on task
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

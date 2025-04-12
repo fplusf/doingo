@@ -71,7 +71,23 @@ export const setSelectedDate = (date: string) => {
 };
 
 export const getTasksByDate = (date: string) => {
-  return tasksStore.state.tasks.filter((task: OptimalTask) => task.taskDate === date);
+  // Get all tasks for this date
+  const tasksForDate = tasksStore.state.tasks.filter((task: OptimalTask) => task.taskDate === date);
+
+  // For multi-day tasks, ensure we only show tasks that belong to this date
+  // If a task is part of a multi-day set, it should only appear in its assigned day
+  const filteredTasks = tasksForDate.filter((task: OptimalTask) => {
+    // If it's not a multi-day task, include it
+    if (!task.isPartOfMultiDay) {
+      return true;
+    }
+
+    // For multi-day tasks, only include if this is its assigned day
+    const taskDate = task.taskDate;
+    return taskDate === date;
+  });
+
+  return filteredTasks;
 };
 
 export const addTask = (task: Omit<OptimalTask, 'id'>) => {
@@ -104,6 +120,9 @@ const handleMultiDayTask = (task: OptimalTask, startTime: Date, endTime: Date): 
   const daysDifference = differenceInDays(endTime, startTime);
   const tasks: OptimalTask[] = [];
 
+  // Generate a unique sequence ID for this multi-day task set
+  const multiDaySetId = task.multiDaySetId || uuidv4();
+
   // Create a task for each day
   for (let i = 0; i <= daysDifference; i++) {
     const currentDate = addDays(startTime, i);
@@ -130,16 +149,26 @@ const handleMultiDayTask = (task: OptimalTask, startTime: Date, endTime: Date): 
       dailyEndTime.setMilliseconds(-1); // Set to 23:59:59.999
     }
 
+    // Calculate duration for this segment
+    const segmentDuration = differenceInMilliseconds(dailyEndTime, dailyStartTime);
+
+    // Generate a unique ID for each day's segment
+    const segmentId = isFirstDay ? task.id : uuidv4();
+
     const newTask: OptimalTask = {
       ...task,
-      id: isFirstDay ? task.id : `${task.id}_day_${i}`,
+      id: segmentId,
       taskDate,
       startTime: dailyStartTime,
       nextStartTime: dailyEndTime,
+      duration: segmentDuration,
       time: `${format(dailyStartTime, 'HH:mm')}—${format(dailyEndTime, 'HH:mm')}`,
       isPartOfMultiDay: true,
-      originalTaskId: isFirstDay ? task.id : task.id, // Reference to the original task
+      originalTaskId: task.id, // Always reference the original task ID
+      multiDaySetId, // Add the set ID to track related tasks
       multiDaySequence: i, // Track the sequence of days
+      isFirstDayOfSet: isFirstDay,
+      isLastDayOfSet: isLastDay,
     };
 
     tasks.push(newTask);
@@ -156,11 +185,12 @@ export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
 
     // If this is part of a multi-day task, we need to update all related tasks
     const isPartOfMultiDay = task.isPartOfMultiDay;
+    const multiDaySetId = task.multiDaySetId;
     const originalTaskId = task.originalTaskId || task.id;
 
     // Get all related tasks if this is part of a multi-day task
     const relatedTasks = isPartOfMultiDay
-      ? state.tasks.filter((t) => t.originalTaskId === originalTaskId || t.id === originalTaskId)
+      ? state.tasks.filter((t) => t.multiDaySetId === multiDaySetId)
       : [];
 
     // If updating time/date/duration, we need to handle potential multi-day spanning
@@ -179,7 +209,15 @@ export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
         );
 
         // Create new multi-day tasks
-        const multiDayTasks = handleMultiDayTask({ ...task, ...updates }, newStartTime, newEndTime);
+        const multiDayTasks = handleMultiDayTask(
+          {
+            ...task,
+            ...updates,
+            multiDaySetId: task.multiDaySetId || undefined, // Preserve existing set ID if any
+          },
+          newStartTime,
+          newEndTime,
+        );
 
         return {
           ...state,
@@ -193,7 +231,7 @@ export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
       ...state,
       tasks: state.tasks.map((t: OptimalTask) => {
         // If this is part of a multi-day task, update all related tasks
-        if (isPartOfMultiDay && (t.id === originalTaskId || t.originalTaskId === originalTaskId)) {
+        if (isPartOfMultiDay && t.multiDaySetId === multiDaySetId) {
           return { ...t, ...updates };
         }
         // Otherwise, just update the specific task

@@ -7,6 +7,7 @@ import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { toggleTaskCompletion, updateTask } from '../../store/tasks.store';
 import CollapsedContainer from '../schedule/collapsed-container';
 import { TaskScheduler } from '../schedule/task-scheduler';
+import { TaskTimer } from '../timer/task-timer';
 import TaskNotes from './notes';
 import { SubtaskList } from './subtasks';
 
@@ -68,9 +69,17 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
         <div className="flex-1">
           <EmojiPicker emoji={task.emoji} onEmojiSelect={handleEmojiSelect} className="text-3xl" />
         </div>
-        <CollapsedContainer>
-          <TaskScheduler className="flex-1 text-muted-foreground" taskId={taskId} />
-        </CollapsedContainer>
+        <div className="flex items-center gap-4">
+          <CollapsedContainer>
+            <TaskScheduler className="flex-1 text-muted-foreground" taskId={taskId} />
+          </CollapsedContainer>
+          <TaskTimer
+            taskId={taskId}
+            startTime={task.startTime || new Date()}
+            duration={task.duration || 0}
+            initialTimeSpent={task.timeSpent || 0}
+          />
+        </div>
       </div>
 
       <ScrollArea
