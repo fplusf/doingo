@@ -21,15 +21,6 @@ interface TimelineNodeProps {
   timeSpent?: number;
 }
 
-// Interface defining the structure of a sand particle
-interface SandParticle {
-  id: number;
-  size: number;
-  left: number;
-  delay: number;
-  duration: number;
-}
-
 export function TimelineNode({
   emoji,
   priority = 'none',
@@ -48,10 +39,8 @@ export function TimelineNode({
 }: TimelineNodeProps) {
   const [progress, setProgress] = useState(0);
   const [timeStatus, setTimeStatus] = useState<'past' | 'present' | 'future'>('future');
-  const [now, setNow] = useState(new Date());
-  const [particles, setParticles] = useState<SandParticle[]>([]);
-  const containerRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Handle click with event prevention
   const handleClick = (e: React.MouseEvent) => {
@@ -82,10 +71,8 @@ export function TimelineNode({
 
   // Update time status and progress
   useEffect(() => {
-    // Initial calculation
     const updateTimeStatus = () => {
       const currentTime = new Date();
-      setNow(currentTime);
 
       if (!startTime || !duration) {
         setTimeStatus('future');
@@ -95,54 +82,30 @@ export function TimelineNode({
       const endTimeValue = addMilliseconds(startTime, duration);
 
       if (endTimeValue < currentTime) {
-        // Task is in the past
         setTimeStatus('past');
         setProgress(100);
       } else if (startTime <= currentTime && endTimeValue > currentTime) {
-        // Task is ongoing
         setTimeStatus('present');
         const totalDuration = duration;
         const elapsedTime = currentTime.getTime() - startTime.getTime();
         const calculatedProgress = Math.min(Math.max((elapsedTime / totalDuration) * 100, 0), 100);
         setProgress(calculatedProgress);
       } else {
-        // Task is in the future
         setTimeStatus('future');
         setProgress(0);
       }
     };
 
-    // Update immediately
     updateTimeStatus();
 
-    // Update every second for ongoing tasks
-    const intervalId = setInterval(() => {
-      updateTimeStatus();
-    }, 1000);
-
+    const intervalId = setInterval(updateTimeStatus, 1000);
     return () => clearInterval(intervalId);
   }, [startTime, duration, timeSpent]);
-
-  // Generate sand particles - do this only once when the component becomes 'present'
-  useEffect(() => {
-    if (timeStatus === 'present' && particles.length === 0) {
-      // Create a fixed number of particles with different properties
-      const newParticles = Array.from({ length: 20 }, (_, index) => ({
-        id: index,
-        size: 2 + Math.random() * 3, // 2-5px
-        left: 5 + Math.random() * 90, // Random horizontal position (5-95%)
-        delay: Math.random() * 2, // Random delay (0-2s)
-        duration: 1 + Math.random() * 2, // Random duration (1-3s)
-      }));
-
-      setParticles(newParticles);
-    }
-  }, [timeStatus, particles.length]);
 
   // Update current time every minute
   useEffect(() => {
     const updateTime = () => setCurrentTime(new Date());
-    updateTime(); // Set initial time
+    updateTime();
 
     const now = new Date();
     const msToNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
@@ -160,16 +123,12 @@ export function TimelineNode({
   const getEmojiTextShadow = (priority: TaskPriority) => {
     switch (priority) {
       case 'high':
-        // For red/high priority (darker background)
         return '0px 1px 2px rgba(0, 0, 0, 0.15), 0px 0px 1px rgba(255, 255, 255, 0.9)';
       case 'medium':
-        // For orange/medium priority (medium background)
         return '0px 1px 2px rgba(0, 0, 0, 0.15), 0px 0px 4px rgba(55, 55, 55, 0.7)';
       case 'low':
-        // For yellow/low priority (light background)
         return '0px 1px 2px rgba(0, 0, 0, 0.35), 0px 0px 1px rgba(255, 255, 255, 0.6)';
       default:
-        // For default/none priority
         return '0px 1px 2px rgba(0, 0, 0, 0.2), 0px 0px 3px rgba(255, 255, 255, 0.9)';
     }
   };
@@ -177,24 +136,18 @@ export function TimelineNode({
   // Get height based on task duration
   const getNodeHeight = () => {
     if (height) {
-      return height; // Use provided height if available
+      return height;
     }
 
-    // If we have duration, calculate based on that
     if (duration !== undefined) {
-      // 0 to 1 hour: 60px height
       if (duration <= ONE_HOUR_IN_MS) {
         return '60px';
-      }
-      // 1 to 2 hours: 120px height (intermediate size)
-      else if (duration <= ONE_HOUR_IN_MS * 2) {
+      } else if (duration <= ONE_HOUR_IN_MS * 2) {
         return '120px';
       }
-      // Default height for longer tasks
       return '48px';
     }
 
-    // Default fallback
     return '48px';
   };
 
@@ -203,77 +156,71 @@ export function TimelineNode({
   // Get border color based on priority
   const getBorderStyles = (priority: TaskPriority) => {
     if (priority === 'none' || priority === 'not-urgent-not-important') {
-      // Use green border for none/default priority tasks
       return {
-        border: '0.5px solid #66BB6A', // Green for Daily Meditation
-        boxShadow: '0 0 0 0.5px rgba(102, 187, 106, 0.6)', // Green with 60% opacity
+        border: '0.5px solid #66BB6A',
+        boxShadow: '0 0 0 0.5px rgba(102, 187, 106, 0.6)',
       };
     }
 
     const priorityColor = PRIORITY_COLORS[priority as keyof typeof PRIORITY_COLORS];
     return {
-      border: `0.5px solid ${priorityColor}`, // Thinner border
-      boxShadow: `0 0 0 0.5px ${priorityColor}90`, // Shadow with 56% opacity
+      border: `0.5px solid ${priorityColor}`,
+      boxShadow: `0 0 0 0.5px ${priorityColor}90`,
     };
   };
 
   // Get background color based on time status and priority
   const getBackgroundStyles = () => {
-    // Default background for future tasks
     const defaultBg = {
-      backgroundColor: '#323236', // Softer gray background color
+      backgroundColor: '#323236',
     };
 
-    // Past tasks should be filled with priority color
     if (timeStatus === 'past') {
       return {
         backgroundColor: priorityColor,
       };
     }
 
-    // For ongoing tasks, we'll use the sand effect
-    if (timeStatus === 'present' && !completed) {
-      return {
-        backgroundColor: '#323236', // Softer background for present tasks
-        overflow: 'hidden', // Ensure particles don't overflow
-      };
-    }
-
-    // For future tasks and completed present tasks, use default background
     return defaultBg;
   };
 
-  // Generate sand particle styles with CSS
-  const getParticleStyle = (particle: SandParticle): React.CSSProperties => {
+  // Get progress fill style
+  const getProgressFillStyle = (): React.CSSProperties => {
     return {
       position: 'absolute',
-      width: `${particle.size}px`,
-      height: `${particle.size}px`,
-      backgroundColor: priorityColor,
-      borderRadius: '50%',
-      left: `${particle.left}%`,
       top: 0,
-      opacity: 0.7 + Math.random() * 0.2, // Higher opacity for particles
-      zIndex: 2,
-      animation: `fallingSand ${particle.duration}s ease-in infinite ${particle.delay}s`,
-      animationPlayState: progress >= 100 ? 'paused' : 'running',
-    };
-  };
-
-  // Get sand level style based on progress
-  const getSandLevelStyle = (): React.CSSProperties => {
-    return {
-      position: 'absolute',
-      bottom: 0,
       left: 0,
       right: 0,
       height: `${progress}%`,
       backgroundColor: priorityColor,
-      opacity: 0.7, // Higher opacity for sand level
-      borderRadius: '0 0 24px 24px',
-      transition: 'height 1s ease-in-out',
+      transition: 'height 1s linear',
+      borderRadius: '24px 24px 0 0',
+    };
+  };
+
+  // Get particle styles
+  const getParticleStyles = (index: number): React.CSSProperties => {
+    const particleSize = 1;
+    const horizontalPosition = index * 3 + Math.random() * 2; // More frequent particles
+    return {
+      position: 'absolute',
+      width: `${particleSize}px`,
+      height: `${particleSize}px`,
+      backgroundColor: 'transparent',
+      borderRadius: '50%',
+      left: `${horizontalPosition}%`,
+      top: `${progress}%`,
+      transform: 'translate(-50%, -50%)',
+      boxShadow: `
+        0 0 1px ${priorityColor},
+        0 0 2px ${priorityColor},
+        0 0 3px ${priorityColor}
+      `,
+      filter: 'brightness(1.75)',
+      opacity: 0.8,
+      animation: `sparkVibrate 0.15s ease-in-out infinite alternate`,
+      animationDelay: `${index * 0.02}s`,
       zIndex: 1,
-      boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.1)', // Slightly stronger shadow
     };
   };
 
@@ -334,15 +281,20 @@ export function TimelineNode({
           }
         }}
       >
-        {/* Sand level at the bottom */}
-        {timeStatus === 'present' && !completed && <div style={getSandLevelStyle()} />}
+        {/* Progress fill */}
+        {timeStatus === 'present' && !completed && (
+          <>
+            <div style={getProgressFillStyle()} />
+            {Array.from({ length: 35 }).map((_, index) => (
+              <>
+                <div key={index} style={getParticleStyles(index)} />
+                <div key={index} style={getParticleStyles(index)} />
+              </>
+            ))}
+          </>
+        )}
 
-        {/* Sand particles with CSS animations */}
-        {timeStatus === 'present' &&
-          !completed &&
-          particles.map((particle) => <div key={particle.id} style={getParticleStyle(particle)} />)}
-
-        {/* Emoji container - keep above sand */}
+        {/* Emoji container */}
         <div className="relative z-10 flex h-full w-full select-none items-center justify-center py-2">
           {emoji ? (
             <div className="flex h-6 w-6 items-center justify-center">
@@ -362,19 +314,14 @@ export function TimelineNode({
         </div>
       </div>
 
-      {/* CSS Animation Keyframes */}
+      {/* Sparkler animation keyframes */}
       <style>{`
-        @keyframes fallingSand {
+        @keyframes sparkVibrate {
           0% {
-            transform: translateY(0);
-            opacity: 0.7;
-          }
-          70% {
-            opacity: 0.9;
+            transform: translate(-50%, -50%) translateY(-0.5px);
           }
           100% {
-            transform: translateY(${containerRef.current?.clientHeight || 100}px);
-            opacity: 0.7;
+            transform: translate(-50%, -50%) translateY(0.5px);
           }
         }
       `}</style>
