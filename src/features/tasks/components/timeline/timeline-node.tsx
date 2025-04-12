@@ -192,7 +192,10 @@ export function TimelineNode({
       left: 0,
       right: 0,
       height: `${progress}%`,
-      backgroundColor: priorityColor,
+      background:
+        progress === 100
+          ? priorityColor
+          : `linear-gradient(to bottom, ${priorityColor} 0%, ${priorityColor} 40%, ${priorityColor}80 100%)`,
       transition: 'height 1s linear',
       borderRadius: '24px 24px 0 0',
     };
@@ -216,7 +219,7 @@ export function TimelineNode({
         0 0 2px ${priorityColor},
         0 0 3px ${priorityColor}
       `,
-      filter: 'brightness(1.75)',
+      filter: 'brightness(1.7)',
       opacity: 0.8,
       animation: `sparkVibrate 0.15s ease-in-out infinite alternate`,
       animationDelay: `${index * 0.02}s`,
@@ -227,7 +230,7 @@ export function TimelineNode({
   return (
     <div className="relative h-full">
       {/* Render start time */}
-      {startTime && !shouldMergeTimes && (
+      {isFocused && startTime && !shouldMergeTimes && (
         <div className="absolute -left-12 top-0 text-xs text-muted-foreground">
           {format(startTime, 'HH:mm')}
         </div>
@@ -241,7 +244,7 @@ export function TimelineNode({
       )}
 
       {/* Render end time */}
-      {endTime && !shouldMergeTimes && (
+      {isFocused && endTime && !shouldMergeTimes && (
         <div className="absolute -left-12 bottom-0 text-xs text-muted-foreground/60">
           {format(endTime, 'HH:mm')}
         </div>
