@@ -15,7 +15,7 @@ import {
   updateRepetition,
   updateStartDateTime,
 } from '../../store/task-form.store';
-import { pushForwardAffectedTasks } from '../../store/tasks.store';
+// import { pushForwardAffectedTasks } from '../../store/tasks.store'; // Removed - Logic now handled by setFocused
 import { DateTimePicker } from './date-time-picker';
 import { DurationPicker } from './duration-picker';
 import { RepetitionPicker } from './repetition-picker';
@@ -198,26 +198,24 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
 
       {showPushForwardPrompt && (
         <div className="mt-1 rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-700">
-          <p className="mb-1">
-            This will reschedule all affected tasks to start after this task's end time. Continue?
-          </p>
-          <div className="flex justify-end gap-2">
+          <p>This will move the overlapping tasks to start after this task finishes.</p>
+          <div className="mt-1 flex justify-end gap-2">
             <button
               onClick={() => setShowPushForwardPrompt(false)}
-              className="rounded bg-gray-200 px-2 py-1 hover:bg-gray-300"
+              className="font-semibold hover:underline"
             >
               Cancel
             </button>
             <button
               onClick={() => {
-                // Call the push forward function and then hide the prompt
-                if (taskId) {
-                  pushForwardAffectedTasks(taskId, startTime, duration, startDate);
-                  setShowPushForwardPrompt(false);
-                  setHasOverlap(false); // Reset the overlap state since we've resolved it
-                }
+                // Logic removed - Handled by focusing the task if needed
+                // if (taskId) {
+                //   pushForwardAffectedTasks(taskId, startTime, duration, startDate);
+                // }
+                setShowPushForwardPrompt(false);
+                setHasOverlap(false); // Assume pushing resolves the overlap
               }}
-              className="rounded bg-blue-500 px-2 py-1 text-white hover:bg-blue-600"
+              className="font-semibold text-blue-600 hover:underline"
             >
               Confirm
             </button>

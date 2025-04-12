@@ -1,7 +1,15 @@
 // Calculate the next 15-minute interval from the current time
 import { tasksStore } from '@/features/tasks/store/tasks.store';
 import { OptimalTask } from '@/features/tasks/types';
-import { addMilliseconds, format } from 'date-fns';
+import {
+  addMilliseconds,
+  addMinutes,
+  format,
+  getMinutes,
+  setMilliseconds,
+  setMinutes,
+  setSeconds,
+} from 'date-fns';
 
 export const getNextFifteenMinuteInterval = (): Date => {
   const now = new Date();
@@ -209,4 +217,30 @@ export const findFreeTimeSlots = (date: string, duration: number): string[] => {
   }
 
   return freeSlots;
+};
+
+/**
+ * Calculates the next 5-minute interval from the given date.
+ * If the current time is exactly on a 5-minute mark, it returns that mark.
+ * Otherwise, it rounds up to the nearest future 5-minute mark.
+ * Example: 10:02 -> 10:05, 10:05 -> 10:05, 10:08 -> 10:10
+ * @param date - The date object to calculate from (defaults to now).
+ * @returns A new Date object set to the next 5-minute interval.
+ */
+export const getNextFiveMinuteInterval = (date: Date = new Date()): Date => {
+  const minutes = getMinutes(date);
+  const remainder = minutes % 5;
+
+  let nextInterval = setSeconds(setMilliseconds(date, 0), 0); // Clear seconds and ms
+
+  if (remainder === 0) {
+    // Already on a 5-minute mark
+    return nextInterval;
+  } else {
+    // Round up to the next 5-minute mark
+    const minutesToAdd = 5 - remainder;
+    nextInterval = addMinutes(nextInterval, minutesToAdd);
+    // Ensure minutes are explicitly set after adding, correcting potential date-fns edge cases
+    return setMinutes(nextInterval, Math.ceil(getMinutes(date) / 5) * 5);
+  }
 };

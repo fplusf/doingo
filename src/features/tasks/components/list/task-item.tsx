@@ -1,4 +1,3 @@
-import { deleteTask, setFocused, toggleTaskCompletion } from '@/features/tasks/store/tasks.store';
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -7,6 +6,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '@/shared/components/ui/context-menu';
+import { ToastAction } from '@/shared/components/ui/toast';
 import {
   Tooltip,
   TooltipContent,
@@ -17,9 +17,16 @@ import { toast } from '@/shared/hooks/use-toast';
 import { useNavigate } from '@tanstack/react-router';
 import { addMilliseconds, format } from 'date-fns';
 import { ArrowRight, GripVertical, LucideFocus, Trash2 } from 'lucide-react';
-import React from 'react';
+import React, { useRef } from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
+import {
+  deleteTask,
+  setFocused,
+  toggleTaskCompletion,
+  undoLastFocusAction,
+} from '../../store/tasks.store';
 import { ONE_HOUR_IN_MS, TaskCardProps } from '../../types';
+import { TaskTimer } from '../timer/task-timer';
 
 interface TaskItemProps extends TaskCardProps {
   listeners?: Record<string, any>;
@@ -30,39 +37,63 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
   const [isHovered, setIsHovered] = React.useState(false);
   const [titleLineClamp, setTitleLineClamp] = React.useState(1);
   const titleContainerRef = React.useRef<HTMLDivElement>(null);
+  const lastFKeyPressTime = useRef<number | null>(null);
+  const DOUBLE_PRESS_THRESHOLD = 500;
   const today = new Date();
   const isToday = task.taskDate === format(today, 'yyyy-MM-dd');
 
-  const displayDuration = effectiveDuration ?? task.duration;
+  const displayDuration = effectiveDuration ?? task.duration ?? ONE_HOUR_IN_MS;
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isHovered) {
-        // Handle 'F' key for focus
         if (e.key.toLowerCase() === 'f') {
           e.preventDefault();
+          const now = Date.now();
 
-          if (task.completed) {
-            // Don't focus completed tasks
-            return;
+          if (
+            lastFKeyPressTime.current &&
+            now - lastFKeyPressTime.current < DOUBLE_PRESS_THRESHOLD
+          ) {
+            if (task.completed) return;
+
+            const taskIsCurrentlyToday = task.taskDate === format(new Date(), 'yyyy-MM-dd');
+
+            if (!taskIsCurrentlyToday) {
+              toast({
+                title: 'Moving task to today',
+                description:
+                  'The task will be moved to current time and focused. Any uncompleted tasks that overlap with this time period will be rescheduled.',
+                duration: 5000,
+                action: (
+                  <ToastAction altText="Undo" onClick={() => undoLastFocusAction()}>
+                    Undo
+                  </ToastAction>
+                ),
+              });
+            } else {
+              toast({
+                title: 'Focusing task',
+                description:
+                  'The task will be moved to current time. Any uncompleted tasks that overlap with this time period will be rescheduled.',
+                duration: 5000,
+                action: (
+                  <ToastAction altText="Undo" onClick={() => undoLastFocusAction()}>
+                    Undo
+                  </ToastAction>
+                ),
+              });
+            }
+
+            setFocused(task.id, true);
+            navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
+
+            lastFKeyPressTime.current = null;
+          } else {
+            lastFKeyPressTime.current = now;
           }
-
-          if (!isToday) {
-            // Show toast for non-today tasks
-            toast({
-              title: 'Focus not available',
-              description:
-                "Focusing possible only on today's tasks. If you want to focus on a task, move it to today.",
-              duration: 5000,
-            });
-            return;
-          }
-
-          // Set focus but don't navigate to details
-          setFocused(task.id, true);
         }
 
-        // Handle 'D' key for details - works for any task regardless of date
         if (e.key.toLowerCase() === 'd') {
           e.preventDefault();
           navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
@@ -70,9 +101,22 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
       }
     };
 
+    const handleMouseLeave = () => {
+      lastFKeyPressTime.current = null;
+    };
+    const currentElement = titleContainerRef.current;
+    if (currentElement) {
+      currentElement.addEventListener('mouseleave', handleMouseLeave);
+    }
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isHovered, navigate, task.id, task.completed, isToday]);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (currentElement) {
+        currentElement.removeEventListener('mouseleave', handleMouseLeave);
+      }
+    };
+  }, [isHovered, navigate, task.id, task.completed, task.taskDate]);
 
   React.useEffect(() => {
     if (!titleContainerRef.current) return;
@@ -157,22 +201,40 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
     e.stopPropagation();
 
     if (task.completed) {
-      return; // Don't focus completed tasks
-    }
-
-    if (!isToday) {
-      // Show toast for non-today tasks
-      toast({
-        title: 'Focus not available',
-        description:
-          "Focusing possible only on today's tasks. If you want to focus on a task, move it to today.",
-        duration: 5000,
-      });
       return;
     }
 
-    // Just set focus, don't navigate to details
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const isTaskFromToday = task.taskDate === today;
+
+    if (!isTaskFromToday) {
+      toast({
+        title: 'Moving task to today',
+        description:
+          'The task will be moved to current time and focused. Any uncompleted tasks that overlap with this time period will be rescheduled.',
+        duration: 5000,
+        action: (
+          <ToastAction altText="Undo" onClick={() => undoLastFocusAction()}>
+            Undo
+          </ToastAction>
+        ),
+      });
+    } else {
+      toast({
+        title: 'Focusing task',
+        description:
+          'The task will be moved to current time. Any uncompleted tasks that overlap with this time period will be rescheduled.',
+        duration: 5000,
+        action: (
+          <ToastAction altText="Undo" onClick={() => undoLastFocusAction()}>
+            Undo
+          </ToastAction>
+        ),
+      });
+    }
+
     setFocused(task.id, true);
+    navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
   };
 
   const handleDetailsClick = (e: React.MouseEvent) => {
@@ -190,7 +252,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
           <div
             className={cn(
               'task-card relative flex h-full w-full flex-col rounded-3xl bg-card sm:w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]',
-              task.isFocused && isToday && 'bg-gradient-to-r from-orange-300 to-orange-600',
+              task.isFocused && 'shadow-md shadow-blue-500/20 ring-2 ring-blue-500',
               task.completed && 'opacity-60 transition-opacity duration-300 hover:opacity-100',
             )}
             onMouseEnter={(e) => {
@@ -207,14 +269,15 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
             }}
             style={{
               border: '1px solid transparent',
-              transition: 'border-color 0.2s ease-in-out, height 0.2s ease-in-out',
+              transition:
+                'border-color 0.2s ease-in-out, height 0.2s ease-in-out, box-shadow 0.3s ease',
             }}
             role="button"
             tabIndex={0}
           >
             <div
               className={cn(
-                task.isFocused && isToday && 'bg-sidebar/95',
+                task.isFocused && 'bg-blue-50 dark:bg-blue-950/20',
                 'relative h-full w-full rounded-3xl',
                 displayDuration <= ONE_HOUR_IN_MS ? 'p-0 px-4 py-0' : 'p-2 py-4',
               )}
@@ -251,21 +314,31 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                   )}
                   ref={titleContainerRef}
                 >
-                  <h3
-                    className={cn(
-                      'text-sm font-medium',
-                      displayDuration <= ONE_HOUR_IN_MS * 2 ? 'mb-1' : '',
-                      task.completed && 'line-through opacity-60',
+                  <div className="flex items-center justify-between">
+                    <h3
+                      className={cn(
+                        'text-sm font-medium',
+                        displayDuration <= ONE_HOUR_IN_MS * 2 ? 'mb-1' : '',
+                        task.completed && 'line-through opacity-60',
+                      )}
+                      style={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: titleLineClamp,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {task.title}
+                    </h3>
+                    {task.isFocused && task.startTime && (
+                      <TaskTimer
+                        taskId={task.id}
+                        startTime={task.startTime}
+                        duration={displayDuration}
+                        initialTimeSpent={task.timeSpent || 0}
+                      />
                     )}
-                    style={{
-                      display: '-webkit-box',
-                      WebkitLineClamp: titleLineClamp,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {task.title}
-                  </h3>
+                  </div>
 
                   {displayDuration <= ONE_HOUR_IN_MS * 2 && task.time && (
                     <div className="flex items-center justify-between">
@@ -340,7 +413,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                                 <LucideFocus
                                   className={cn(
                                     'h-4 w-4 transition-all duration-200',
-                                    task.isFocused && isToday
+                                    task.isFocused
                                       ? 'fill-blue-500 text-blue-500'
                                       : 'text-muted-foreground',
                                     'hover:scale-150 hover:fill-blue-500 hover:text-blue-500 hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]',
@@ -394,7 +467,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                                 <LucideFocus
                                   className={cn(
                                     'h-4 w-4 transition-all duration-200',
-                                    task.isFocused && isToday
+                                    task.isFocused
                                       ? 'fill-blue-500 text-blue-500'
                                       : 'text-muted-foreground',
                                     'hover:scale-150 hover:fill-blue-500 hover:text-blue-500',
@@ -441,7 +514,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
           </ContextMenuItem>
           <ContextMenuItem
             onClick={(e: React.MouseEvent<HTMLDivElement>) => handleFocusClick(e)}
-            disabled={task.completed || !isToday}
+            disabled={task.completed}
           >
             Focus
           </ContextMenuItem>

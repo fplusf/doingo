@@ -38,7 +38,7 @@ interface SortableTimelineTaskItemProps {
 const getSortedTasksForDate = (tasks: OptimalTask[], date: string): OptimalTask[] => {
   return tasks
     .filter((t) => t.taskDate === date)
-    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+    .sort((a, b) => (a.startTime?.getTime() || 0) - (b.startTime?.getTime() || 0));
 };
 
 // Helper function to update subsequent tasks
@@ -275,8 +275,8 @@ export const SortableTimelineTaskItem = ({
               <div className="h-full">
                 <TimelineItem
                   priority={task.priority}
-                  startTime={task.startTime}
-                  nextStartTime={effectiveEndTime}
+                  startTime={task.startTime || new Date()}
+                  nextStartTime={effectiveEndTime || new Date()}
                   completed={task.completed}
                   strikethrough={task.completed}
                   emoji={task.emoji}
@@ -289,6 +289,8 @@ export const SortableTimelineTaskItem = ({
                   isLastItem={isLastItem}
                   fixedHeight={true}
                   nextTaskPriority={nextTask?.priority || 'none'}
+                  isFocused={task.isFocused}
+                  timeSpent={task.timeSpent || 0}
                   {...attributes}
                   data-id={task.id}
                 />
@@ -313,7 +315,7 @@ export const SortableTimelineTaskItem = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div
-                      className={`-bottom-18 absolute right-10 z-10 flex items-center gap-1 text-xs text-yellow-500`}
+                      className={`absolute -bottom-5 right-20 z-10 flex items-center gap-1 text-xs text-yellow-500`}
                     >
                       <Blend className="h-4 w-4" />
                     </div>

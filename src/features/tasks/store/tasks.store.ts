@@ -1,11 +1,24 @@
 import {
   findNextAvailableTimeSlot,
   getNextFifteenMinuteInterval,
+  getNextFiveMinuteInterval,
 } from '@/shared/helpers/date/next-feefteen-minutes';
 import { LocalStorageAdapter } from '@/shared/store/adapters/local-storage-adapter';
 import { StorageAdapter } from '@/shared/store/adapters/storage-adapter';
 import { Store } from '@tanstack/react-store';
-import { addMilliseconds, format, parse, parseISO } from 'date-fns';
+import {
+  addDays,
+  addMilliseconds,
+  differenceInDays,
+  differenceInMilliseconds,
+  format,
+  getHours,
+  getMinutes,
+  isSameDay,
+  parse,
+  parseISO,
+  startOfDay,
+} from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import {
   ONE_HOUR_IN_MS,
@@ -33,6 +46,7 @@ const initialState: TasksState = {
   focusedTaskId: null,
   editingTaskId: null,
   highlightedTaskId: null,
+  taskHistory: [],
   resizingState: {
     taskId: null,
     temporaryDuration: null,
@@ -80,38 +94,111 @@ export const addTask = (task: Omit<OptimalTask, 'id'>) => {
   }));
 };
 
+// Helper function to handle tasks that span multiple days
+const handleMultiDayTask = (task: OptimalTask, startTime: Date, endTime: Date): OptimalTask[] => {
+  // If start and end are on the same day, return original task
+  if (isSameDay(startTime, endTime)) {
+    return [{ ...task, startTime, nextStartTime: endTime }];
+  }
+
+  const daysDifference = differenceInDays(endTime, startTime);
+  const tasks: OptimalTask[] = [];
+
+  // Create a task for each day
+  for (let i = 0; i <= daysDifference; i++) {
+    const currentDate = addDays(startTime, i);
+    const taskDate = format(currentDate, 'yyyy-MM-dd');
+    const isFirstDay = i === 0;
+    const isLastDay = i === daysDifference;
+
+    let dailyStartTime: Date;
+    let dailyEndTime: Date;
+
+    if (isFirstDay) {
+      // First day: from original start time to end of day (23:59:59)
+      dailyStartTime = new Date(startTime);
+      dailyEndTime = new Date(startOfDay(addDays(currentDate, 1)));
+      dailyEndTime.setMilliseconds(-1); // Set to 23:59:59.999
+    } else if (isLastDay) {
+      // Last day: from start of day (00:00) to original end time
+      dailyStartTime = new Date(startOfDay(currentDate));
+      dailyEndTime = new Date(endTime);
+    } else {
+      // Middle days: full day (00:00 to 23:59:59)
+      dailyStartTime = new Date(startOfDay(currentDate));
+      dailyEndTime = new Date(startOfDay(addDays(currentDate, 1)));
+      dailyEndTime.setMilliseconds(-1); // Set to 23:59:59.999
+    }
+
+    const newTask: OptimalTask = {
+      ...task,
+      id: isFirstDay ? task.id : `${task.id}_day_${i}`,
+      taskDate,
+      startTime: dailyStartTime,
+      nextStartTime: dailyEndTime,
+      time: `${format(dailyStartTime, 'HH:mm')}—${format(dailyEndTime, 'HH:mm')}`,
+      isPartOfMultiDay: true,
+      originalTaskId: isFirstDay ? task.id : task.id, // Reference to the original task
+      multiDaySequence: i, // Track the sequence of days
+    };
+
+    tasks.push(newTask);
+  }
+
+  return tasks;
+};
+
+// Modify the updateTask function to handle multi-day tasks
 export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
   updateStateAndStorage((state) => {
     const task = state.tasks.find((t: OptimalTask) => t.id === id);
     if (!task) return state;
 
-    // If time is being updated, extract the date from the start time
-    if (updates.time && typeof updates.time === 'string') {
-      try {
-        const timeComponents = updates.time.split(/[—-]/); // Handle both em dash and regular dash
-        if (timeComponents.length > 0) {
-          const startTime = timeComponents[0].trim();
-          const [hours, minutes] = startTime.split(':').map(Number);
+    // If this is part of a multi-day task, we need to update all related tasks
+    const isPartOfMultiDay = task.isPartOfMultiDay;
+    const originalTaskId = task.originalTaskId || task.id;
 
-          if (!isNaN(hours) && !isNaN(minutes)) {
-            // Create date from the current task date and new time
-            const currentDate = new Date(task.taskDate + 'T00:00:00');
-            currentDate.setHours(hours, minutes);
+    // Get all related tasks if this is part of a multi-day task
+    const relatedTasks = isPartOfMultiDay
+      ? state.tasks.filter((t) => t.originalTaskId === originalTaskId || t.id === originalTaskId)
+      : [];
 
-            // Update taskDate to match the start time's date
-            updates.taskDate = format(currentDate, 'yyyy-MM-dd');
-          }
-        }
-      } catch (error) {
-        console.error('Error parsing time:', error);
+    // If updating time/date/duration, we need to handle potential multi-day spanning
+    if (updates.startTime || updates.nextStartTime || updates.duration) {
+      const newStartTime = updates.startTime || task.startTime;
+      const newEndTime =
+        updates.nextStartTime ||
+        (newStartTime && updates.duration
+          ? addMilliseconds(newStartTime, updates.duration)
+          : task.nextStartTime);
+
+      if (newStartTime && newEndTime && !isSameDay(newStartTime, newEndTime)) {
+        // Remove all existing related tasks
+        const nonRelatedTasks = state.tasks.filter(
+          (t) => !relatedTasks.some((rt) => rt.id === t.id),
+        );
+
+        // Create new multi-day tasks
+        const multiDayTasks = handleMultiDayTask({ ...task, ...updates }, newStartTime, newEndTime);
+
+        return {
+          ...state,
+          tasks: [...nonRelatedTasks, ...multiDayTasks],
+        };
       }
     }
 
+    // For non-time/date updates or single-day tasks, update normally
     return {
       ...state,
-      tasks: state.tasks.map((task: OptimalTask) =>
-        task.id === id ? { ...task, ...updates } : task,
-      ),
+      tasks: state.tasks.map((t: OptimalTask) => {
+        // If this is part of a multi-day task, update all related tasks
+        if (isPartOfMultiDay && (t.id === originalTaskId || t.originalTaskId === originalTaskId)) {
+          return { ...t, ...updates };
+        }
+        // Otherwise, just update the specific task
+        return t.id === id ? { ...t, ...updates } : t;
+      }),
     };
   });
 };
@@ -142,28 +229,123 @@ export const setEditingTaskId = (taskId: string | null) => {
   }));
 };
 
+// Modify the setFocused function to handle multi-day tasks
 export const setFocused = (id: string, isFocused: boolean) => {
-  const today = format(new Date(), 'yyyy-MM-dd');
-
   updateStateAndStorage((state) => {
-    // Find the task that should be focused
     const taskToFocus = state.tasks.find((task: OptimalTask) => task.id === id);
+    if (!taskToFocus) return state;
 
-    // If the task is not for today, don't allow focusing
-    if (taskToFocus && taskToFocus.taskDate !== today && isFocused) {
-      return state;
+    let finalTasks = [...state.tasks];
+    let finalHistory = [...state.taskHistory];
+    let finalFocusedId: string | null = state.focusedTaskId;
+
+    if (isFocused) {
+      // Update time spent for previously focused task if exists
+      if (state.focusedTaskId) {
+        const prevFocusedTask = state.tasks.find((t) => t.id === state.focusedTaskId);
+        if (prevFocusedTask?.startTime) {
+          const timeSpent = differenceInMilliseconds(new Date(), prevFocusedTask.startTime);
+          finalTasks = finalTasks.map((task) =>
+            task.id === prevFocusedTask.id
+              ? { ...task, timeSpent: (task.timeSpent || 0) + timeSpent }
+              : task,
+          );
+        }
+      }
+
+      finalFocusedId = id;
+      const currentTime = Date.now();
+      const newStartTime = new Date(currentTime);
+      const originalDuration = taskToFocus.duration || ONE_HOUR_IN_MS;
+      const newEndTime = addMilliseconds(newStartTime, originalDuration);
+
+      // Check if the task will span multiple days
+      if (!isSameDay(newStartTime, newEndTime)) {
+        const multiDayTasks = handleMultiDayTask(taskToFocus, newStartTime, newEndTime);
+
+        // Store the previous state for history
+        finalHistory = [
+          ...state.taskHistory,
+          {
+            taskId: taskToFocus.id,
+            previousState: { ...taskToFocus },
+            timestamp: Date.now(),
+            action: 'focus' as const,
+          },
+        ];
+        if (finalHistory.length > 20) finalHistory.shift();
+
+        // Remove the original task and add the multi-day tasks
+        finalTasks = state.tasks.filter((t) => t.id !== taskToFocus.id).concat(multiDayTasks);
+
+        // Focus remains on the first task of the sequence
+        finalFocusedId = multiDayTasks[0].id;
+      } else {
+        // Handle single-day focus as before
+        const newTimeString = `${format(newStartTime, 'HH:mm')}—${format(newEndTime, 'HH:mm')}`;
+        const newTaskDate = format(newStartTime, 'yyyy-MM-dd');
+
+        const focusedTaskUpdates = {
+          taskDate: newTaskDate,
+          startTime: newStartTime,
+          nextStartTime: newEndTime,
+          time: newTimeString,
+          isFocused: true,
+        };
+
+        finalHistory = [
+          ...state.taskHistory,
+          {
+            taskId: taskToFocus.id,
+            previousState: { ...taskToFocus },
+            timestamp: Date.now(),
+            action: 'focus' as const,
+          },
+        ];
+        if (finalHistory.length > 20) finalHistory.shift();
+
+        const overlappingUpdates = calculateAffectedTaskUpdates(
+          id,
+          newStartTime,
+          originalDuration,
+          state.tasks,
+        );
+
+        const updatesMap = new Map<string, Partial<OptimalTask>>();
+        updatesMap.set(id, focusedTaskUpdates);
+
+        overlappingUpdates.forEach((overlapUpdate) => {
+          if (overlapUpdate.id !== id) {
+            const existingUpdates = updatesMap.get(overlapUpdate.id) || {};
+            updatesMap.set(overlapUpdate.id, { ...existingUpdates, ...overlapUpdate.updates });
+          }
+        });
+
+        finalTasks = state.tasks.map((originalTask) => {
+          const calculatedUpdates = updatesMap.get(originalTask.id);
+          const updatedTask = { ...originalTask, ...(calculatedUpdates || {}) };
+          updatedTask.isFocused = originalTask.id === id;
+          return updatedTask;
+        });
+      }
+    } else {
+      // When unfocusing, update the time spent
+      if (taskToFocus.startTime) {
+        const timeSpent = differenceInMilliseconds(new Date(), taskToFocus.startTime);
+        finalTasks = finalTasks.map((task) =>
+          task.id === taskToFocus.id
+            ? { ...task, timeSpent: (task.timeSpent || 0) + timeSpent, isFocused: false }
+            : task,
+        );
+      }
+      finalFocusedId = null;
     }
 
     return {
       ...state,
-      focusedTaskId: isFocused ? id : null,
-      tasks: state.tasks.map((task: OptimalTask) => {
-        if (task.id === id) {
-          return { ...task, isFocused };
-        }
-        // Ensure other tasks are unfocused
-        return { ...task, isFocused: false };
-      }),
+      tasks: finalTasks,
+      focusedTaskId: finalFocusedId,
+      taskHistory: finalHistory,
     };
   });
 };
@@ -193,6 +375,7 @@ export const clearTasks = () => {
     focusedTaskId: null,
     editingTaskId: null,
     highlightedTaskId: null,
+    taskHistory: [],
     resizingState: {
       taskId: null,
       temporaryDuration: null,
@@ -222,20 +405,15 @@ export const updateTaskStartDateTime = (taskId: string, date: Date, time: string
     // Format taskDate from the provided date
     const taskDate = format(date, 'yyyy-MM-dd');
 
-    // Parse the start time
-    const startTime = parse(time, 'HH:mm', date);
+    // Parse the new start time Date object
+    const newStartTime = parse(time, 'HH:mm', date);
 
-    // Update time string - preserve due time if it exists
-    let timeString = time;
-    if (task.time && task.time.includes('—')) {
-      const timeParts = task.time.split('—');
-      if (timeParts.length > 1) {
-        timeString = `${time}—${timeParts[1]}`;
-      }
-    }
+    // Calculate the new end time Date object using the task's duration
+    const duration = task.duration || ONE_HOUR_IN_MS; // Use default if duration is missing
+    const newEndTime = addMilliseconds(newStartTime, duration);
 
-    // Calculate next start time based on current duration
-    const nextStartTime = addMilliseconds(startTime, task.duration || 0);
+    // Format the new time string using the calculated start and end times
+    const newTimeString = `${format(newStartTime, 'HH:mm')}—${format(newEndTime, 'HH:mm')}`;
 
     return {
       ...state,
@@ -244,9 +422,9 @@ export const updateTaskStartDateTime = (taskId: string, date: Date, time: string
           ? {
               ...t,
               taskDate,
-              startTime: startTime,
-              nextStartTime,
-              time: timeString,
+              startTime: newStartTime, // Update startTime Date object
+              nextStartTime: newEndTime, // Update nextStartTime (which is the end time) Date object
+              time: newTimeString, // Update the time string
             }
           : t,
       ),
@@ -422,6 +600,7 @@ export const createNewTask = (
       startTime,
       nextStartTime,
       repetition: values.repetition || 'once',
+      timeSpent: 0, // Initialize time spent
     };
 
     addTask(task);
@@ -542,119 +721,84 @@ export const highlightTask = (taskId: string) => {
   }, 500);
 };
 
-// Push forward affected tasks after a task's duration changes
-export const pushForwardAffectedTasks = (
-  taskId: string,
-  startTime: string,
-  duration: number,
-  date: Date,
-) => {
-  const taskDate = format(date, 'yyyy-MM-dd');
+// Helper to calculate necessary updates for overlapping tasks
+const calculateAffectedTaskUpdates = (
+  focusedTaskId: string,
+  focusedTaskNewStartTime: Date,
+  focusedTaskDuration: number,
+  currentTasks: OptimalTask[],
+): { id: string; updates: Partial<OptimalTask> }[] => {
+  const updatesToApply: { id: string; updates: Partial<OptimalTask> }[] = [];
+  const taskDate = format(focusedTaskNewStartTime, 'yyyy-MM-dd');
 
-  // Get tasks on the selected date
-  const tasksOnDate = tasksStore.state.tasks.filter(
-    (task) => task.taskDate === taskDate && task.id !== taskId,
+  const tasksOnDate = currentTasks.filter(
+    (task) => task.taskDate === taskDate && task.id !== focusedTaskId,
   );
 
-  if (tasksOnDate.length === 0) return;
+  if (tasksOnDate.length === 0) return [];
 
-  // Parse the current task's time range
-  const [hours, minutes] = startTime.split(':').map(Number);
-  const startTimeInMinutes = hours * 60 + minutes;
-  const endTimeInMinutes = startTimeInMinutes + duration / (60 * 1000);
+  const startTimeInMinutes =
+    getHours(focusedTaskNewStartTime) * 60 + getMinutes(focusedTaskNewStartTime);
+  const endTimeInMinutes = startTimeInMinutes + focusedTaskDuration / (60 * 1000);
 
-  // Identify affected tasks (those that start during or after this task)
   const affectedTasks = tasksOnDate.filter((task) => {
-    if (!task.time) return false;
+    if (!task.time || task.completed) return false;
 
-    const [taskStartTime] = task.time.split('—');
-    const [taskHours, taskMinutes] = taskStartTime.split(':').map(Number);
+    const [taskStartTimeStr] = task.time.split('—');
+    const [taskHours, taskMinutes] = taskStartTimeStr.split(':').map(Number);
+    if (isNaN(taskHours) || isNaN(taskMinutes)) return false;
     const taskStartInMinutes = taskHours * 60 + taskMinutes;
+    const taskDuration = task.duration || ONE_HOUR_IN_MS;
+    const taskEndInMinutes = taskStartInMinutes + taskDuration / (60 * 1000);
 
-    // Task is affected if it starts during or after this task's range
-    return taskStartInMinutes >= startTimeInMinutes && taskStartInMinutes < endTimeInMinutes;
+    const noOverlap =
+      taskEndInMinutes <= startTimeInMinutes || taskStartInMinutes >= endTimeInMinutes;
+
+    return !noOverlap;
   });
 
-  if (affectedTasks.length === 0) return;
+  if (affectedTasks.length === 0) return [];
 
-  // Sort tasks by start time to maintain order
   const sortedTasks = [...affectedTasks].sort((a, b) => {
     if (!a.time || !b.time) return 0;
-
-    const [aStartTime] = a.time.split('—');
-    const [bStartTime] = b.time.split('—');
-
-    const [aHours, aMinutes] = aStartTime.split(':').map(Number);
-    const [bHours, bMinutes] = bStartTime.split(':').map(Number);
-
+    const [aStartTimeStr] = a.time.split('—');
+    const [bStartTimeStr] = b.time.split('—');
+    const [aHours, aMinutes] = aStartTimeStr.split(':').map(Number);
+    const [bHours, bMinutes] = bStartTimeStr.split(':').map(Number);
+    if (isNaN(aHours) || isNaN(aMinutes) || isNaN(bHours) || isNaN(bMinutes)) return 0;
     const aStartInMinutes = aHours * 60 + aMinutes;
     const bStartInMinutes = bHours * 60 + bMinutes;
-
     return aStartInMinutes - bStartInMinutes;
   });
 
-  // Calculate the new start time for the first affected task
-  // Convert end time back to hours and minutes
-  const newStartHour = Math.floor(endTimeInMinutes / 60);
-  const newStartMinute = endTimeInMinutes % 60;
+  // Calculate the next 5-minute block after the focused task's end time
+  const focusedTaskEndTime = addMilliseconds(focusedTaskNewStartTime, focusedTaskDuration);
+  const nextFiveMinBlock = getNextFiveMinuteInterval(focusedTaskEndTime);
+  let previousTaskEndTime = nextFiveMinBlock;
+  const focusedDateStr = format(focusedTaskNewStartTime, 'yyyy-MM-dd');
 
-  // Round to the nearest 15-minute interval
-  const roundedMinutes = Math.ceil(newStartMinute / 15) * 15;
-  let adjustedHour = newStartHour;
-  let adjustedMinute = roundedMinutes;
+  for (const taskToUpdate of sortedTasks) {
+    const currentTaskDuration = taskToUpdate.duration || ONE_HOUR_IN_MS;
+    const newStartTime = new Date(previousTaskEndTime);
+    const newEndTime = addMilliseconds(newStartTime, currentTaskDuration);
 
-  // If rounded to 60 minutes, add an hour and set minutes to 0
-  if (roundedMinutes === 60) {
-    adjustedHour += 1;
-    adjustedMinute = 0;
-  }
+    if (format(newStartTime, 'yyyy-MM-dd') === focusedDateStr) {
+      const taskUpdate: Partial<OptimalTask> = {
+        taskDate: focusedDateStr,
+        startTime: newStartTime,
+        nextStartTime: newEndTime,
+        time: `${format(newStartTime, 'HH:mm')}—${format(newEndTime, 'HH:mm')}`,
+      };
+      updatesToApply.push({ id: taskToUpdate.id, updates: taskUpdate });
 
-  // Format the new start time
-  const newStartTime = `${adjustedHour.toString().padStart(2, '0')}:${adjustedMinute.toString().padStart(2, '0')}`;
-
-  // Create a date object for the adjusted start time
-  const adjustedStartDate = new Date(date);
-  adjustedStartDate.setHours(adjustedHour, adjustedMinute, 0, 0);
-
-  // Update the first affected task
-  if (sortedTasks.length > 0) {
-    const firstTask = sortedTasks[0];
-    updateTaskStartDateTime(firstTask.id, adjustedStartDate, newStartTime);
-
-    // Update remaining tasks in sequence
-    let previousEndTime = addMilliseconds(adjustedStartDate, firstTask.duration || ONE_HOUR_IN_MS);
-
-    for (let i = 1; i < sortedTasks.length; i++) {
-      const currentTask = sortedTasks[i];
-
-      // Round to the nearest 15-minute interval
-      const prevEndMinutes = previousEndTime.getMinutes();
-      const roundedEndMinutes = Math.ceil(prevEndMinutes / 15) * 15;
-
-      previousEndTime.setMinutes(roundedEndMinutes);
-      previousEndTime.setSeconds(0);
-      previousEndTime.setMilliseconds(0);
-
-      // If rounded to 60 minutes, add an hour and set minutes to 0
-      if (roundedEndMinutes === 60) {
-        previousEndTime.setHours(previousEndTime.getHours() + 1);
-        previousEndTime.setMinutes(0);
-      }
-
-      // Format the new start time for this task
-      const taskStartTime = format(previousEndTime, 'HH:mm');
-
-      // Update this task's start time
-      updateTaskStartDateTime(currentTask.id, previousEndTime, taskStartTime);
-
-      // Calculate the end time for the next task
-      previousEndTime = addMilliseconds(previousEndTime, currentTask.duration || ONE_HOUR_IN_MS);
+      // For the next task, use the next 5-minute block after this task's end time
+      previousTaskEndTime = getNextFiveMinuteInterval(newEndTime);
+    } else {
+      break;
     }
   }
-};
 
-const parseDateTime = (dateStr: string, timeStr: string): Date => {
-  return parse(`${dateStr} ${timeStr}`, 'yyyy-MM-dd HH:mm', new Date());
+  return updatesToApply;
 };
 
 // Resizing state management functions
@@ -681,5 +825,70 @@ export const clearResizingState = () => {
       temporaryDuration: null,
       temporaryEndTime: null,
     },
+  }));
+};
+
+// Add a new function to undo the last focus action
+export const undoLastFocusAction = () => {
+  updateStateAndStorage((state) => {
+    const lastHistoryEntry = state.taskHistory[state.taskHistory.length - 1];
+
+    if (!lastHistoryEntry || lastHistoryEntry.action !== 'focus') return state;
+
+    // Restore the task to its previous state
+    const updatedTasks = state.tasks.map((task: OptimalTask) =>
+      task.id === lastHistoryEntry.taskId
+        ? { ...lastHistoryEntry.previousState, isFocused: false }
+        : task,
+    );
+
+    // Remove the last history entry
+    const updatedHistory = state.taskHistory.slice(0, -1);
+
+    return {
+      ...state,
+      tasks: updatedTasks,
+      focusedTaskId: null,
+      taskHistory: updatedHistory,
+    };
+  });
+};
+
+// Action for automatic focus based on current time
+export const setAutomaticFocus = (taskId: string | null) => {
+  console.log(`[Automatic Focus] Setting focus to: ${taskId ?? 'none'}`); // DEBUG
+  updateStateAndStorage((state) => {
+    // Check if the focus state actually needs changing
+    if (state.focusedTaskId === taskId) {
+      // If the target taskId is already focused, ensure the isFocused flags are correct
+      // This handles cases where manual focus might have left flags inconsistent
+      let needsUpdate = false;
+      state.tasks.forEach((task) => {
+        if (task.id === taskId && !task.isFocused) needsUpdate = true;
+        if (task.id !== taskId && task.isFocused) needsUpdate = true;
+      });
+      if (!needsUpdate) return state; // No change needed
+    } else {
+      // If the target taskId is different, we definitely need an update
+    }
+
+    return {
+      ...state,
+      focusedTaskId: taskId,
+      tasks: state.tasks.map((task) => ({
+        ...task,
+        isFocused: task.id === taskId,
+      })),
+    };
+  });
+};
+
+// Add new action to update time spent
+export const updateTaskTimeSpent = (taskId: string, additionalTime: number) => {
+  updateStateAndStorage((state) => ({
+    ...state,
+    tasks: state.tasks.map((task) =>
+      task.id === taskId ? { ...task, timeSpent: (task.timeSpent || 0) + additionalTime } : task,
+    ),
   }));
 };

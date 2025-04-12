@@ -38,6 +38,8 @@ interface TimelineItemProps extends React.HTMLAttributes<HTMLDivElement> {
   taskId?: string;
   duration?: number;
   nextTaskPriority?: TaskPriority;
+  isFocused?: boolean;
+  timeSpent?: number;
 }
 
 export const TimelineItem = ({
@@ -57,6 +59,8 @@ export const TimelineItem = ({
   taskId,
   duration = ONE_HOUR_IN_MS,
   nextTaskPriority = 'none',
+  isFocused = false,
+  timeSpent = 0,
   ...rest
 }: TimelineItemProps) => {
   const timeDiffMinutes = React.useMemo(() => {
@@ -168,6 +172,8 @@ export const TimelineItem = ({
           startTime={startTime}
           duration={duration}
           prevTaskEndTime={isLastItem ? undefined : nextStartTime}
+          isFocused={isFocused}
+          timeSpent={timeSpent}
         />
       </div>
     </div>

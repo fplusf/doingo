@@ -17,6 +17,8 @@ interface TimelineNodeProps {
   nextTaskStartTime?: Date; // Next task's start time
   hideStartTime?: boolean; // Flag to hide start time (when it matches previous task's end time)
   hideEndTime?: boolean; // Flag to hide end time (when it matches next task's start time)
+  isFocused?: boolean;
+  timeSpent?: number;
 }
 
 // Interface defining the structure of a sand particle
@@ -41,12 +43,15 @@ export function TimelineNode({
   nextTaskStartTime,
   hideStartTime = false,
   hideEndTime = false,
+  isFocused = false,
+  timeSpent = 0,
 }: TimelineNodeProps) {
   const [progress, setProgress] = useState(0);
   const [timeStatus, setTimeStatus] = useState<'past' | 'present' | 'future'>('future');
   const [now, setNow] = useState(new Date());
   const [particles, setParticles] = useState<SandParticle[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   // Handle click with event prevention
   const handleClick = (e: React.MouseEvent) => {
@@ -116,7 +121,7 @@ export function TimelineNode({
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [startTime, duration]);
+  }, [startTime, duration, timeSpent]);
 
   // Generate sand particles - do this only once when the component becomes 'present'
   useEffect(() => {
@@ -133,6 +138,23 @@ export function TimelineNode({
       setParticles(newParticles);
     }
   }, [timeStatus, particles.length]);
+
+  // Update current time every minute
+  useEffect(() => {
+    const updateTime = () => setCurrentTime(new Date());
+    updateTime(); // Set initial time
+
+    const now = new Date();
+    const msToNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+
+    const initialTimeout = setTimeout(() => {
+      updateTime();
+      const interval = setInterval(updateTime, 60000);
+      return () => clearInterval(interval);
+    }, msToNextMinute);
+
+    return () => clearTimeout(initialTimeout);
+  }, []);
 
   // Dynamic text shadow configuration based on priority
   const getEmojiTextShadow = (priority: TaskPriority) => {
@@ -261,6 +283,13 @@ export function TimelineNode({
       {startTime && !shouldMergeTimes && (
         <div className="absolute -left-12 top-0 text-xs text-muted-foreground">
           {format(startTime, 'HH:mm')}
+        </div>
+      )}
+
+      {/* Render current time only for focused tasks */}
+      {isFocused && (
+        <div className="absolute -left-12 top-1/2 -translate-y-1/2 text-xs font-medium text-blue-500/70">
+          {format(currentTime, 'HH:mm')}
         </div>
       )}
 

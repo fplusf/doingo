@@ -30,25 +30,37 @@ export interface OptimalTask {
   title: string;
   notes?: string;
   emoji?: string;
-  time: string;
-  startTime: Date;
-  nextStartTime: Date;
-  duration: number;
-  completed: boolean;
-  priority: TaskPriority;
-  category: TaskCategory;
+  time?: string;
+  duration?: number;
   dueDate?: Date;
   dueTime?: string;
+  priority: TaskPriority;
+  category: TaskCategory;
+  completed: boolean;
   isFocused: boolean;
   taskDate: string;
-  subtasks?: Subtask[];
-  progress?: number;
+  subtasks: Subtask[];
+  progress: number;
+  startTime?: Date;
+  nextStartTime?: Date;
   repetition?: RepetitionOption;
+  // Multi-day task properties
+  isPartOfMultiDay?: boolean;
+  originalTaskId?: string;
+  multiDaySequence?: number;
   // Gap-specific properties
   isGap?: boolean;
   gapType?: GapType;
   gapStartTime?: Date;
   gapEndTime?: Date;
+  timeSpent: number; // Total time spent on task in milliseconds
+}
+
+export interface TaskHistoryEntry {
+  taskId: string;
+  previousState: OptimalTask;
+  timestamp: number;
+  action: 'focus' | 'edit' | 'move';
 }
 
 export interface TasksState {
@@ -57,6 +69,7 @@ export interface TasksState {
   focusedTaskId: string | null;
   editingTaskId: string | null;
   highlightedTaskId: string | null;
+  taskHistory: TaskHistoryEntry[];
   resizingState: {
     taskId: string | null;
     temporaryDuration: number | null;

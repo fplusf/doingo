@@ -35,8 +35,8 @@ export const TimelineTaskItemOverlay = ({ task }: TimelineTaskItemOverlayProps) 
       <div className="absolute left-2 top-0 z-10 h-full w-11">
         <TimelineItem
           priority={task.priority}
-          startTime={task.startTime}
-          nextStartTime={task.nextStartTime}
+          startTime={task.startTime ?? new Date()}
+          nextStartTime={task.nextStartTime ?? new Date()}
           completed={task.completed}
           strikethrough={task.completed}
           emoji={task.emoji}
@@ -49,6 +49,7 @@ export const TimelineTaskItemOverlay = ({ task }: TimelineTaskItemOverlayProps) 
           isLastItem={false}
           fixedHeight={true}
           nextTaskPriority={'none'}
+          isFocused={task.isFocused}
         />
       </div>
 
