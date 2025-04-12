@@ -350,21 +350,72 @@ export const setFocused = (id: string, isFocused: boolean) => {
   });
 };
 
+export const calculateTaskProgress = (task: OptimalTask): number => {
+  if (!task.subtasks || task.subtasks.length === 0) {
+    return task.completed ? 100 : 0;
+  }
+
+  const completedSubtasks = task.subtasks.filter((subtask) => subtask.isCompleted).length;
+  return Math.round((completedSubtasks / task.subtasks.length) * 100);
+};
+
 export const toggleTaskCompletion = (id: string) => {
-  // Simply toggle the completion status without reordering
-  updateStateAndStorage((state) => ({
-    ...state,
-    tasks: state.tasks.map((task: OptimalTask) => {
-      if (task.id === id) {
-        return {
-          ...task,
-          completed: !task.completed,
-          isFocused: false, // Still remove focus when toggling completion
-        };
-      }
-      return task;
-    }),
-  }));
+  updateStateAndStorage((state) => {
+    const task = state.tasks.find((t) => t.id === id);
+    if (!task) return state;
+
+    const newCompleted = !task.completed;
+
+    // If completing the task, mark all subtasks as completed
+    const updatedSubtasks = task.subtasks.map((subtask) => ({
+      ...subtask,
+      isCompleted: newCompleted ? true : subtask.isCompleted,
+    }));
+
+    return {
+      ...state,
+      tasks: state.tasks.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              completed: newCompleted,
+              subtasks: updatedSubtasks,
+              progress: newCompleted
+                ? 100
+                : calculateTaskProgress({ ...t, subtasks: updatedSubtasks }),
+            }
+          : t,
+      ),
+    };
+  });
+};
+
+export const toggleSubtaskCompletion = (taskId: string, subtaskId: string) => {
+  updateStateAndStorage((state) => {
+    const task = state.tasks.find((t) => t.id === taskId);
+    if (!task) return state;
+
+    const updatedSubtasks = task.subtasks.map((subtask) =>
+      subtask.id === subtaskId ? { ...subtask, isCompleted: !subtask.isCompleted } : subtask,
+    );
+
+    const newProgress = calculateTaskProgress({ ...task, subtasks: updatedSubtasks });
+    const allSubtasksCompleted = updatedSubtasks.every((subtask) => subtask.isCompleted);
+
+    return {
+      ...state,
+      tasks: state.tasks.map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              subtasks: updatedSubtasks,
+              progress: newProgress,
+              completed: allSubtasksCompleted,
+            }
+          : t,
+      ),
+    };
+  });
 };
 
 export const clearTasks = () => {

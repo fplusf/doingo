@@ -346,23 +346,6 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                           </span>
                         )}
                       </div>
-
-                      {hasSubtasks &&
-                        task.subtasks &&
-                        task.subtasks.length > 0 &&
-                        !task.completed && (
-                          <div className="flex items-center gap-2">
-                            <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted/30">
-                              <div
-                                className="h-full bg-green-500 transition-all duration-300"
-                                style={{ width: `${progress}%` }}
-                              />
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {Math.round(progress)}%
-                            </span>
-                          </div>
-                        )}
                     </div>
                   )}
 
@@ -380,20 +363,6 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                       </div>
 
                       <div className="flex items-center">
-                        {hasSubtasks && task.subtasks && (
-                          <div className="mr-4 flex items-center gap-2">
-                            <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted/30">
-                              <div
-                                className="h-full bg-green-500 transition-all duration-300"
-                                style={{ width: `${progress}%` }}
-                              />
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {Math.round(progress)}%
-                            </span>
-                          </div>
-                        )}
-
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -449,60 +418,16 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                     </section>
                   )}
 
-                  {displayDuration <= ONE_HOUR_IN_MS * 2 && (
-                    <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
-                      {!task.completed && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e: React.MouseEvent<HTMLButtonElement>) =>
-                                  handleFocusClick(e)
-                                }
-                                className={cn(
-                                  'flex h-7 w-7 bg-transparent p-0 opacity-0 hover:bg-transparent',
-                                  isHovered && 'opacity-100',
-                                )}
-                              >
-                                <LucideFocus
-                                  className={cn(
-                                    'ml-4 h-4 w-4 transition-all duration-200',
-                                    task.isFocused
-                                      ? 'fill-blue-500 text-blue-500'
-                                      : 'text-muted-foreground',
-                                    'hover:scale-125 hover:fill-blue-500 hover:text-blue-500',
-                                  )}
-                                />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom" className="p-0.5 text-[10px] uppercase">
-                              <p>Focus (F)</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e: React.MouseEvent<HTMLButtonElement>) =>
-                                handleDetailsClick(e)
-                              }
-                              className="flex h-7 w-7 bg-transparent p-0 hover:bg-transparent"
-                            >
-                              <ArrowRight className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" className="p-0.5 text-[10px] uppercase">
-                            <p>Details (D)</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                  {/* Progress bar - Now positioned absolutely */}
+                  {hasSubtasks && task.subtasks && task.subtasks.length > 0 && !task.completed && (
+                    <div className="absolute bottom-2 right-2 z-10 flex items-center gap-2">
+                      <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted/30">
+                        <div
+                          className="h-full bg-green-500 transition-all duration-300"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground">{Math.round(progress)}%</span>
                     </div>
                   )}
                 </div>

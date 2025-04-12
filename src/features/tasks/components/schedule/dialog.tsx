@@ -27,6 +27,7 @@ import { useStore } from '@tanstack/react-store';
 import { ChevronDown, ChevronRight, Hash, ListPlus, Maximize2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
+import { useSubtasksCollapse } from '../../hooks/use-subtasks-collapse';
 import {
   loadTaskForEditing,
   resetForm,
@@ -161,7 +162,7 @@ function TaskDialogContent({
   const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
 
   // Collapsible state - closed by default
-  const [isSubtasksOpen, setIsSubtasksOpen] = useState(false);
+  const { isSubtasksOpen, setIsSubtasksOpen } = useSubtasksCollapse();
 
   // Show subtasks section automatically if there are existing subtasks
   const [showSubtasks, setShowSubtasks] = useState(Boolean(subtasks && subtasks.length > 0));
@@ -495,7 +496,7 @@ function TaskDialogContent({
                             .filter((s) => s.isCompleted).length
                         }
                         /{subtasks.filter((s) => s.title.trim().length > 0).length}
-                        completed
+                        &nbsp; completed
                       </span>
                     )}
                   </CollapsibleTrigger>
