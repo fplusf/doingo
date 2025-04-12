@@ -175,7 +175,7 @@ export function TimelineNode({
       backgroundColor: '#323236',
     };
 
-    if (timeStatus === 'past') {
+    if (completed || timeStatus === 'past') {
       return {
         backgroundColor: priorityColor,
       };
@@ -289,10 +289,10 @@ export function TimelineNode({
           <>
             <div style={getProgressFillStyle()} />
             {Array.from({ length: 35 }).map((_, index) => (
-              <>
-                <div key={index} style={getParticleStyles(index)} />
-                <div key={index} style={getParticleStyles(index)} />
-              </>
+              <React.Fragment key={index}>
+                <div key={`particle1-${index}`} style={getParticleStyles(index)} />
+                <div key={`particle2-${index}`} style={getParticleStyles(index)} />
+              </React.Fragment>
             ))}
           </>
         )}

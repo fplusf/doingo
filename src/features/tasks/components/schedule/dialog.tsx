@@ -160,8 +160,6 @@ function TaskDialogContent({
   const showActionButtons = title && title.length > 0;
   const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
 
-  console.log('subtasks: ', subtasks, mode);
-
   // Collapsible state - closed by default
   const [isSubtasksOpen, setIsSubtasksOpen] = useState(false);
 
@@ -251,8 +249,6 @@ function TaskDialogContent({
   // Create a unified batch submission function for clean submission
   const submitFormBatch = () => {
     if (!title) return;
-
-    console.log('Submitting form as batch on exit');
 
     // Get all form values and submit them
     const formValues = submitForm();
@@ -493,7 +489,13 @@ function TaskDialogContent({
                     </div>
                     {subtasks && subtasks.length > 0 && (
                       <span className="text-xs">
-                        {subtasks.filter((s) => s.isCompleted).length}/{subtasks.length} completed
+                        {
+                          subtasks
+                            .filter((s) => s.title.trim().length > 0)
+                            .filter((s) => s.isCompleted).length
+                        }
+                        /{subtasks.filter((s) => s.title.trim().length > 0).length}
+                        completed
                       </span>
                     )}
                   </CollapsibleTrigger>

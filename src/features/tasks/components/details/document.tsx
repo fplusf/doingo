@@ -96,10 +96,11 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
           className="z-40 mb-6"
           subtasks={task.subtasks || []}
           onSubtasksChange={(updatedSubtasks) => {
-            const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
+            const nonEmptySubtasks = updatedSubtasks.filter((s) => s.title.trim().length > 0);
+            const completedNonEmptyCount = nonEmptySubtasks.filter((s) => s.isCompleted).length;
             const progress =
-              updatedSubtasks.length > 0
-                ? Math.round((completedCount / updatedSubtasks.length) * 100)
+              nonEmptySubtasks.length > 0
+                ? Math.round((completedNonEmptyCount / nonEmptySubtasks.length) * 100)
                 : 0;
 
             updateTask(taskId, { subtasks: updatedSubtasks, progress });

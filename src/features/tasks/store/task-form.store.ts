@@ -183,15 +183,9 @@ export const addSubtask = (title: string) => {
 
     const updatedSubtasks = [...state.subtasks, newSubtask];
 
-    // Calculate new progress
-    const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
-    const progress =
-      updatedSubtasks.length > 0 ? Math.round((completedCount / updatedSubtasks.length) * 100) : 0;
-
     return {
       ...state,
       subtasks: updatedSubtasks,
-      progress,
       isDirty: true,
     };
   });
@@ -203,15 +197,9 @@ export const updateSubtask = (subtaskId: string, updates: Partial<Subtask>) => {
       subtask.id === subtaskId ? { ...subtask, ...updates } : subtask,
     );
 
-    // Calculate new progress
-    const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
-    const progress =
-      updatedSubtasks.length > 0 ? Math.round((completedCount / updatedSubtasks.length) * 100) : 0;
-
     return {
       ...state,
       subtasks: updatedSubtasks,
-      progress,
       isDirty: true,
     };
   });
@@ -221,15 +209,9 @@ export const deleteSubtask = (subtaskId: string) => {
   taskFormStore.setState((state) => {
     const updatedSubtasks = state.subtasks.filter((subtask) => subtask.id !== subtaskId);
 
-    // Calculate new progress
-    const completedCount = updatedSubtasks.filter((s) => s.isCompleted).length;
-    const progress =
-      updatedSubtasks.length > 0 ? Math.round((completedCount / updatedSubtasks.length) * 100) : 0;
-
     return {
       ...state,
       subtasks: updatedSubtasks,
-      progress,
       isDirty: true,
     };
   });

@@ -137,8 +137,11 @@ export function SubtaskList({ subtasks = [], onSubtasksChange, className }: Subt
 
   // Calculate progress percentage
   const calculateProgress = (tasks: Subtask[]): number => {
-    const completedCount = tasks.filter((s) => s.isCompleted).length;
-    return tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
+    const nonEmptyTasks = tasks.filter((s) => s.title.trim().length > 0);
+    const completedNonEmptyCount = nonEmptyTasks.filter((s) => s.isCompleted).length;
+    return nonEmptyTasks.length > 0
+      ? Math.round((completedNonEmptyCount / nonEmptyTasks.length) * 100)
+      : 0;
   };
 
   // Update the form store and notify parent component
