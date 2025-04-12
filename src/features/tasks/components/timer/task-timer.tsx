@@ -5,7 +5,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/components/ui/tooltip';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface TaskTimerProps {
   taskId: string;
@@ -15,38 +15,26 @@ interface TaskTimerProps {
 }
 
 export function TaskTimer({ taskId, startTime, duration, initialTimeSpent }: TaskTimerProps) {
-  const [timeSpent, setTimeSpent] = useState(initialTimeSpent);
-  const [isRunning, setIsRunning] = useState(true);
-  const lastUpdateRef = useRef<number>(Date.now());
-  const sessionStartTimeRef = useRef<number>(Date.now());
+  const [elapsedTime, setElapsedTime] = useState(initialTimeSpent);
 
   useEffect(() => {
-    const updateTimer = () => {
+    let lastUpdate = Date.now();
+    const startTime = Date.now() - initialTimeSpent;
+
+    const timer = setInterval(() => {
       const now = Date.now();
-      const sessionElapsed = now - sessionStartTimeRef.current;
-      const totalTimeSpent = initialTimeSpent + sessionElapsed;
-      const remainingTime = duration - totalTimeSpent;
+      const newElapsedTime = now - startTime;
+      setElapsedTime(newElapsedTime);
 
-      if (remainingTime <= 0) {
-        setIsRunning(false);
-        return;
+      // Update task time spent in store every minute
+      if (now - lastUpdate >= 60000) {
+        updateTaskTimeSpent(taskId, now - lastUpdate);
+        lastUpdate = now;
       }
+    }, 1000);
 
-      setTimeSpent(totalTimeSpent);
-
-      // Update the stored time spent every minute
-      const timeSinceLastUpdate = now - lastUpdateRef.current;
-      if (timeSinceLastUpdate >= 60000) {
-        updateTaskTimeSpent(taskId, timeSinceLastUpdate);
-        lastUpdateRef.current = now;
-      }
-    };
-
-    updateTimer(); // Initial update
-    const interval = setInterval(updateTimer, 1000);
-
-    return () => clearInterval(interval);
-  }, [taskId, duration, initialTimeSpent]);
+    return () => clearInterval(timer);
+  }, [taskId, initialTimeSpent]);
 
   const formatTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -54,7 +42,6 @@ export function TaskTimer({ taskId, startTime, duration, initialTimeSpent }: Tas
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
 
-    // Always show in HH:MM:SS format for consistent width
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
@@ -63,7 +50,7 @@ export function TaskTimer({ taskId, startTime, duration, initialTimeSpent }: Tas
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="absolute right-3 top-2 z-10 flex h-6 w-[72px] cursor-default items-center justify-center rounded-md bg-gray-800/80 px-2 py-1 text-xs font-medium tabular-nums text-white">
-            {formatTime(timeSpent)}
+            {formatTime(elapsedTime)}
           </div>
         </TooltipTrigger>
         <TooltipContent side="left" className="text-xs">
