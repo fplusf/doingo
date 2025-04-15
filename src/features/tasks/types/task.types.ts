@@ -25,6 +25,12 @@ export interface Subtask {
   order?: number;
 }
 
+// Timer state for each task
+export interface TimerState {
+  isRunning: boolean;
+  lastUpdatedAt: number;
+}
+
 export interface OptimalTask {
   id: string;
   title: string;
@@ -73,6 +79,7 @@ export interface TasksState {
   editingTaskId: string | null;
   highlightedTaskId: string | null;
   taskHistory: TaskHistoryEntry[];
+  timerStates: Record<string, TimerState>; // Map of task IDs to timer states
   resizingState: {
     taskId: string | null;
     temporaryDuration: number | null;

@@ -14,6 +14,7 @@ export default function TodayPage() {
     taskId: null,
     timestamp: 0,
   });
+  const isInitialLoadRef = useRef(true);
 
   const allTasks = useStore(tasksStore, (state) => state.tasks);
   const focusedTaskId = useStore(tasksStore, (state) => state.focusedTaskId);
@@ -41,6 +42,12 @@ export default function TodayPage() {
   // Effect for automatic focus check
   useEffect(() => {
     const checkFocus = () => {
+      // Skip auto-focus on initial page load
+      if (isInitialLoadRef.current) {
+        isInitialLoadRef.current = false;
+        return;
+      }
+
       const now = new Date();
       let currentlyFocusedTask = null;
 
@@ -90,6 +97,9 @@ export default function TodayPage() {
         timeSinceLastFocus > MIN_FOCUS_INTERVAL &&
         currentlyFocusedTask !== lastFocusStateRef.current.taskId
       ) {
+        console.log(
+          `[AutoFocus] Switching focus from task ${focusedTaskId} to task ${currentlyFocusedTask}`,
+        );
         lastFocusStateRef.current = {
           taskId: currentlyFocusedTask,
           timestamp: currentTime,
@@ -101,8 +111,8 @@ export default function TodayPage() {
     // Initial check with a small delay to avoid immediate re-renders
     const initialCheckTimeout = setTimeout(checkFocus, 100);
 
-    // Check every minute after the initial check
-    const intervalId = setInterval(checkFocus, 60 * 1000);
+    // Check more frequently - every 15 seconds instead of every minute
+    const intervalId = setInterval(checkFocus, 15 * 1000);
 
     return () => {
       clearTimeout(initialCheckTimeout);

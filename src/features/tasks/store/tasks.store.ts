@@ -28,6 +28,7 @@ import {
   TaskCategory,
   TaskPriority,
   TasksState,
+  TimerState,
 } from '../types/task.types';
 
 // Initialize the storage adapter (can be easily swapped with a different implementation)
@@ -36,17 +37,53 @@ const storageAdapter: StorageAdapter = new LocalStorageAdapter();
 // Get today's date as a string in YYYY-MM-DD format
 const today = format(new Date(), 'yyyy-MM-dd');
 
+// Get timer states from localStorage or initialize empty object
+const getStoredTimerStates = (): Record<string, TimerState> => {
+  const timerStateJson = localStorage.getItem('timerStates');
+  if (!timerStateJson) return {};
+  try {
+    return JSON.parse(timerStateJson);
+  } catch {
+    return {};
+  }
+};
+
+// Helper function to update timer states in localStorage
+const saveTimerStates = (timerStates: Record<string, TimerState>) => {
+  localStorage.setItem('timerStates', JSON.stringify(timerStates));
+};
+
+// Get focused task from localStorage
+const getStoredFocusedTask = () => {
+  const focusedTaskId = localStorage.getItem('focusedTaskId');
+  return focusedTaskId || null;
+};
+
+// Save focused task to localStorage
+const saveFocusedTask = (taskId: string | null) => {
+  if (taskId) {
+    localStorage.setItem('focusedTaskId', taskId);
+  } else {
+    localStorage.removeItem('focusedTaskId');
+  }
+};
+
 // Initialize store with tasks from storage
 const initialState: TasksState = {
-  tasks: storageAdapter.getTasks().map((task: OptimalTask) => ({
-    ...task,
-    taskDate: task.taskDate || today,
-  })),
+  tasks: storageAdapter.getTasks().map((task: OptimalTask) => {
+    const focusedTaskId = getStoredFocusedTask();
+    return {
+      ...task,
+      taskDate: task.taskDate || today,
+      isFocused: task.id === focusedTaskId,
+    };
+  }),
   selectedDate: today,
-  focusedTaskId: null,
+  focusedTaskId: getStoredFocusedTask(),
   editingTaskId: null,
   highlightedTaskId: null,
   taskHistory: [],
+  timerStates: getStoredTimerStates(),
   resizingState: {
     taskId: null,
     temporaryDuration: null,
@@ -254,10 +291,21 @@ export const deleteTask = (id: string) => {
 };
 
 export const setFocusedTaskId = (taskId: string | null) => {
-  tasksStore.setState((state) => ({
-    ...state,
-    focusedTaskId: taskId,
-  }));
+  tasksStore.setState((state) => {
+    // Update tasks' focused states
+    const updatedTasks = state.tasks.map((task) => ({
+      ...task,
+      isFocused: task.id === taskId,
+    }));
+
+    saveFocusedTask(taskId);
+
+    return {
+      ...state,
+      tasks: updatedTasks,
+      focusedTaskId: taskId,
+    };
+  });
 };
 
 export const setEditingTaskId = (taskId: string | null) => {
@@ -270,122 +318,109 @@ export const setEditingTaskId = (taskId: string | null) => {
 // Modify the setFocused function to handle multi-day tasks
 export const setFocused = (id: string, isFocused: boolean) => {
   updateStateAndStorage((state) => {
-    const taskToFocus = state.tasks.find((task: OptimalTask) => task.id === id);
-    if (!taskToFocus) return state;
+    const taskToFocus = state.tasks.find((t: OptimalTask) => t.id === id);
+    if (!taskToFocus) return state; // Task not found
 
-    let finalTasks = [...state.tasks];
-    let finalHistory = [...state.taskHistory];
-    let finalFocusedId: string | null = state.focusedTaskId;
+    // If already in the desired state, do nothing
+    if (taskToFocus.isFocused === isFocused) {
+      return state;
+    }
+
+    // Store the previous state for potential undo
+    const previousTasksState = state.tasks.map((t) => ({ ...t }));
+    const previousFocusedId = state.focusedTaskId;
+
+    let newTasks = state.tasks;
+    let newFocusedTaskId: string | null = state.focusedTaskId;
+    let affectedTaskUpdates: { id: string; updates: Partial<OptimalTask> }[] = [];
 
     if (isFocused) {
-      // Update time spent for previously focused task if exists
-      if (state.focusedTaskId) {
-        const prevFocusedTask = state.tasks.find((t) => t.id === state.focusedTaskId);
-        if (prevFocusedTask?.startTime) {
-          const timeSpent = differenceInMilliseconds(new Date(), prevFocusedTask.startTime);
-          finalTasks = finalTasks.map((task) =>
-            task.id === prevFocusedTask.id
-              ? { ...task, timeSpent: (task.timeSpent || 0) + timeSpent }
-              : task,
-          );
+      // Unfocus any previously focused task
+      newTasks = newTasks.map((t) => (t.isFocused ? { ...t, isFocused: false } : t));
+      newFocusedTaskId = id;
+
+      const now = new Date();
+      const todayStr = format(now, 'yyyy-MM-dd');
+      const taskStartTime = getNextFiveMinuteInterval(now);
+      const taskEndTime = addMilliseconds(taskStartTime, taskToFocus.duration || ONE_HOUR_IN_MS);
+
+      const focusUpdates: Partial<OptimalTask> = {
+        isFocused: true,
+        startTime: taskStartTime,
+        nextStartTime: taskEndTime,
+        time: `${format(taskStartTime, 'HH:mm')}—${format(taskEndTime, 'HH:mm')}`,
+        taskDate: todayStr, // Move task to today when focusing
+      };
+
+      // Calculate updates for overlapping tasks
+      affectedTaskUpdates = calculateAffectedTaskUpdates(
+        id,
+        taskStartTime,
+        taskToFocus.duration || ONE_HOUR_IN_MS,
+        newTasks.filter((t) => t.id !== id && t.taskDate === todayStr), // Exclude the task being focused and only consider tasks for today
+      );
+
+      // Apply updates to affected tasks
+      newTasks = newTasks.map((task) => {
+        if (task.id === id) {
+          return { ...task, ...focusUpdates };
         }
-      }
-
-      finalFocusedId = id;
-      const currentTime = Date.now();
-      const newStartTime = new Date(currentTime);
-      const originalDuration = taskToFocus.duration || ONE_HOUR_IN_MS;
-      const newEndTime = addMilliseconds(newStartTime, originalDuration);
-
-      // Check if the task will span multiple days
-      if (!isSameDay(newStartTime, newEndTime)) {
-        const multiDayTasks = handleMultiDayTask(taskToFocus, newStartTime, newEndTime);
-
-        // Store the previous state for history
-        finalHistory = [
-          ...state.taskHistory,
-          {
-            taskId: taskToFocus.id,
-            previousState: { ...taskToFocus },
-            timestamp: Date.now(),
-            action: 'focus' as const,
-          },
-        ];
-        if (finalHistory.length > 20) finalHistory.shift();
-
-        // Remove the original task and add the multi-day tasks
-        finalTasks = state.tasks.filter((t) => t.id !== taskToFocus.id).concat(multiDayTasks);
-
-        // Focus remains on the first task of the sequence
-        finalFocusedId = multiDayTasks[0].id;
-      } else {
-        // Handle single-day focus as before
-        const newTimeString = `${format(newStartTime, 'HH:mm')}—${format(newEndTime, 'HH:mm')}`;
-        const newTaskDate = format(newStartTime, 'yyyy-MM-dd');
-
-        const focusedTaskUpdates = {
-          taskDate: newTaskDate,
-          startTime: newStartTime,
-          nextStartTime: newEndTime,
-          time: newTimeString,
-          isFocused: true,
-        };
-
-        finalHistory = [
-          ...state.taskHistory,
-          {
-            taskId: taskToFocus.id,
-            previousState: { ...taskToFocus },
-            timestamp: Date.now(),
-            action: 'focus' as const,
-          },
-        ];
-        if (finalHistory.length > 20) finalHistory.shift();
-
-        const overlappingUpdates = calculateAffectedTaskUpdates(
-          id,
-          newStartTime,
-          originalDuration,
-          state.tasks,
-        );
-
-        const updatesMap = new Map<string, Partial<OptimalTask>>();
-        updatesMap.set(id, focusedTaskUpdates);
-
-        overlappingUpdates.forEach((overlapUpdate) => {
-          if (overlapUpdate.id !== id) {
-            const existingUpdates = updatesMap.get(overlapUpdate.id) || {};
-            updatesMap.set(overlapUpdate.id, { ...existingUpdates, ...overlapUpdate.updates });
-          }
-        });
-
-        finalTasks = state.tasks.map((originalTask) => {
-          const calculatedUpdates = updatesMap.get(originalTask.id);
-          const updatedTask = { ...originalTask, ...(calculatedUpdates || {}) };
-          updatedTask.isFocused = originalTask.id === id;
-          return updatedTask;
-        });
-      }
+        const affectedUpdate = affectedTaskUpdates.find((u) => u.id === task.id);
+        return affectedUpdate ? { ...task, ...affectedUpdate.updates } : task;
+      });
     } else {
-      // When unfocusing, update the time spent
-      if (taskToFocus.startTime) {
-        const timeSpent = differenceInMilliseconds(new Date(), taskToFocus.startTime);
-        finalTasks = finalTasks.map((task) =>
-          task.id === taskToFocus.id
-            ? { ...task, timeSpent: (task.timeSpent || 0) + timeSpent, isFocused: false }
-            : task,
-        );
+      // Unfocusing the specified task
+      newTasks = newTasks.map((t) => (t.id === id ? { ...t, isFocused: false } : t));
+      if (state.focusedTaskId === id) {
+        newFocusedTaskId = null;
       }
-      finalFocusedId = null;
     }
+
+    // Persist the focused task ID to local storage
+    saveFocusedTask(newFocusedTaskId);
+
+    // Define the type for the new history entry explicitly
+    type HistoryEntry = {
+      tasks: OptimalTask[];
+      focusedTaskId: string | null;
+      affectedTaskUpdates: { id: string; previousState: OptimalTask | undefined }[];
+    };
+
+    // Add the previous state to history for undo
+    const newHistoryEntry: HistoryEntry = {
+      tasks: previousTasksState,
+      focusedTaskId: previousFocusedId,
+      affectedTaskUpdates: affectedTaskUpdates.map((update) => ({
+        id: update.id,
+        previousState: previousTasksState.find((t) => t.id === update.id),
+      })),
+    };
+
+    // Ensure taskHistory type compatibility explicitly
+    const updatedTaskHistory = [...state.taskHistory, newHistoryEntry].slice(
+      -10,
+    ) as typeof state.taskHistory;
 
     return {
       ...state,
-      tasks: finalTasks,
-      focusedTaskId: finalFocusedId,
-      taskHistory: finalHistory,
+      tasks: newTasks,
+      focusedTaskId: newFocusedTaskId,
+      taskHistory: updatedTaskHistory, // Use the explicitly typed history
     };
   });
+
+  // Start/Stop timer logic after state update
+  const updatedState = tasksStore.state;
+  const focusedTask = updatedState.tasks.find((t) => t.id === updatedState.focusedTaskId);
+
+  if (isFocused && focusedTask && focusedTask.startTime) {
+    toggleTaskTimer(focusedTask.id, true);
+  } else if (!isFocused) {
+    const taskThatWasUnfocused = updatedState.tasks.find((t) => t.id === id);
+    if (taskThatWasUnfocused && updatedState.timerStates[id]?.isRunning) {
+      toggleTaskTimer(id, false);
+    }
+  }
 };
 
 export const calculateTaskProgress = (task: OptimalTask): number => {
@@ -457,14 +492,26 @@ export const toggleSubtaskCompletion = (taskId: string, subtaskId: string) => {
 };
 
 export const clearTasks = () => {
+  // Clear all stored canvases
+  tasksStore.state.tasks.forEach((task) => {
+    localStorage.removeItem(`canvas_${task.id}`);
+  });
+
+  // Clear timer UI state
+  localStorage.removeItem('activeTimer');
+
+  // Clear storage adapter
   storageAdapter.clear();
-  tasksStore.setState(() => ({
+
+  updateStateAndStorage((state) => ({
+    ...state,
     tasks: [],
     selectedDate: today,
     focusedTaskId: null,
     editingTaskId: null,
     highlightedTaskId: null,
     taskHistory: [],
+    timerStates: {},
     resizingState: {
       taskId: null,
       temporaryDuration: null,
@@ -945,39 +992,60 @@ export const undoLastFocusAction = () => {
 
 // Action for automatic focus based on current time
 export const setAutomaticFocus = (taskId: string | null) => {
-  console.log(`[Automatic Focus] Setting focus to: ${taskId ?? 'none'}`); // DEBUG
+  // Don't override manual focus with automatic focus
+  const currentFocusedId = tasksStore.state.focusedTaskId;
+  if (currentFocusedId) {
+    return; // Exit if there's already a focused task
+  }
+
+  console.log(`[Automatic Focus] Setting focus to: ${taskId ?? 'none'}`);
   updateStateAndStorage((state) => {
-    // Check if the focus state actually needs changing
-    if (state.focusedTaskId === taskId) {
-      // If the target taskId is already focused, ensure the isFocused flags are correct
-      // This handles cases where manual focus might have left flags inconsistent
-      let needsUpdate = false;
-      state.tasks.forEach((task) => {
-        if (task.id === taskId && !task.isFocused) needsUpdate = true;
-        if (task.id !== taskId && task.isFocused) needsUpdate = true;
-      });
-      if (!needsUpdate) return state; // No change needed
-    } else {
-      // If the target taskId is different, we definitely need an update
+    // Update tasks' focused states
+    const updatedTasks = state.tasks.map((task) => ({
+      ...task,
+      isFocused: task.id === taskId,
+    }));
+
+    if (taskId) {
+      saveFocusedTask(taskId);
     }
 
     return {
       ...state,
+      tasks: updatedTasks,
       focusedTaskId: taskId,
-      tasks: state.tasks.map((task) => ({
-        ...task,
-        isFocused: task.id === taskId,
-      })),
     };
   });
 };
 
-// Add new action to update time spent
+// Timer State Management
+export const toggleTaskTimer = (taskId: string, isRunning: boolean) => {
+  // Update this timer's state
+  tasksStore.setState((state) => {
+    const newTimerStates = {
+      ...state.timerStates,
+      [taskId]: { isRunning, lastUpdatedAt: Date.now() },
+    };
+    saveTimerStates(newTimerStates);
+    return {
+      ...state,
+      timerStates: newTimerStates,
+    };
+  });
+};
+
+export const getTaskTimerState = (taskId: string): TimerState => {
+  return tasksStore.state.timerStates[taskId] || { isRunning: false, lastUpdatedAt: 0 };
+};
+
 export const updateTaskTimeSpent = (taskId: string, additionalTime: number) => {
-  updateStateAndStorage((state) => ({
-    ...state,
-    tasks: state.tasks.map((task) =>
+  updateStateAndStorage((state) => {
+    const updatedTasks = state.tasks.map((task) =>
       task.id === taskId ? { ...task, timeSpent: (task.timeSpent || 0) + additionalTime } : task,
-    ),
-  }));
+    );
+    return {
+      ...state,
+      tasks: updatedTasks,
+    };
+  });
 };

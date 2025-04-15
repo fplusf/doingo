@@ -193,7 +193,7 @@ function TaskDialogContent({
         }
       }
     }
-  }, [open, mode, editingTaskId, initialValues]);
+  }, [open, mode, editingTaskId]);
 
   // Auto-suggest emoji when title or category changes
   useEffect(() => {

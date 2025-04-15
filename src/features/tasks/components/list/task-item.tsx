@@ -313,10 +313,10 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                       </h3>
                       {task.isFocused && task.startTime && (
                         <TaskTimer
+                          key={`timer-${task.id}-${task.startTime.getTime()}`}
                           taskId={task.id}
-                          startTime={task.startTime}
-                          duration={displayDuration}
                           initialTimeSpent={task.timeSpent || 0}
+                          className="absolute right-2 top-2"
                         />
                       )}
                     </div>

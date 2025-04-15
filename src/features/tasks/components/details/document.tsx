@@ -73,12 +73,7 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
           <CollapsedContainer>
             <TaskScheduler className="flex-1 text-muted-foreground" taskId={taskId} />
           </CollapsedContainer>
-          <TaskTimer
-            taskId={taskId}
-            startTime={task.startTime || new Date()}
-            duration={task.duration || 0}
-            initialTimeSpent={task.timeSpent || 0}
-          />
+          <TaskTimer taskId={taskId} initialTimeSpent={task.timeSpent || 0} />
         </div>
       </div>
 
