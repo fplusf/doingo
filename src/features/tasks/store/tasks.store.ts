@@ -217,30 +217,51 @@ const handleMultiDayTask = (task: OptimalTask, startTime: Date, endTime: Date): 
 // Modify the updateTask function to handle multi-day tasks
 export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
   updateStateAndStorage((state) => {
-    const task = state.tasks.find((t: OptimalTask) => t.id === id);
-    if (!task) return state;
+    const taskIndex = state.tasks.findIndex((t: OptimalTask) => t.id === id);
+    if (taskIndex === -1) return state;
+
+    const task = state.tasks[taskIndex];
 
     // If this is part of a multi-day task, we need to update all related tasks
     const isPartOfMultiDay = task.isPartOfMultiDay;
     const multiDaySetId = task.multiDaySetId;
-    const originalTaskId = task.originalTaskId || task.id;
-
-    // Get all related tasks if this is part of a multi-day task
-    const relatedTasks = isPartOfMultiDay
-      ? state.tasks.filter((t) => t.multiDaySetId === multiDaySetId)
-      : [];
 
     // If updating time/date/duration, we need to handle potential multi-day spanning
-    if (updates.startTime || updates.nextStartTime || updates.duration) {
+    if (
+      updates.startTime !== undefined ||
+      updates.nextStartTime !== undefined ||
+      updates.duration !== undefined
+    ) {
       const newStartTime = updates.startTime || task.startTime;
-      const newEndTime =
-        updates.nextStartTime ||
-        (newStartTime && updates.duration
-          ? addMilliseconds(newStartTime, updates.duration)
-          : task.nextStartTime);
+      // Ensure duration is valid, fall back to task's duration if needed
+      const effectiveDuration = updates.duration ?? task.duration ?? 0;
+      // Calculate newEndTime based on start time and duration, primarily using these unless nextStartTime is explicitly provided
+      const calculatedEndTime = newStartTime
+        ? addMilliseconds(newStartTime, effectiveDuration)
+        : null;
+      // Prefer updates.nextStartTime if provided (comes from resize), otherwise use calculated end time
+      const newEndTime = updates.nextStartTime || calculatedEndTime;
 
-      if (newStartTime && newEndTime && !isSameDay(newStartTime, newEndTime)) {
-        // Remove all existing related tasks
+      // Determine if this update is primarily a resize operation (only duration/end time changed)
+      const isResizeOperation =
+        updates.duration !== undefined &&
+        updates.nextStartTime !== undefined &&
+        updates.startTime === undefined;
+
+      // Check if the task spans multiple days AND it's NOT just a resize operation
+      if (
+        !isResizeOperation && // <<< MODIFICATION: Only split if NOT a resize
+        newStartTime &&
+        newEndTime &&
+        !isSameDay(newStartTime, newEndTime)
+      ) {
+        // --- Multi-day splitting logic (only if not a resize) ---
+        console.log('Triggering multi-day split for task:', task.id, 'Updates:', updates);
+        const relatedTasks = isPartOfMultiDay
+          ? state.tasks.filter((t) => t.multiDaySetId === multiDaySetId)
+          : [task]; // Include the current task itself if not previously multi-day
+
+        // Remove all existing related tasks before creating new ones
         const nonRelatedTasks = state.tasks.filter(
           (t) => !relatedTasks.some((rt) => rt.id === t.id),
         );
@@ -248,9 +269,12 @@ export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
         // Create new multi-day tasks
         const multiDayTasks = handleMultiDayTask(
           {
-            ...task,
-            ...updates,
-            multiDaySetId: task.multiDaySetId || undefined, // Preserve existing set ID if any
+            ...task, // Base task properties
+            ...updates, // Apply incoming updates
+            startTime: newStartTime, // Ensure newStartTime is used
+            nextStartTime: newEndTime, // Ensure newEndTime is used
+            duration: effectiveDuration, // Ensure duration reflects the potentially new times
+            multiDaySetId: task.multiDaySetId || undefined, // Preserve existing set ID
           },
           newStartTime,
           newEndTime,
@@ -260,20 +284,34 @@ export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
           ...state,
           tasks: [...nonRelatedTasks, ...multiDayTasks],
         };
+        // --- End of multi-day splitting logic ---
+      } else {
+        // --- Standard update for single day OR resize operation ---
+        console.log('Applying standard update/resize for task:', task.id, 'Updates:', updates);
+        const updatedTasks = [...state.tasks];
+        updatedTasks[taskIndex] = {
+          ...task,
+          ...updates,
+          // Ensure calculated fields are consistent if only duration/nextStartTime changed
+          startTime: newStartTime, // Keep original start time if resizing
+          duration: effectiveDuration,
+          nextStartTime: newEndTime ?? undefined, // Convert null to undefined
+        };
+        return {
+          ...state,
+          tasks: updatedTasks,
+        };
+        // --- End of standard update ---
       }
     }
 
-    // For non-time/date updates or single-day tasks, update normally
+    // Fallback/Default update logic (if not time/date/duration related)
+    console.log('Applying fallback update for task:', task.id, 'Updates:', updates);
+    const updatedTasks = [...state.tasks];
+    updatedTasks[taskIndex] = { ...task, ...updates };
     return {
       ...state,
-      tasks: state.tasks.map((t: OptimalTask) => {
-        // If this is part of a multi-day task, update all related tasks
-        if (isPartOfMultiDay && t.multiDaySetId === multiDaySetId) {
-          return { ...t, ...updates };
-        }
-        // Otherwise, just update the specific task
-        return t.id === id ? { ...t, ...updates } : t;
-      }),
+      tasks: updatedTasks,
     };
   });
 };

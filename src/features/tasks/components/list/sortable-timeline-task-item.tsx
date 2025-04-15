@@ -8,7 +8,6 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { addMilliseconds, format } from 'date-fns';
 import { gsap } from 'gsap';
 import { Draggable } from 'gsap/Draggable';
 import { Blend } from 'lucide-react';
@@ -39,31 +38,6 @@ const getSortedTasksForDate = (tasks: OptimalTask[], date: string): OptimalTask[
   return tasks
     .filter((t) => t.taskDate === date)
     .sort((a, b) => (a.startTime?.getTime() || 0) - (b.startTime?.getTime() || 0));
-};
-
-// Helper function to update subsequent tasks
-const updateSubsequentTasks = (
-  tasks: OptimalTask[],
-  currentTaskId: string,
-  newEndTime: Date,
-): void => {
-  const taskDate = format(newEndTime, 'yyyy-MM-dd');
-  const sortedTasks = getSortedTasksForDate(tasks, taskDate);
-  const currentIndex = sortedTasks.findIndex((t) => t.id === currentTaskId);
-  if (currentIndex === -1) return;
-
-  let lastEndTime = newEndTime;
-  for (let i = currentIndex + 1; i < sortedTasks.length; i++) {
-    const taskToUpdate = sortedTasks[i]; // Renamed to avoid conflict
-    const newStartTime = new Date(lastEndTime);
-    const newNextStartTime = addMilliseconds(newStartTime, taskToUpdate.duration || ONE_HOUR_IN_MS);
-    updateTask(taskToUpdate.id, {
-      startTime: newStartTime,
-      nextStartTime: newNextStartTime,
-      time: format(newStartTime, 'HH:mm'),
-    });
-    lastEndTime = newNextStartTime;
-  }
 };
 
 export const SortableTimelineTaskItem = ({
@@ -217,12 +191,11 @@ export const SortableTimelineTaskItem = ({
         tempState.temporaryDuration &&
         tempState.temporaryEndTime
       ) {
+        // Update ONLY the task being resized
         updateTask(currentTask.id, {
           duration: tempState.temporaryDuration,
           nextStartTime: tempState.temporaryEndTime,
         });
-        // Access the main tasks array from the store's state property
-        updateSubsequentTasks(tasksStore.state.tasks, currentTask.id, tempState.temporaryEndTime);
       }
       clearResizingState();
       setResizing(false); // Update state

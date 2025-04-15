@@ -23,7 +23,7 @@ import {
 } from '@/shared/components/ui/tooltip';
 import { toast } from '@/shared/hooks/use-toast';
 import { useNavigate } from '@tanstack/react-router';
-import { addMilliseconds, format } from 'date-fns';
+import { addMilliseconds, format, isSameDay } from 'date-fns';
 import { ArrowRight, GripVertical, LucideFocus, Trash2 } from 'lucide-react';
 import React, { useRef } from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
@@ -201,8 +201,10 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
     const startDate = new Date();
     startDate.setHours(hours, minutes, 0, 0);
     const endDate = addMilliseconds(startDate, duration);
+    const isNextDay = !isSameDay(startDate, endDate);
+    const endTimeFormatted = `${format(endDate, 'HH:mm')}${isNextDay ? '<span class="text-[8px] align-super ml-0.5">+1</span>' : ''}`;
 
-    return `${format(startDate, 'HH:mm')} - ${format(endDate, 'HH:mm')} (${formatDurationForDisplay(
+    return `${format(startDate, 'HH:mm')} - ${endTimeFormatted} (${formatDurationForDisplay(
       duration,
     )})`;
   }
@@ -212,8 +214,10 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
     const startDate = new Date();
     startDate.setHours(hours, minutes, 0, 0);
     const endDate = addMilliseconds(startDate, duration);
+    const isNextDay = !isSameDay(startDate, endDate);
+    const endTimeFormatted = `${format(endDate, 'HH:mm')}${isNextDay ? '<span class="text-[8px] align-super ml-0.5">+1</span>' : ''}`;
 
-    return `${format(startDate, 'HH:mm')}-${format(endDate, 'HH:mm')}`;
+    return `${format(startDate, 'HH:mm')}-${endTimeFormatted}`;
   }
 
   const handleFocusClick = (e: React.MouseEvent) => {
@@ -321,20 +325,21 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                       )}
                     </div>
 
-                    {displayDuration <= ONE_HOUR_IN_MS * 2 && task.time && (
+                    {/* Short Duration Time Display */}
+                    {displayDuration <= ONE_HOUR_IN_MS * 2 && task.startTime && (
                       <div className="mr-2 flex items-center justify-between">
                         <div className="flex items-baseline">
-                          <span className="whitespace-nowrap text-xs opacity-50">
-                            {displayDuration <= ONE_HOUR_IN_MS
-                              ? formatCompactTimeRange(
-                                  task.time.split('—')[0],
-                                  displayDuration || ONE_HOUR_IN_MS,
-                                )
-                              : formatTimeRange(
-                                  task.time.split('—')[0],
-                                  displayDuration || ONE_HOUR_IN_MS,
-                                )}
-                          </span>
+                          {/* Apply dangerouslySetInnerHTML for compact time */}
+                          <span
+                            className="whitespace-nowrap text-xs opacity-50"
+                            dangerouslySetInnerHTML={{
+                              __html: formatCompactTimeRange(
+                                format(task.startTime, 'HH:mm'), // Use formatted startTime
+                                displayDuration || ONE_HOUR_IN_MS,
+                              ),
+                            }}
+                          />
+                          {/* Show duration separately only if very short */}
                           {displayDuration <= ONE_HOUR_IN_MS && (
                             <span className="ml-1 whitespace-nowrap text-xs opacity-40">
                               ({formatDurationForDisplay(displayDuration || ONE_HOUR_IN_MS)})
@@ -344,19 +349,30 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                       </div>
                     )}
 
+                    {/* Long Duration Time Display & Controls */}
                     {displayDuration > ONE_HOUR_IN_MS * 2 && (
                       <section className="mr-2 mt-auto flex items-center justify-between">
                         <div className="text-xs opacity-50">
-                          {task.time ? (
+                          {task.startTime ? (
+                            /* Apply dangerouslySetInnerHTML for full time range */
+                            <span
+                              className="whitespace-nowrap"
+                              dangerouslySetInnerHTML={{
+                                __html: formatTimeRange(
+                                  format(task.startTime, 'HH:mm'), // Use formatted startTime
+                                  displayDuration || ONE_HOUR_IN_MS,
+                                ),
+                              }}
+                            />
+                          ) : (
+                            /* Fallback to just duration if no start time */
                             <span className="whitespace-nowrap">
-                              {formatTimeRange(
-                                task.time.split('—')[0],
-                                displayDuration || ONE_HOUR_IN_MS,
-                              )}
+                              {formatDurationForDisplay(displayDuration || ONE_HOUR_IN_MS)}
                             </span>
-                          ) : null}
+                          )}
                         </div>
 
+                        {/* Controls (Focus/Details buttons) */}
                         <div className="flex items-center">
                           <TooltipProvider>
                             <Tooltip>
