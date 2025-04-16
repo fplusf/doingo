@@ -212,3 +212,66 @@ npm run start
 This project is licensed under the MIT License - see the [LICENSE](https://github.com/LuanRoger/electron-shadcn/blob/main/LICENSE) file for details.
 
 # optimal-adhd-react
+
+## Task Management Documentation
+
+### Overview
+
+The task management feature is designed to help users organize and manage their tasks efficiently. It includes components for displaying tasks, hooks for managing task state, and services for interacting with task data.
+
+### Components
+
+#### TasksList Component
+
+- **Purpose**: Displays a list of tasks, manages their state, and handles interactions such as creating, editing, and dragging tasks.
+- **Key Features**:
+  - **State Management**: Utilizes hooks to manage task-related states such as `isCreating`, `activeCategory`, `editingTask`, and more.
+  - **Task Sorting**: Sorts tasks by start time and categorizes them.
+  - **Drag and Drop**: Implements drag-and-drop functionality using `dnd-kit` to reorder tasks.
+  - **Task Creation and Editing**: Provides dialogs for creating and editing tasks, with initial values populated from the current state.
+  - **Edge Cases**:
+    - Handles empty task lists by ensuring default values are set.
+    - Manages task movement across dates, showing a toast notification when a task is moved.
+    - Ensures tasks are not dragged over gaps or invalid positions.
+
+#### TaskItem Component
+
+- **Purpose**: Represents individual tasks within the list, providing controls for editing, focusing, and completing tasks.
+- **Key Features**:
+  - **Task Display**: Shows task details such as title, duration, and start time, with dynamic styling based on task state (e.g., completed, focused).
+  - **Focus and Details**: Allows users to focus on a task or view its details, with keyboard and mouse interactions.
+  - **Subtasks and Progress**: Displays progress for tasks with subtasks, updating dynamically.
+  - **Edge Cases**:
+    - Handles tasks with no start time by providing default values.
+    - Manages task focus state, ensuring tasks are moved to the current time if not already focused.
+    - Provides accessibility features such as keyboard navigation and tooltips.
+
+### Hooks
+
+#### useTasksProgress Hook
+
+- **Purpose**: Manages the calculation of task progress for a given date.
+- **Functionality**:
+  - Filters tasks by date and calculates the completion percentage based on task completion and individual task progress.
+  - Returns a function `getProgressForDate` that provides the progress percentage for a specified date.
+
+#### useSubtasksCollapse Hook
+
+- **Purpose**: Manages the collapsed state of subtasks.
+- **Functionality**:
+  - Uses local storage to persist the collapsed state of subtasks across sessions.
+  - Provides `isSubtasksOpen` and `setIsSubtasksOpen` to get and set the collapse state.
+
+#### useWeekNavigation Hook
+
+- **Purpose**: Handles navigation logic for weekly task views.
+- **Functionality**:
+  - Manages the current week view and allows navigation between weeks.
+  - Updates the selected date based on URL search parameters.
+  - Provides functions for selecting dates, navigating to the next or previous week, and animating week transitions.
+
+### Future Improvements
+
+- Consider adding more detailed error handling and user feedback for network operations.
+- Explore opportunities to optimize performance for large task lists.
+- Enhance accessibility features to ensure compliance with WCAG standards.
