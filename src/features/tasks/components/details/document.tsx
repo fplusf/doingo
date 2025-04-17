@@ -7,7 +7,6 @@ import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { toggleTaskCompletion, updateTask } from '../../store/tasks.store';
 import CollapsedContainer from '../schedule/collapsed-container';
 import { TaskScheduler } from '../schedule/task-scheduler';
-import { TaskTimer } from '../timer/task-timer';
 import TaskNotes from './notes';
 import { SubtaskList } from './subtasks';
 
@@ -73,7 +72,8 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
           <CollapsedContainer>
             <TaskScheduler className="flex-1 text-muted-foreground" taskId={taskId} />
           </CollapsedContainer>
-          <TaskTimer taskId={taskId} initialTimeSpent={task.timeSpent || 0} editable={true} />
+          {/* TODO: add back after launch & idea validtion*/}
+          {/* <TaskTimer taskId={taskId} initialTimeSpent={task.timeSpent || 0} editable={true} /> */}
         </div>
       </div>
 

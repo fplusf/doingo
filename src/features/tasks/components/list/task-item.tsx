@@ -34,7 +34,6 @@ import {
   undoLastFocusAction,
 } from '../../store/tasks.store';
 import { ONE_HOUR_IN_MS, TaskCardProps } from '../../types';
-import { TaskTimer } from '../timer/task-timer';
 
 interface TaskItemProps extends TaskCardProps {
   listeners?: Record<string, any>;
@@ -315,14 +314,15 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                       >
                         {task.title}
                       </h3>
-                      {task.isFocused && task.startTime && (
+                      {/* TODO: add back after launch & idea validtion*/}
+                      {/* {task.isFocused && task.startTime && (
                         <TaskTimer
                           key={`timer-${task.id}-${task.startTime.getTime()}`}
                           taskId={task.id}
                           initialTimeSpent={task.timeSpent || 0}
                           className="absolute right-2 top-2"
                         />
-                      )}
+                      )} */}
                     </div>
 
                     {/* Short Duration Time Display */}
