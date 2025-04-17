@@ -45,18 +45,28 @@ export class LocalStorageAdapter implements StorageAdapter {
             nextStartTime,
             dueDate,
             taskDate: task.taskDate || today,
+            timeSpent: task.timeSpent || 0, // Ensure timeSpent is properly initialized
           };
         })
         .filter(Boolean);
     } catch (error) {
-      console.error('Error reading tasks from localStorage:', error);
+      console.error('Error loading tasks from localStorage:', error);
       return [];
     }
   }
 
   saveTasks(tasks: OptimalTask[]): void {
     try {
-      localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
+      // Convert Date objects to ISO strings for storage
+      const tasksToSave = tasks.map((task) => ({
+        ...task,
+        startTime: task.startTime?.toISOString(),
+        nextStartTime: task.nextStartTime?.toISOString(),
+        dueDate: task.dueDate?.toISOString(),
+        timeSpent: task.timeSpent || 0, // Ensure timeSpent is saved
+      }));
+
+      localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasksToSave));
     } catch (error) {
       console.error('Error saving tasks to localStorage:', error);
     }

@@ -379,7 +379,8 @@ export const setFocused = (id: string, isFocused: boolean) => {
 
       const now = new Date();
       const todayStr = format(now, 'yyyy-MM-dd');
-      const taskStartTime = getNextFiveMinuteInterval(now);
+      // Use current time instead of next 5-minute interval
+      const taskStartTime = now;
       const taskEndTime = addMilliseconds(taskStartTime, taskToFocus.duration || ONE_HOUR_IN_MS);
 
       const focusUpdates: Partial<OptimalTask> = {
@@ -388,6 +389,8 @@ export const setFocused = (id: string, isFocused: boolean) => {
         nextStartTime: taskEndTime,
         time: `${format(taskStartTime, 'HH:mm')}—${format(taskEndTime, 'HH:mm')}`,
         taskDate: todayStr, // Move task to today when focusing
+        // Preserve the existing timeSpent when refocusing
+        timeSpent: taskToFocus.timeSpent || 0,
       };
 
       // Calculate updates for overlapping tasks
@@ -1033,7 +1036,21 @@ export const setAutomaticFocus = (taskId: string | null) => {
   // Don't override manual focus with automatic focus
   const currentFocusedId = tasksStore.state.focusedTaskId;
   if (currentFocusedId) {
-    return; // Exit if there's already a focused task
+    // Check if the current focused task has ended
+    const currentFocusedTask = tasksStore.state.tasks.find((t) => t.id === currentFocusedId);
+    if (currentFocusedTask && currentFocusedTask.nextStartTime) {
+      const endTime =
+        typeof currentFocusedTask.nextStartTime === 'string'
+          ? parseISO(currentFocusedTask.nextStartTime)
+          : currentFocusedTask.nextStartTime;
+
+      // If the current task has ended, unfocus it
+      if (endTime < new Date()) {
+        setFocused(currentFocusedId, false);
+      } else {
+        return; // Exit if there's already a focused task that hasn't ended
+      }
+    }
   }
 
   console.log(`[Automatic Focus] Setting focus to: ${taskId ?? 'none'}`);
@@ -1054,10 +1071,26 @@ export const setAutomaticFocus = (taskId: string | null) => {
       focusedTaskId: taskId,
     };
   });
+
+  // Start timer for the automatically focused task
+  if (taskId) {
+    const focusedTask = tasksStore.state.tasks.find((t) => t.id === taskId);
+    if (focusedTask && focusedTask.startTime) {
+      toggleTaskTimer(taskId, true);
+    }
+  }
 };
 
 // Timer State Management
 export const toggleTaskTimer = (taskId: string, isRunning: boolean) => {
+  // Check if the task is focused before starting the timer
+  const taskToToggle = tasksStore.state.tasks.find((t) => t.id === taskId);
+
+  // If trying to start the timer but task is not focused, don't allow it
+  if (isRunning && taskToToggle && !taskToToggle.isFocused) {
+    return; // Don't start timer if task is not focused
+  }
+
   // Update this timer's state
   tasksStore.setState((state) => {
     const newTimerStates = {

@@ -10,7 +10,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { gsap } from 'gsap';
 import { Draggable } from 'gsap/Draggable';
-import { Blend } from 'lucide-react';
+import { Blend, ChevronsRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { ONE_HOUR_IN_MS, OptimalTask } from '../../types';
 import { TimelineItem } from '../timeline/timeline';
@@ -231,6 +231,23 @@ export const SortableTimelineTaskItem = ({
   };
   const outerContainerClasses = `group relative ${resizing ? 'z-50' : 'z-auto'}`;
 
+  const shouldShowOverlap = overlapsWithNext && !taskRef.current.completed;
+
+  const [showResolveButton, setShowResolveButton] = useState(false);
+
+  const handleResolveOverlap = () => {
+    if (!nextTask || !nextTask.id || !effectiveEndTime) return;
+
+    // Update the next task's start time to be the current task's end time
+    updateTask(nextTask.id, {
+      startTime: effectiveEndTime,
+      // Recalculate the next task's end time based on its duration
+      nextStartTime: nextTask.duration
+        ? new Date(effectiveEndTime.getTime() + nextTask.duration)
+        : undefined,
+    });
+  };
+
   return (
     <>
       <div
@@ -284,13 +301,29 @@ export const SortableTimelineTaskItem = ({
                 listeners={listeners}
               />
 
-              {overlapsWithNext && !taskRef.current.completed && (
+              {shouldShowOverlap && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div
                       className={`absolute -bottom-5 right-20 z-10 flex items-center gap-1 text-xs text-yellow-500`}
+                      onMouseEnter={() => setShowResolveButton(true)}
+                      onMouseLeave={() => setShowResolveButton(false)}
                     >
                       <Blend className="h-4 w-4" />
+                      {showResolveButton && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleResolveOverlap();
+                          }}
+                          className="ml-1 flex items-center gap-0.5 rounded bg-blue-500 px-1 py-0.5 text-[10px] text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          aria-label="Resolve time overlap"
+                          tabIndex={0}
+                        >
+                          <span>Resolve</span>
+                          <ChevronsRight className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
                   </TooltipTrigger>
                   <TooltipContent className="px-1.5 py-1">

@@ -339,12 +339,10 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                               ),
                             }}
                           />
-                          {/* Show duration separately only if very short */}
-                          {displayDuration <= ONE_HOUR_IN_MS && (
-                            <span className="ml-1 whitespace-nowrap text-xs opacity-40">
-                              ({formatDurationForDisplay(displayDuration || ONE_HOUR_IN_MS)})
-                            </span>
-                          )}
+                          {/* Always show duration for 1-2 hour range */}
+                          <span className="ml-1 whitespace-nowrap text-xs opacity-40">
+                            ({formatDurationForDisplay(displayDuration || ONE_HOUR_IN_MS)})
+                          </span>
                         </div>
                       </div>
                     )}

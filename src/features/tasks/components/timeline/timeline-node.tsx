@@ -227,10 +227,13 @@ export function TimelineNode({
     };
   };
 
+  // Determine which time to display based on focus state
+  const displayEndTime = isFocused ? endTime : undefined;
+
   return (
     <div className="relative h-full">
-      {/* Render start time */}
-      {isFocused && startTime && !shouldMergeTimes && (
+      {/* Render start time conditionally */}
+      {isFocused && startTime && !hideStartTime && (
         <div className="absolute -left-12 top-0 text-xs text-muted-foreground">
           {format(startTime, 'HH:mm')}
         </div>
@@ -244,9 +247,9 @@ export function TimelineNode({
       )}
 
       {/* Render end time */}
-      {isFocused && endTime && !shouldMergeTimes && (
+      {displayEndTime && !hideEndTime && (
         <div className="absolute -left-12 bottom-0 text-xs text-muted-foreground/60">
-          {format(endTime, 'HH:mm')}
+          {format(displayEndTime, 'HH:mm')}
         </div>
       )}
 
