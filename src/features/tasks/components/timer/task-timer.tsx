@@ -161,9 +161,9 @@ export const TaskTimer = ({
     const seconds = totalSeconds % 60;
 
     if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   // Enter edit mode
@@ -251,7 +251,7 @@ export const TaskTimer = ({
                 max="99"
                 value={hours}
                 onChange={(e) => handleInputChange(e.target.value, setHours, 99)}
-                className="h-6 w-10 px-1 text-xs"
+                className="h-6 w-10 px-1 font-mono text-xs"
                 aria-label="Hours"
               />
               <span className="text-xs">:</span>
@@ -261,7 +261,7 @@ export const TaskTimer = ({
                 max="59"
                 value={minutes}
                 onChange={(e) => handleInputChange(e.target.value, setMinutes, 59)}
-                className="h-6 w-10 px-1 text-xs"
+                className="h-6 w-10 px-1 font-mono text-xs"
                 aria-label="Minutes"
               />
               <span className="text-xs">:</span>
@@ -271,7 +271,7 @@ export const TaskTimer = ({
                 max="59"
                 value={seconds}
                 onChange={(e) => handleInputChange(e.target.value, setSeconds, 59)}
-                className="h-6 w-10 px-1 text-xs"
+                className="h-6 w-10 px-1 font-mono text-xs"
                 aria-label="Seconds"
               />
               <Button
@@ -287,7 +287,7 @@ export const TaskTimer = ({
           ) : (
             // Display mode
             <>
-              <div className="flex h-6 items-center justify-center rounded-md bg-gray-800/80 px-2 py-1 text-xs font-medium tabular-nums text-white">
+              <div className="flex h-6 min-w-[4.5rem] items-center justify-center rounded-md bg-gray-800/80 px-2 py-1 font-mono text-xs font-medium tabular-nums text-white">
                 {formatTime(displayTime)}
               </div>
 

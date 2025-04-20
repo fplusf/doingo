@@ -42,3 +42,5 @@ Follow these rules when you write code:
 # Commands to know
 
 The project starts with - `npm start`
+
+- Always use lowercase split by "-" component and file names
