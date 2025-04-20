@@ -349,6 +349,17 @@ export const setFocusedTaskId = (taskId: string | null) => {
 
     saveFocusedTask(taskId);
 
+    // If a task is being focused, sync it with the task-form store
+    if (taskId) {
+      const focusedTask = state.tasks.find((task) => task.id === taskId);
+      if (focusedTask) {
+        // Import dynamically to avoid circular dependencies
+        import('./task-form.store').then(({ loadTaskForEditing }) => {
+          loadTaskForEditing(focusedTask);
+        });
+      }
+    }
+
     return {
       ...state,
       tasks: updatedTasks,

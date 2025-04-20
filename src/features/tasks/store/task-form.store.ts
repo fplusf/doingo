@@ -220,8 +220,8 @@ export const deleteSubtask = (subtaskId: string) => {
 // Scheduling helpers
 export const updateStartDateTime = (date: Date, time: string | null | undefined) => {
   taskFormStore.setState((state) => {
-    // Ensure time is a string
-    const timeString = typeof time === 'string' ? time : '';
+    // Ensure time is a string and not empty
+    const timeString = typeof time === 'string' && time.length > 0 ? time : '';
 
     // Parse the start time
     const startTimeComponents = timeString.split(':').map(Number);
@@ -234,6 +234,15 @@ export const updateStartDateTime = (date: Date, time: string | null | undefined)
       !isNaN(startTimeComponents[1])
     ) {
       newStartDate.setHours(startTimeComponents[0], startTimeComponents[1], 0, 0);
+
+      // If we're in edit mode and have a taskId, sync with main store
+      // Only sync if we have valid time components and a non-empty timeString
+      if (state.mode === 'edit' && state.taskId && timeString) {
+        const validTimeString: string = timeString; // Type assertion after validation
+        import('./tasks.store').then(({ updateTaskStartDateTime }) => {
+          updateTaskStartDateTime(state.taskId!, newStartDate, validTimeString);
+        });
+      }
     }
 
     return {

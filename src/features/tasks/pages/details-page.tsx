@@ -6,6 +6,7 @@ import React, { useEffect } from 'react';
 import { toggleSidebarState } from '../../../layouts/store/layout.store';
 import { TaskDetailsRoute } from '../../../routes/routes';
 import { TaskDetails } from '../components';
+import { loadTaskForEditing, resetForm } from '../store/task-form.store';
 import { OptimalTask } from '../types';
 
 interface TaskDetailsPageProps {
@@ -25,11 +26,20 @@ const TaskDetailsPage: React.FC<TaskDetailsPageProps> = () => {
     return () => {
       // Optionally restore sidebar when leaving the page
       toggleSidebarState(false);
+      // Reset task form store when leaving
+      resetForm();
 
       // Don't manipulate scroll position when navigating back
       // Let the router handle scroll restoration
     };
   }, []);
+
+  // Sync with task-form store when task changes
+  useEffect(() => {
+    if (task) {
+      loadTaskForEditing(task);
+    }
+  }, [task]);
 
   // Redirect to first task if task not found
   useEffect(() => {

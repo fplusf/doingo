@@ -16,6 +16,7 @@ import {
   updateStartDateTime,
 } from '../../store/task-form.store';
 // import { pushForwardAffectedTasks } from '../../store/tasks.store'; // Removed - Logic now handled by setFocused
+import { useRouter } from '@tanstack/react-router';
 import { DateTimePicker } from './date-time-picker';
 import { DurationPicker } from './duration-picker';
 import { RepetitionPicker } from './repetition-picker';
@@ -36,6 +37,24 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
   const dueDate = useStore(taskFormStore, (state) => state.dueDate);
   const dueTime = useStore(taskFormStore, (state) => state.dueTime);
   const repetition = useStore(taskFormStore, (state) => state.repetition);
+  const currentTaskId = useStore(taskFormStore, (state) => state.taskId);
+
+  // check if the component is used in a task document or in a task list
+  const isTaskDocument = useRouter().state.location.pathname.includes('document');
+
+  // Sync with task store when taskId changes or when task is updated
+  useEffect(() => {
+    if (taskId) {
+      import('../../store/tasks.store').then(({ tasksStore }) => {
+        const task = tasksStore.state.tasks.find((t) => t.id === taskId);
+        if (task && taskId !== currentTaskId) {
+          import('../../store/task-form.store').then(({ loadTaskForEditing }) => {
+            loadTaskForEditing(task);
+          });
+        }
+      });
+    }
+  }, [taskId, currentTaskId]);
 
   const [hasOverlap, setHasOverlap] = useState(false);
   const [showPushForwardPrompt, setShowPushForwardPrompt] = useState(false);
@@ -171,7 +190,7 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
         </div>
       )}
 
-      {hasOverlap && (
+      {hasOverlap && !isTaskDocument && (
         <div className="mt-1 flex items-center gap-1.5 text-xs text-amber-500">
           <Tooltip>
             <TooltipTrigger asChild>

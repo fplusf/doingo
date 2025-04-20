@@ -236,7 +236,6 @@ export function CategorySection({
 
           // Calculate gap duration for determining if it's a very long gap
           const gapDuration = currentTask.isGap ? currentTask.duration : nextTask.duration || 0;
-          const isVeryLongGap = gapDuration >= SEVEN_HOURS_IN_MS;
 
           // Create a dotted connector segment for the gap
           segments.push({
