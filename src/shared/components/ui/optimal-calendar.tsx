@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import {
   Select,
@@ -31,6 +32,8 @@ export function OptimalCalendar({
   const [date, setDate] = React.useState<Date>(selected.date);
   const [selectedTime, setSelectedTime] = React.useState<string>(selected.time);
   const [isTimePickerOpen, setIsTimePickerOpen] = React.useState(false);
+  const [customHour, setCustomHour] = React.useState('');
+  const [customMinute, setCustomMinute] = React.useState('');
   const timePickerRef = React.useRef<HTMLDivElement>(null);
   const timePickerButtonRef = React.useRef<HTMLButtonElement>(null);
   const timePickerContainerRef = React.useRef<HTMLDivElement>(null);
@@ -143,6 +146,38 @@ export function OptimalCalendar({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isTimePickerOpen, selectedTime, timeOptions, size]);
+
+  const handleCustomHourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, '');
+    if (value === '' || (parseInt(value, 10) >= 0 && parseInt(value, 10) <= 23)) {
+      setCustomHour(value);
+    } else if (parseInt(value, 10) > 23) {
+      setCustomHour('23');
+    }
+  };
+
+  const handleCustomMinuteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, '');
+    if (value === '' || (parseInt(value, 10) >= 0 && parseInt(value, 10) <= 59)) {
+      setCustomMinute(value);
+    } else if (parseInt(value, 10) > 59) {
+      setCustomMinute('59');
+    }
+  };
+
+  const handleCustomTimeSubmit = () => {
+    const hour = customHour.padStart(2, '0');
+    const minute = customMinute.padStart(2, '0');
+    const newTime = `${hour}:${minute}`;
+
+    if (/^([01]\d|2[0-3]):([0-5]\d)$/.test(newTime)) {
+      setSelectedTime(newTime);
+      onSelect?.(new Date(date.getFullYear(), date.getMonth(), date.getDate()), newTime);
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    }
+  };
 
   const sizeClasses = {
     sm: {
@@ -264,15 +299,68 @@ export function OptimalCalendar({
           >
             <SelectValue placeholder={selectedTime}>{selectedTime}</SelectValue>
           </SelectTrigger>
-          <SelectContent className="p-0">
-            <ScrollArea className="h-[200px]">
-              <div className="p-1">
-                {timeOptions.map((time) => (
-                  <SelectItem key={time} value={time}>
-                    {time}
-                  </SelectItem>
-                ))}
+          <SelectContent className="max-h-[250px] w-40" ref={timePickerContainerRef}>
+            <div className="border-b border-border p-2">
+              <div className="mb-1 text-xs text-muted-foreground">Custom time:</div>
+              <div className="flex items-center gap-1">
+                <Input
+                  className="h-7 w-11 text-center text-[10px] placeholder:text-[10px]"
+                  placeholder="HH"
+                  value={customHour}
+                  onChange={handleCustomHourChange}
+                  maxLength={2}
+                  type="text"
+                  inputMode="numeric"
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') {
+                      const minuteInput =
+                        e.currentTarget.parentElement?.querySelector<HTMLInputElement>(
+                          'input[placeholder="mm"]',
+                        );
+                      if (customMinute) {
+                        handleCustomTimeSubmit();
+                      } else {
+                        minuteInput?.focus();
+                      }
+                    }
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <span className="text-sm text-muted-foreground">:</span>
+                <Input
+                  className="h-7 w-11 text-center text-[10px] placeholder:text-[10px]"
+                  placeholder="mm"
+                  value={customMinute}
+                  onChange={handleCustomMinuteChange}
+                  maxLength={2}
+                  type="text"
+                  inputMode="numeric"
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') handleCustomTimeSubmit();
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <Button
+                  size="sm"
+                  className="ml-auto h-7 px-2 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCustomTimeSubmit();
+                  }}
+                >
+                  Set
+                </Button>
               </div>
+            </div>
+
+            <ScrollArea className="h-[180px]" ref={timePickerRef}>
+              {timeOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
             </ScrollArea>
           </SelectContent>
         </Select>
