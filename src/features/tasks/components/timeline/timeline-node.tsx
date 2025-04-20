@@ -197,7 +197,7 @@ export function TimelineNode({
         progress === 100
           ? priorityColor
           : `linear-gradient(to bottom, ${priorityColor} 0%, ${priorityColor} 40%, ${priorityColor}80 100%)`,
-      transition: 'height 1s linear',
+      transition: 'height 0.2s ease-in-out',
       borderRadius: '24px 24px 0 0',
     };
   };
@@ -225,6 +225,7 @@ export function TimelineNode({
       animation: `sparkVibrate 0.15s ease-in-out infinite alternate`,
       animationDelay: `${index * 0.02}s`,
       zIndex: 1,
+      transition: 'top 0.2s ease-in-out',
     };
   };
 
