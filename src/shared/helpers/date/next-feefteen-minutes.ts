@@ -1,6 +1,5 @@
 // Calculate the next 15-minute interval from the current time
 import { tasksStore } from '@/features/tasks/store/tasks.store';
-import { OptimalTask } from '@/features/tasks/types';
 import {
   addMilliseconds,
   addMinutes,
@@ -28,44 +27,6 @@ export const getNextFifteenMinuteInterval = (): Date => {
   }
 
   return result;
-};
-
-/**
- * Checks if a new task with the given start time and duration would overlap with existing tasks
- */
-export const hasTimeOverlapWithExistingTasks = (
-  startTimeString: string,
-  durationMs: number,
-  date: string,
-  taskIdToExclude?: string,
-): { hasOverlap: boolean; overlappingTasks: OptimalTask[] } => {
-  const tasks = tasksStore.state.tasks;
-  const tasksOnDate = tasks.filter((task) => task.taskDate === date && task.id !== taskIdToExclude);
-
-  if (tasksOnDate.length === 0) return { hasOverlap: false, overlappingTasks: [] };
-
-  // Parse the start time
-  const [hours, minutes] = startTimeString.split(':').map(Number);
-  const startTimeInMinutes = hours * 60 + minutes;
-  const endTimeInMinutes = startTimeInMinutes + durationMs / (60 * 1000);
-
-  const overlappingTasks = tasksOnDate.filter((task) => {
-    if (!task.time) return false;
-
-    const [taskStartTime] = task.time.split('—');
-    const [taskHours, taskMinutes] = taskStartTime.split(':').map(Number);
-    const taskStartInMinutes = taskHours * 60 + taskMinutes;
-    const taskDuration = task.duration || 60 * 60 * 1000; // Default 1 hour
-    const taskEndInMinutes = taskStartInMinutes + taskDuration / (60 * 1000);
-
-    // Check if time ranges overlap
-    return startTimeInMinutes < taskEndInMinutes && endTimeInMinutes > taskStartInMinutes;
-  });
-
-  return {
-    hasOverlap: overlappingTasks.length > 0,
-    overlappingTasks,
-  };
 };
 
 /**

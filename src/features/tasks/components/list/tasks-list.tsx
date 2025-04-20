@@ -18,6 +18,7 @@ import {
   TaskCategory,
   TaskPriority,
 } from '@/features/tasks/types/task.types';
+import { hasTimeOverlap } from '@/lib/task-utils';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import {
   DndContext,
@@ -41,24 +42,6 @@ import { TimelineTaskItemOverlay } from './timeline-task-item-overlay';
 interface DayContainerProps {
   // Props if any
 }
-
-// Helper function to check if two time ranges overlap
-const hasTimeOverlap = (task1: OptimalTask, task2: OptimalTask) => {
-  if (!task1.time || !task2.time) return false;
-  const [start1] = task1.time.split('—');
-  const [start2] = task2.time.split('—');
-  if (!start1 || !start2) return false; // Ensure start times exist
-  const [hours1, minutes1] = start1.split(':').map(Number);
-  const [hours2, minutes2] = start2.split(':').map(Number);
-  if (isNaN(hours1) || isNaN(minutes1) || isNaN(hours2) || isNaN(minutes2)) return false; // Validate numbers
-  const startTime1 = hours1 * 60 + minutes1;
-  const startTime2 = hours2 * 60 + minutes2;
-  const duration1 = task1.duration || ONE_HOUR_IN_MS;
-  const duration2 = task2.duration || ONE_HOUR_IN_MS;
-  const endTime1 = startTime1 + duration1 / 60000; // Convert ms to minutes
-  const endTime2 = startTime2 + duration2 / 60000;
-  return startTime1 < endTime2 && endTime1 > startTime2;
-};
 
 // Sort tasks within each category by start time
 const sortByStartTime = (tasks: OptimalTask[]) => {

@@ -1,9 +1,7 @@
+import { hasTimeOverlapWithExistingTasks } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
-import {
-  findFreeTimeSlots,
-  hasTimeOverlapWithExistingTasks,
-} from '@/shared/helpers/date/next-feefteen-minutes';
+import { findFreeTimeSlots } from '@/shared/helpers/date/next-feefteen-minutes';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
 import { AlertCircle, ArrowLeftRight, Clock, Flag } from 'lucide-react';
