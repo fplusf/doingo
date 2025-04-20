@@ -172,7 +172,8 @@ const processTasksWithGaps = (tasks: OptimalTask[]): OptimalTask[] => {
   return result;
 };
 
-interface TasksListHandle {
+// Export the handle interface
+export interface TasksListHandle {
   setIsCreating: (value: boolean) => void;
 }
 

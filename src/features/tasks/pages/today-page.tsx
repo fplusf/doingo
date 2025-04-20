@@ -1,19 +1,15 @@
+import { cn } from '@/lib/utils';
 import { useSidebar } from '@/shared/components/ui/sidebar';
 import { useStore } from '@tanstack/react-store';
-import { isWithinInterval, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { useEffect, useRef } from 'react';
-import { cn } from '../../../lib/utils';
-import { TasksList } from '../components/list/tasks-list';
+import { TasksList, TasksListHandle } from '../components/list/tasks-list';
 import { WeekNavigator } from '../components/weekly-calendar/week-navigator';
-import { setAutomaticFocus, tasksStore } from '../store/tasks.store';
+import { setFocused, tasksStore } from '../store/tasks.store';
 
 export default function TodayPage() {
   const sidebar = useSidebar();
-  const dayContentRef = useRef<{ setIsCreating: (value: boolean) => void } | null>(null);
-  const lastFocusStateRef = useRef<{ taskId: string | null; timestamp: number }>({
-    taskId: null,
-    timestamp: 0,
-  });
+  const dayContentRef = useRef<TasksListHandle>(null);
   const isInitialLoadRef = useRef(true);
 
   const allTasks = useStore(tasksStore, (state) => state.tasks);
@@ -39,43 +35,30 @@ export default function TodayPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Effect for automatic focus check
+  // Effect for automatic focus checking
   useEffect(() => {
     const checkFocus = () => {
-      // Skip auto-focus on initial page load
-      if (isInitialLoadRef.current) {
-        isInitialLoadRef.current = false;
-        return;
-      }
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      const tasksForToday = allTasks.filter((task) => task.taskDate === todayStr);
+      // Sort tasks to ensure consistent order when checking intervals
+      const sortedTasks = tasksForToday.sort(
+        (a, b) => (a.startTime?.getTime() || 0) - (b.startTime?.getTime() || 0),
+      );
 
+      let taskToFocusNow: string | null = null;
       const now = new Date();
-      let currentlyFocusedTask = null;
 
-      // Find the first non-completed task whose time interval includes the current time
-      for (const task of allTasks) {
+      for (const task of sortedTasks) {
         if (task.completed) continue;
+
         if (task.startTime && task.nextStartTime) {
           try {
-            // Ensure startTime and nextStartTime are Date objects
-            const startTime =
-              typeof task.startTime === 'string' ? parseISO(task.startTime) : task.startTime;
-            const endTime =
-              typeof task.nextStartTime === 'string'
-                ? parseISO(task.nextStartTime)
-                : task.nextStartTime;
+            const startTime = task.startTime;
+            const endTime = task.nextStartTime;
 
-            // Validate that both times are valid Date objects and startTime is before endTime
-            if (
-              startTime instanceof Date &&
-              endTime instanceof Date &&
-              !isNaN(startTime.getTime()) &&
-              !isNaN(endTime.getTime()) &&
-              startTime < endTime
-            ) {
-              if (isWithinInterval(now, { start: startTime, end: endTime })) {
-                currentlyFocusedTask = task.id;
-                break; // Found the first overlapping task
-              }
+            if (now >= startTime && now < endTime) {
+              taskToFocusNow = task.id;
+              break;
             }
           } catch (error) {
             console.warn(`Invalid interval for task ${task.id}:`, error);
@@ -84,41 +67,41 @@ export default function TodayPage() {
         }
       }
 
-      const currentTime = Date.now();
-      const timeSinceLastFocus = currentTime - lastFocusStateRef.current.timestamp;
-      const MIN_FOCUS_INTERVAL = 2000; // 2 seconds minimum between focus changes
+      // Get the currently focused task ID from the store *inside* the check
+      // to ensure we have the latest value at the time of execution.
+      const currentFocusedIdInStore = tasksStore.state.focusedTaskId;
 
-      // Only update if:
-      // 1. The automatically determined focus differs from the current state
-      // 2. Enough time has passed since the last focus change
-      // 3. The new focus state is different from the last recorded focus state
-      if (
-        currentlyFocusedTask !== focusedTaskId &&
-        timeSinceLastFocus > MIN_FOCUS_INTERVAL &&
-        currentlyFocusedTask !== lastFocusStateRef.current.taskId
-      ) {
+      // If the calculated focus state differs from the store state
+      if (taskToFocusNow !== currentFocusedIdInStore) {
         console.log(
-          `[AutoFocus] Switching focus from task ${focusedTaskId} to task ${currentlyFocusedTask}`,
+          `[Focus Check] State change needed. Should be: ${taskToFocusNow ?? 'null'}, Is: ${currentFocusedIdInStore ?? 'null'}`,
         );
-        lastFocusStateRef.current = {
-          taskId: currentlyFocusedTask,
-          timestamp: currentTime,
-        };
-        setAutomaticFocus(currentlyFocusedTask);
+        // Unfocus the old task if there was one
+        if (currentFocusedIdInStore) {
+          console.log(`[Focus Check] Unfocusing task: ${currentFocusedIdInStore}`);
+          setFocused(currentFocusedIdInStore, false);
+        }
+        // Focus the new task if there is one
+        if (taskToFocusNow) {
+          console.log(`[Focus Check] Focusing task: ${taskToFocusNow}`);
+          setFocused(taskToFocusNow, true);
+        }
       }
     };
 
-    // Initial check with a small delay to avoid immediate re-renders
+    // Initial check with a small delay
     const initialCheckTimeout = setTimeout(checkFocus, 100);
 
-    // Check more frequently - every 15 seconds instead of every minute
-    const intervalId = setInterval(checkFocus, 15 * 1000);
+    // Check periodically
+    const intervalId = setInterval(checkFocus, 15 * 1000); // Check every 15 seconds
 
     return () => {
       clearTimeout(initialCheckTimeout);
       clearInterval(intervalId);
     };
-  }, [allTasks, focusedTaskId]);
+    // Depend on allTasks so the check reruns if tasks change,
+    // but focusedTaskId is handled inside checkFocus to avoid loops.
+  }, [allTasks]);
 
   // Don't add any code here that would reset scroll position
   // Let the router handle scroll restoration

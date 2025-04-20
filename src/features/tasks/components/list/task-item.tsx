@@ -83,7 +83,10 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
     }
 
     setFocused(task.id, true);
-    navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
+    // Delay navigation slightly to ensure state update completes
+    setTimeout(() => {
+      navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
+    }, 0);
   }, [task.id, task.taskDate, navigate]);
 
   React.useEffect(() => {
@@ -195,10 +198,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
     return remainingMinutes === 0 ? `${hours} hr` : `${hours} hr, ${remainingMinutes} min`;
   }
 
-  function formatTimeRange(startTimeStr: string, duration: number): string {
-    const [hours, minutes] = startTimeStr.split(':').map(Number);
-    const startDate = new Date();
-    startDate.setHours(hours, minutes, 0, 0);
+  function formatTimeRange(startDate: Date, duration: number): string {
     const endDate = addMilliseconds(startDate, duration);
     const isNextDay = !isSameDay(startDate, endDate);
     const endTimeFormatted = `${format(endDate, 'HH:mm')}${isNextDay ? '<span class="text-[8px] align-super ml-0.5">+1</span>' : ''}`;
@@ -208,10 +208,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
     )})`;
   }
 
-  function formatCompactTimeRange(startTimeStr: string, duration: number): string {
-    const [hours, minutes] = startTimeStr.split(':').map(Number);
-    const startDate = new Date();
-    startDate.setHours(hours, minutes, 0, 0);
+  function formatCompactTimeRange(startDate: Date, duration: number): string {
     const endDate = addMilliseconds(startDate, duration);
     const isNextDay = !isSameDay(startDate, endDate);
     const endTimeFormatted = `${format(endDate, 'HH:mm')}${isNextDay ? '<span class="text-[8px] align-super ml-0.5">+1</span>' : ''}`;
@@ -334,7 +331,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                             className="whitespace-nowrap text-xs opacity-50"
                             dangerouslySetInnerHTML={{
                               __html: formatCompactTimeRange(
-                                format(task.startTime, 'HH:mm'), // Use formatted startTime
+                                task.startTime,
                                 displayDuration || ONE_HOUR_IN_MS,
                               ),
                             }}
@@ -357,7 +354,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                               className="whitespace-nowrap"
                               dangerouslySetInnerHTML={{
                                 __html: formatTimeRange(
-                                  format(task.startTime, 'HH:mm'), // Use formatted startTime
+                                  task.startTime,
                                   displayDuration || ONE_HOUR_IN_MS,
                                 ),
                               }}
