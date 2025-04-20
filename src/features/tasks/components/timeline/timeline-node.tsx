@@ -178,6 +178,7 @@ export function TimelineNode({
     if (completed || timeStatus === 'past') {
       return {
         backgroundColor: priorityColor,
+        opacity: 0.8,
       };
     }
 
