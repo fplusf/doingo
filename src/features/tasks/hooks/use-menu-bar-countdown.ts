@@ -16,13 +16,28 @@ declare global {
   }
 }
 
-const ipcRenderer = window.electron?.ipcRenderer;
+const isElectron = typeof window !== 'undefined' && window.electron !== undefined;
+const ipcRenderer = isElectron ? window.electron?.ipcRenderer : null;
 
 export const useMenuBarCountdown = () => {
   console.log('[MenuBarCountdown] Hook running.');
+
+  if (!isElectron) {
+    console.log('[MenuBarCountdown] Not running in Electron environment');
+    return {
+      startCountdown: () => {},
+      stopCountdown: () => {},
+      isRunning: false,
+    };
+  }
+
   if (!ipcRenderer) {
     console.warn('[MenuBarCountdown] ipcRenderer is not available on window.electron');
-    return;
+    return {
+      startCountdown: () => {},
+      stopCountdown: () => {},
+      isRunning: false,
+    };
   }
 
   const { focusedTaskId, tasks } = useStore(tasksStore, (state) => {
@@ -82,4 +97,10 @@ export const useMenuBarCountdown = () => {
       ipcRenderer.send('stop-countdown');
     };
   }, [focusedTaskId, focusedTask]);
+
+  return {
+    startCountdown: (endTime: number) => ipcRenderer.send('start-countdown', endTime),
+    stopCountdown: () => ipcRenderer.send('stop-countdown'),
+    isRunning: focusedTask?.startTime !== undefined,
+  };
 };
