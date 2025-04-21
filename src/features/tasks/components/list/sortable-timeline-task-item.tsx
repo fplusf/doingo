@@ -246,6 +246,12 @@ export const SortableTimelineTaskItem = ({
         ? new Date(effectiveEndTime.getTime() + nextTask.duration)
         : undefined,
     });
+
+    // Force a state update to trigger overlap recalculation
+    tasksStore.setState((state) => ({
+      ...state,
+      lastUpdate: new Date().getTime(), // Add a timestamp to force recalculation
+    }));
   };
 
   return (

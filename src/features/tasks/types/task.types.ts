@@ -85,6 +85,7 @@ export interface TasksState {
     temporaryDuration: number | null;
     temporaryEndTime: Date | null;
   };
+  lastUpdate: number; // Timestamp for forcing recalculation of derived state
 }
 
 export interface DragHandleProps {

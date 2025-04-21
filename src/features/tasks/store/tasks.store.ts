@@ -89,6 +89,7 @@ const initialState: TasksState = {
     temporaryDuration: null,
     temporaryEndTime: null,
   },
+  lastUpdate: Date.now(),
 };
 
 export const tasksStore = new Store<TasksState>(initialState);
@@ -232,21 +233,24 @@ export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
       updates.nextStartTime !== undefined ||
       updates.duration !== undefined
     ) {
-      const newStartTime = updates.startTime || task.startTime;
+      // Determine if this update is primarily a resize operation (only duration/end time changed)
+      const isResizeOperation =
+        updates.duration !== undefined &&
+        updates.nextStartTime !== undefined &&
+        updates.startTime === undefined;
+
+      // For resize operations, keep the original start time
+      const newStartTime = isResizeOperation ? task.startTime : updates.startTime || task.startTime;
+
       // Ensure duration is valid, fall back to task's duration if needed
       const effectiveDuration = updates.duration ?? task.duration ?? 0;
+
       // Calculate newEndTime based on start time and duration, primarily using these unless nextStartTime is explicitly provided
       const calculatedEndTime = newStartTime
         ? addMilliseconds(newStartTime, effectiveDuration)
         : null;
       // Prefer updates.nextStartTime if provided (comes from resize), otherwise use calculated end time
       const newEndTime = updates.nextStartTime || calculatedEndTime;
-
-      // Determine if this update is primarily a resize operation (only duration/end time changed)
-      const isResizeOperation =
-        updates.duration !== undefined &&
-        updates.nextStartTime !== undefined &&
-        updates.startTime === undefined;
 
       // Determine if the task truly spans multiple days based on duration
       const crossesMidnight = newStartTime && newEndTime && !isSameDay(newStartTime, newEndTime);
@@ -307,6 +311,11 @@ export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
           startTime: newStartTime, // Keep original start time if resizing or use updated
           duration: effectiveDuration,
           nextStartTime: newEndTime ?? undefined, // Convert null to undefined
+          // Update the time string to reflect the new times
+          time:
+            newStartTime && newEndTime
+              ? `${format(newStartTime, 'HH:mm')}—${format(newEndTime, 'HH:mm')}`
+              : task.time,
         };
         return {
           ...state,
@@ -381,11 +390,6 @@ export const setFocused = (id: string, isFocused: boolean) => {
     const taskToFocus = state.tasks.find((t: OptimalTask) => t.id === id);
     if (!taskToFocus) return state; // Task not found
 
-    // If already in the desired state, do nothing
-    if (taskToFocus.isFocused === isFocused) {
-      return state;
-    }
-
     // Store the previous state for potential undo
     const previousTasksState = state.tasks.map((t) => ({ ...t }));
     const previousFocusedId = state.focusedTaskId;
@@ -395,8 +399,8 @@ export const setFocused = (id: string, isFocused: boolean) => {
     let affectedTaskUpdates: { id: string; updates: Partial<OptimalTask> }[] = [];
 
     if (isFocused) {
-      // Unfocus any previously focused task
-      newTasks = newTasks.map((t) => (t.isFocused ? { ...t, isFocused: false } : t));
+      // Unfocus any previously focused task (except the current task if it's already focused)
+      newTasks = newTasks.map((t) => (t.isFocused && t.id !== id ? { ...t, isFocused: false } : t));
       newFocusedTaskId = id;
 
       const now = new Date();

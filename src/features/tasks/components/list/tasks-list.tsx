@@ -288,7 +288,7 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
         }
       });
       return { tasks: sortedTasks, overlaps };
-    }, [tasksWithGaps]);
+    }, [tasksWithGaps, tasksStore.state.lastUpdate]);
 
     // Effect to update end time (ensure safety)...
     useEffect(() => {
@@ -389,10 +389,11 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
           const taskDuration = task.duration || 0; // Handle potentially missing duration
 
           updatedTask.startTime = new Date(currentTimeCursor); // Assign current cursor time
-          updatedTask.time = format(currentTimeCursor, 'HH:mm'); // Update time string
-
           const endTime = new Date(currentTimeCursor.getTime() + taskDuration);
           updatedTask.nextStartTime = endTime; // Update next start time (end of current task)
+
+          // Correctly format the time string with both start and end times
+          updatedTask.time = `${format(updatedTask.startTime, 'HH:mm')}—${format(endTime, 'HH:mm')}`;
 
           currentTimeCursor = endTime; // Advance the cursor for the next task
 
