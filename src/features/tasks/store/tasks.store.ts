@@ -512,12 +512,28 @@ export const toggleTaskCompletion = (id: string) => {
       isCompleted: newCompleted ? true : subtask.isCompleted,
     }));
 
+    // If completing the task and it has a start time, update the duration
+    let updatedTask = { ...task };
+    if (newCompleted && task.startTime) {
+      const currentTime = new Date();
+      const actualDuration = currentTime.getTime() - task.startTime.getTime();
+
+      // Only update duration if task was completed before its end time
+      if (actualDuration < (task.duration || 0)) {
+        updatedTask = {
+          ...task,
+          duration: actualDuration,
+          nextStartTime: currentTime,
+        };
+      }
+    }
+
     return {
       ...state,
       tasks: state.tasks.map((t) =>
         t.id === id
           ? {
-              ...t,
+              ...updatedTask,
               completed: newCompleted,
               subtasks: updatedSubtasks,
               progress: newCompleted
