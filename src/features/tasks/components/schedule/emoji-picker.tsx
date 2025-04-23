@@ -5,7 +5,7 @@ import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import { Smile } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface EmojiPickerProps {
   emoji?: string;
@@ -15,6 +15,24 @@ interface EmojiPickerProps {
 
 export function EmojiPicker({ emoji, onEmojiSelect, className }: EmojiPickerProps) {
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+
+  useEffect(() => {
+    if (isEmojiPickerOpen) {
+      // Find the root element of the shadow dom for the emoji picker
+      const shadowRoot = document.querySelector('em-emoji-picker')?.shadowRoot;
+
+      // Auto-focus the search input for the emoji picker
+      if (shadowRoot) {
+        // Need to use timeout to ensure the shadow DOM is fully rendered
+        setTimeout(() => {
+          const searchInput = shadowRoot.querySelector(
+            '.search input[type="search"]',
+          ) as HTMLInputElement;
+          searchInput?.focus({ preventScroll: true });
+        }, 100); // Increased timeout to ensure DOM is fully rendered
+      }
+    }
+  }, [isEmojiPickerOpen]);
 
   return (
     <Popover modal={true} open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
@@ -49,6 +67,7 @@ export function EmojiPicker({ emoji, onEmojiSelect, className }: EmojiPickerProp
       >
         <div onClick={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
           <Picker
+            key={isEmojiPickerOpen ? 'open' : 'closed'}
             data={data}
             onEmojiSelect={(emoji: any) => {
               onEmojiSelect(emoji.native);
@@ -58,6 +77,7 @@ export function EmojiPicker({ emoji, onEmojiSelect, className }: EmojiPickerProp
             previewPosition="none"
             skinTonePosition="none"
             scrollable={true}
+            autoFocus={true}
           />
         </div>
       </PopoverContent>
