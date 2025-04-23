@@ -41,6 +41,7 @@ import {
 import { setEditingTaskId, tasksStore, updateTask } from '../../store/tasks.store';
 import { SubtaskList } from '../details/subtasks';
 import { PriorityPicker } from './priority-picker';
+import { SliderTimePicker } from './slider-time-picker';
 import { TaskScheduler } from './task-scheduler';
 
 export interface TaskFormValues {
@@ -549,52 +550,55 @@ function TaskDialogContent({
       </form>
 
       {/* Fixed footer */}
-      <div className="flex items-baseline border-t border-border bg-card p-2">
-        <TaskScheduler className="text-muted-foreground" taskId={editingTaskId || undefined} />
-        <div className="mt-2 flex flex-1 items-center justify-between gap-1">
-          <Select
-            value={category}
-            onValueChange={(value: TaskCategory) => updateField('category', value)}
-          >
-            <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
-              <div className="flex items-center">
-                {category === 'work' && <Hash className="mr-1 h-3.5 w-3.5" />}
-                {(category === 'passion' || category === 'play') && (
-                  <Hash className="mr-1 h-3.5 w-3.5" />
-                )}
-                <SelectValue>
-                  {category === 'work' ? 'Work' : category === 'passion' ? 'Passion' : 'Play'}
-                </SelectValue>
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="work">
+      <div className="flex flex-col gap-2 border-t border-border bg-card p-2">
+        <div className="mb-2 flex w-full items-center justify-between">
+          <TaskScheduler className="text-muted-foreground" taskId={editingTaskId || undefined} />
+          <div className="flex items-center gap-1">
+            <Select
+              value={category}
+              onValueChange={(value: TaskCategory) => updateField('category', value)}
+            >
+              <SelectTrigger className="h-8 w-[120px] px-2 text-sm">
                 <div className="flex items-center">
-                  <Hash className="mr-1 h-3.5 w-3.5" />
-                  Work
+                  {category === 'work' && <Hash className="mr-1 h-3.5 w-3.5" />}
+                  {(category === 'passion' || category === 'play') && (
+                    <Hash className="mr-1 h-3.5 w-3.5" />
+                  )}
+                  <SelectValue>
+                    {category === 'work' ? 'Work' : category === 'passion' ? 'Passion' : 'Play'}
+                  </SelectValue>
                 </div>
-              </SelectItem>
-              <SelectItem value="passion">
-                <div className="flex items-center">
-                  <Hash className="mr-1 h-3.5 w-3.5" />
-                  Passion
-                </div>
-              </SelectItem>
-              <SelectItem value="play">
-                <div className="flex items-center">
-                  <Hash className="mr-1 h-3.5 w-3.5" />
-                  Play
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="work">
+                  <div className="flex items-center">
+                    <Hash className="mr-1 h-3.5 w-3.5" />
+                    Work
+                  </div>
+                </SelectItem>
+                <SelectItem value="passion">
+                  <div className="flex items-center">
+                    <Hash className="mr-1 h-3.5 w-3.5" />
+                    Passion
+                  </div>
+                </SelectItem>
+                <SelectItem value="play">
+                  <div className="flex items-center">
+                    <Hash className="mr-1 h-3.5 w-3.5" />
+                    Play
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
-          <PriorityPicker
-            className="self-end"
-            value={priority}
-            onValueChange={(priority) => updateField('priority', priority)}
-          />
+            <PriorityPicker
+              value={priority}
+              onValueChange={(priority) => updateField('priority', priority)}
+            />
+          </div>
         </div>
+
+        <SliderTimePicker className="w-full" />
       </div>
     </DialogContent>
   );

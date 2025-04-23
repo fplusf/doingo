@@ -4,7 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/
 import { findFreeTimeSlots } from '@/shared/helpers/date/next-feefteen-minutes';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
-import { AlertCircle, ArrowLeftRight, Clock, Flag } from 'lucide-react';
+import { ArrowLeftRight, Clock, Flag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   taskFormStore,
@@ -188,7 +188,7 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
         </div>
       )}
 
-      {hasOverlap && !isTaskDocument && (
+      {/* {hasOverlap && !isTaskDocument && (
         <div className="mt-1 flex items-center gap-1.5 text-xs text-amber-500">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -238,7 +238,7 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
             </button>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 }
