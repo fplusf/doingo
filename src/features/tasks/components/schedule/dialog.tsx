@@ -1,5 +1,6 @@
 import { EmojiPicker } from '@/features/tasks/components/schedule/emoji-picker';
 import { OptimalTask, Subtask, TaskCategory, TaskPriority } from '@/features/tasks/types';
+import { getSuggestedEmojiFromLLM } from '@/lib/groq';
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -132,6 +133,23 @@ const getSuggestedEmoji = (title: string, category: TaskCategory): string => {
   return categoryMappings.default;
 };
 
+// Function to get emoji suggestion
+const getEmojiSuggestion = async (title: string, category: TaskCategory): Promise<string> => {
+  try {
+    // Try LLM-based suggestion first
+    const result = await getSuggestedEmojiFromLLM(title, category);
+    if (result.confidence > 0.7) {
+      return result.emoji;
+    }
+
+    // Fallback to rule-based suggestion
+    return getSuggestedEmoji(title, category);
+  } catch (error) {
+    console.error('Error getting LLM emoji suggestion:', error);
+    return getSuggestedEmoji(title, category);
+  }
+};
+
 function TaskDialogContent({
   onSubmit,
   mode = 'create',
@@ -194,14 +212,6 @@ function TaskDialogContent({
       }
     }
   }, [open, mode, editingTaskId]);
-
-  // Auto-suggest emoji when title or category changes
-  useEffect(() => {
-    if (title && !emoji) {
-      const suggestedEmoji = getSuggestedEmoji(title, category || 'work');
-      updateField('emoji', suggestedEmoji);
-    }
-  }, [title, category, emoji]);
 
   // Auto-adjust height when title changes
   const adjustTextareaHeight = () => {
@@ -273,15 +283,44 @@ function TaskDialogContent({
     }
   };
 
-  // Update key event handlers to use the batch submission
+  // Update handleSubmit to be non-blocking
+  const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
+    if (e) e.preventDefault();
+    if (title && title.length > 0) {
+      // Submit the form immediately
+      submitFormBatch();
+      const currentTaskId = editingTaskId;
+      onOpenChange(false);
+      setEditingTaskId(null);
+
+      // If no emoji was set, get suggestion asynchronously and update the task
+      if (!emoji) {
+        getEmojiSuggestion(title, category || 'work')
+          .then((suggestedEmoji) => {
+            if (currentTaskId) {
+              // Update existing task
+              updateTask(currentTaskId, { emoji: suggestedEmoji });
+            } else {
+              // For new tasks, update the last created task
+              const tasks = tasksStore.state.tasks;
+              const lastTask = tasks[tasks.length - 1];
+              if (lastTask) {
+                updateTask(lastTask.id, { emoji: suggestedEmoji });
+              }
+            }
+          })
+          .catch((error) => {
+            console.error('Error updating task emoji:', error);
+          });
+      }
+    }
+  };
+
+  // Update key event handlers
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (title && title.length > 0) {
-        submitFormBatch();
-        onOpenChange(false);
-        setEditingTaskId(null);
-      }
+      handleSubmit();
     }
   };
 
@@ -302,19 +341,9 @@ function TaskDialogContent({
     }
   };
 
-  // Update title field in the form store
+  // Simple title change handler without emoji logic
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateField('title', e.target.value);
-  };
-
-  // Replace handleSubmit with the batch submission
-  const handleSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (title && title.length > 0) {
-      submitFormBatch();
-      onOpenChange(false);
-      setEditingTaskId(null);
-    }
   };
 
   // Update handleClose to submit changes if title is valid and form is dirty
