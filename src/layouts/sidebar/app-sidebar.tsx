@@ -1,7 +1,6 @@
 import { setFocused, tasksStore } from '@/features/tasks/store/tasks.store';
 import { OptimalTask } from '@/features/tasks/types/index';
 import { NavUser } from '@/layouts/sidebar/nav-user';
-import ToggleTheme from '@/shared/components/toggle-theme';
 import {
   Sidebar,
   SidebarContent,
@@ -16,7 +15,7 @@ import { toast } from '@/shared/hooks/use-toast';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
-import { BarChart, Bell, Calendar, Calendar1Icon, Inbox, LucideFocus } from 'lucide-react';
+import { Bell, Calendar1Icon, Inbox, LucideFocus } from 'lucide-react';
 import * as React from 'react';
 
 const data = {
@@ -144,7 +143,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 )}
               </Tooltip>
             </SidebarMenuButton>
-            <span className="mt-0.5 truncate text-xs">Focus</span>
+            <span className="mt-2 truncate text-xs">Focus</span>
           </SidebarMenuItem>
         </SidebarMenu>
 
@@ -183,7 +182,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
 
-        <SidebarMenu>
+        {/* <SidebarMenu>
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>
               <Link
@@ -198,9 +197,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuButton>
             <span className="mt-0.5 truncate text-xs">Calendar</span>
           </SidebarMenuItem>
-        </SidebarMenu>
+        </SidebarMenu> */}
 
-        <SidebarMenu>
+        {/* <SidebarMenu>
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>
               <Link
@@ -215,12 +214,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuButton>
             <span className="mt-0.5 truncate text-xs">Stats</span>
           </SidebarMenuItem>
-        </SidebarMenu>
+        </SidebarMenu> */}
       </SidebarHeader>
       <SidebarContent />
       <SidebarFooter>
         <div className="flex flex-col items-center gap-4">
-          <ToggleTheme />
+          {/* <ToggleTheme /> */}
           <NavUser user={data.user} />
         </div>
       </SidebarFooter>
