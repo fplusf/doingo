@@ -175,10 +175,18 @@ export function TimelineNode({
       backgroundColor: '#323236',
     };
 
-    if (completed || timeStatus === 'past') {
+    if (timeStatus === 'past') {
       return {
         backgroundColor: priorityColor,
-        opacity: 0.8,
+        opacity: 1,
+      };
+    }
+
+    if (completed) {
+      return {
+        // TODO: soften the color without changing opacity
+        backgroundColor: priorityColor,
+        opacity: 1,
       };
     }
 

@@ -326,12 +326,25 @@ export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
           'Updates:',
           updates,
         );
+
+        // Handle tasks that cross midnight but are less than 24 hours
+        let taskDate = task.taskDate;
+        let endsNextDay = false;
+
+        if (newStartTime && newEndTime) {
+          // Keep the task on the date it starts on
+          taskDate = format(newStartTime, 'yyyy-MM-dd');
+          // Set endsNextDay flag if the task crosses midnight
+          endsNextDay = !isSameDay(newStartTime, newEndTime);
+          console.log(`Task ${task.id} starts on ${taskDate}, endsNextDay: ${endsNextDay}`);
+        }
+
         const updatedTasks = [...state.tasks];
         updatedTasks[taskIndex] = {
           ...task,
           ...updates,
-          // Ensure calculated fields are consistent
-          // startTime: newStartTime, // Keep original start time if resizing or use updated
+          taskDate, // Use the date based on start time
+          endsNextDay, // Add flag for UI to show +1 indicator
           duration: effectiveDuration,
           nextStartTime: newEndTime ?? undefined, // Convert null to undefined
           // Update the time string to reflect the new times

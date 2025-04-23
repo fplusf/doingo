@@ -63,6 +63,8 @@ export interface OptimalTask {
   gapStartTime?: Date;
   gapEndTime?: Date;
   timeSpent: number; // Total time spent on task in milliseconds
+  // Next day indicator
+  endsNextDay?: boolean; // Indicates if the task ends on the next day
 }
 
 export interface TaskHistoryEntry {
