@@ -236,18 +236,21 @@ function TaskDialogContent({
 
   // Position cursor at the end when dialog opens in edit mode
   useEffect(() => {
-    if (open && mode === 'edit' && textareaRef.current && title) {
+    if (open && mode === 'edit' && textareaRef.current) {
       // Use requestAnimationFrame to ensure dialog is fully rendered
       const frameId = requestAnimationFrame(() => {
         if (textareaRef.current) {
           textareaRef.current.focus();
-          textareaRef.current.setSelectionRange(title.length, title.length);
+          textareaRef.current.setSelectionRange(
+            textareaRef.current.value.length,
+            textareaRef.current.value.length,
+          );
         }
       });
 
       return () => cancelAnimationFrame(frameId);
     }
-  }, [open, mode, title]);
+  }, [open, mode]);
 
   // Ensure subtasks section is shown if there are subtasks
   useEffect(() => {
