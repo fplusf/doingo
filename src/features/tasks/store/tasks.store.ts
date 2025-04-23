@@ -252,6 +252,29 @@ export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
       // Prefer updates.nextStartTime if provided (comes from resize), otherwise use calculated end time
       const newEndTime = updates.nextStartTime || calculatedEndTime;
 
+      // Check if this task should be focused based on its new time range
+      const now = new Date();
+      const shouldBeFocused = Boolean(
+        newStartTime && newEndTime && now >= newStartTime && now < newEndTime && !task.completed,
+      );
+
+      // If the task should be focused and isn't already, or shouldn't be focused and is,
+      // we'll update its focus state
+      if (shouldBeFocused !== task.isFocused) {
+        console.log(
+          `[Task Update] Task ${id} focus state changing to ${shouldBeFocused} due to time range update`,
+        );
+        if (shouldBeFocused) {
+          // Unfocus any other focused tasks
+          state.tasks.forEach((t) => {
+            if (t.id !== id && t.isFocused) {
+              t.isFocused = false;
+            }
+          });
+        }
+        updates.isFocused = shouldBeFocused;
+      }
+
       // Determine if the task truly spans multiple days based on duration
       const crossesMidnight = newStartTime && newEndTime && !isSameDay(newStartTime, newEndTime);
       // Consider it truly multi-day only if it crosses midnight AND duration is >= 24 hours
@@ -308,7 +331,7 @@ export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
           ...task,
           ...updates,
           // Ensure calculated fields are consistent
-          startTime: newStartTime, // Keep original start time if resizing or use updated
+          // startTime: newStartTime, // Keep original start time if resizing or use updated
           duration: effectiveDuration,
           nextStartTime: newEndTime ?? undefined, // Convert null to undefined
           // Update the time string to reflect the new times
@@ -384,8 +407,12 @@ export const setEditingTaskId = (taskId: string | null) => {
   }));
 };
 
-// Modify the setFocused function to handle multi-day tasks
-export const setFocused = (id: string, isFocused: boolean) => {
+// Modify the setFocused function to handle multi-day tasks and options
+export const setFocused = (
+  id: string,
+  isFocused: boolean,
+  options?: { preserveTimeAndDate?: boolean },
+) => {
   updateStateAndStorage((state) => {
     const taskToFocus = state.tasks.find((t: OptimalTask) => t.id === id);
     if (!taskToFocus) return state; // Task not found
@@ -405,26 +432,32 @@ export const setFocused = (id: string, isFocused: boolean) => {
 
       const now = new Date();
       const todayStr = format(now, 'yyyy-MM-dd');
-      // Use current time instead of next 5-minute interval
-      const taskStartTime = now;
+
+      // Determine start time and date based on options
+      const preserve = options?.preserveTimeAndDate ?? false;
+      const taskStartTime = preserve ? taskToFocus.startTime || now : now;
+      const taskDateToUse = preserve ? taskToFocus.taskDate || todayStr : todayStr;
+      // Calculate end time based on the determined start time and existing duration
       const taskEndTime = addMilliseconds(taskStartTime, taskToFocus.duration || ONE_HOUR_IN_MS);
 
       const focusUpdates: Partial<OptimalTask> = {
         isFocused: true,
+        // Use the determined start time
         startTime: taskStartTime,
         nextStartTime: taskEndTime,
+        // Update time string based on the determined start time
         time: `${format(taskStartTime, 'HH:mm')}—${format(taskEndTime, 'HH:mm')}`,
-        taskDate: todayStr, // Move task to today when focusing
+        taskDate: taskDateToUse, // Use the determined task date
         // Preserve the existing timeSpent when refocusing
         timeSpent: taskToFocus.timeSpent || 0,
       };
 
-      // Calculate updates for overlapping tasks
+      // Calculate updates for overlapping tasks based on the determined date
       affectedTaskUpdates = calculateAffectedTaskUpdates(
         id,
-        taskStartTime,
+        taskStartTime, // Use the determined startTime
         taskToFocus.duration || ONE_HOUR_IN_MS,
-        newTasks.filter((t) => t.id !== id && t.taskDate === todayStr), // Exclude the task being focused and only consider tasks for today
+        newTasks.filter((t) => t.id !== id && t.taskDate === taskDateToUse), // Filter based on the determined task date
       );
 
       // Apply updates to affected tasks
@@ -436,7 +469,7 @@ export const setFocused = (id: string, isFocused: boolean) => {
         return affectedUpdate ? { ...task, ...affectedUpdate.updates } : task;
       });
     } else {
-      // Unfocusing the specified task
+      // Unfocusing the specified task (no changes needed here)
       newTasks = newTasks.map((t) => (t.id === id ? { ...t, isFocused: false } : t));
       if (state.focusedTaskId === id) {
         newFocusedTaskId = null;
@@ -480,10 +513,12 @@ export const setFocused = (id: string, isFocused: boolean) => {
   const updatedState = tasksStore.state;
   const focusedTask = updatedState.tasks.find((t) => t.id === updatedState.focusedTaskId);
 
+  // Use isFocused directly, no need to check the task state again
   if (isFocused && focusedTask && focusedTask.startTime) {
-    toggleTaskTimer(focusedTask.id, true);
+    toggleTaskTimer(id, true);
   } else if (!isFocused) {
-    const taskThatWasUnfocused = updatedState.tasks.find((t) => t.id === id);
+    // Find the task being unfocused *within the current state* to check its timer status
+    const taskThatWasUnfocused = updatedState.tasks.find((t: OptimalTask) => t.id === id);
     if (taskThatWasUnfocused && updatedState.timerStates[id]?.isRunning) {
       toggleTaskTimer(id, false);
     }
@@ -1020,12 +1055,19 @@ const calculateAffectedTaskUpdates = (
   return updatesToApply;
 };
 
-// Resizing state management functions
+// Add a resizing lock to prevent automatic focus during resize operations
+let isResizingActive = false;
+
 export const setResizingState = (
   taskId: string | null,
   temporaryDuration: number | null = null,
   temporaryEndTime: Date | null = null,
 ) => {
+  // If starting a resize operation (taskId not null), set the lock
+  if (taskId !== null) {
+    isResizingActive = true;
+  }
+
   tasksStore.setState((state) => ({
     ...state,
     resizingState: {
@@ -1037,6 +1079,11 @@ export const setResizingState = (
 };
 
 export const clearResizingState = () => {
+  // Release the resize lock after a short delay to allow the store to update
+  setTimeout(() => {
+    isResizingActive = false;
+  }, 500);
+
   tasksStore.setState((state) => ({
     ...state,
     resizingState: {
@@ -1045,6 +1092,11 @@ export const clearResizingState = () => {
       temporaryEndTime: null,
     },
   }));
+};
+
+// Add a function to check if resize is in progress
+export const isResizeInProgress = () => {
+  return isResizingActive;
 };
 
 // Add a new function to undo the last focus action
