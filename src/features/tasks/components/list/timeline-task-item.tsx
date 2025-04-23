@@ -6,8 +6,6 @@ import {
   updateTask,
 } from '@/features/tasks/store/tasks.store';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { gsap } from 'gsap';
 import { Draggable } from 'gsap/Draggable';
 import { Blend, ChevronsRight } from 'lucide-react';
@@ -25,7 +23,7 @@ const MAX_HEIGHT_PX = MIN_HEIGHT_PX + EIGHT_HOURS_MS / (60 * 1000); // Maximum h
 // GSAP Plugin Registration
 gsap.registerPlugin(Draggable);
 
-interface SortableTimelineTaskItemProps {
+interface TimelineTaskItemProps {
   task: OptimalTask;
   onEdit: (task: OptimalTask) => void;
   isLastItem?: boolean;
@@ -40,27 +38,13 @@ const getSortedTasksForDate = (tasks: OptimalTask[], date: string): OptimalTask[
     .sort((a, b) => (a.startTime?.getTime() || 0) - (b.startTime?.getTime() || 0));
 };
 
-export const SortableTimelineTaskItem = ({
+export const TimelineTaskItem = ({
   task,
   onEdit,
   isLastItem = false,
   nextTask,
   overlapsWithNext = false,
-}: SortableTimelineTaskItemProps) => {
-  const { attributes, listeners, setNodeRef, isDragging, transform, transition, isOver } =
-    useSortable({
-      id: task.id,
-    });
-
-  // Style for the element receiving the dnd-kit transform
-  const transformStyle: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition: transition || 'transform 250ms ease',
-    transformOrigin: '0 0',
-    height: '100%', // Fill the outer container
-    position: 'relative',
-  };
-
+}: TimelineTaskItemProps) => {
   const timelineNodeRef = useRef<HTMLDivElement>(null);
   const taskCardRef = useRef<HTMLDivElement>(null);
   const bottomHandleRef = useRef<HTMLDivElement>(null);
@@ -88,14 +72,12 @@ export const SortableTimelineTaskItem = ({
   };
 
   const handleRefUpdate = (node: HTMLDivElement | null) => {
-    setNodeRef(node);
     setContainerElement(node);
   };
 
   // --- Refs to hold current values for GSAP callbacks ---
   const taskRef = useRef(task);
   const containerElementRef = useRef(containerElement);
-  const isDraggingRef = useRef(isDragging);
   const resizingRef = useRef(resizing);
 
   // Keep refs updated
@@ -106,9 +88,6 @@ export const SortableTimelineTaskItem = ({
     containerElementRef.current = containerElement;
   }, [containerElement]);
   useEffect(() => {
-    isDraggingRef.current = isDragging;
-  }, [isDragging]);
-  useEffect(() => {
     resizingRef.current = resizing;
   }, [resizing]);
   // --------------------------------------------------------
@@ -117,14 +96,14 @@ export const SortableTimelineTaskItem = ({
   useEffect(() => {
     const currentContainer = containerElementRef.current;
     // Check refs for dragging and resizing status
-    if (currentContainer && !isDraggingRef.current && !resizingRef.current) {
+    if (currentContainer && !resizingRef.current) {
       const currentTask = taskRef.current;
       const initialHeight = MIN_HEIGHT_PX + (currentTask.duration || FIVE_MINUTES_MS) / (60 * 1000);
       // Use overwrite: 'auto' to prevent potential conflicts if GSAP tries setting height multiple times
       gsap.set(currentContainer, { height: initialHeight, overwrite: 'auto' });
     }
-    // Dependencies: containerElement state, task duration (for initial calc), isDragging state, resizing state
-  }, [containerElement, task.duration, isDragging, resizing]);
+    // Dependencies: containerElement state, task duration (for initial calc), resizing state
+  }, [containerElement, task.duration, resizing]);
   // ------------------------------------------
 
   // --- Effect for Draggable Setup ---
@@ -226,10 +205,10 @@ export const SortableTimelineTaskItem = ({
   const outerContainerStyle: React.CSSProperties = {
     ...containerHeightStyle,
     position: 'relative',
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging || isOver || resizing ? 100 : 'auto', // Boost zIndex during resize too
+    opacity: 1, // No longer fades during drag
+    zIndex: resizing ? 100 : 'auto', // Boost zIndex only during resize
   };
-  const outerContainerClasses = `group relative ${resizing ? 'z-50' : 'z-auto'}`;
+  const outerContainerClasses = `group relative ${resizing ? 'z-50' : ''}`;
 
   const shouldShowOverlap = overlapsWithNext && !taskRef.current.completed;
 
@@ -262,7 +241,7 @@ export const SortableTimelineTaskItem = ({
         className={outerContainerClasses}
         data-id={task.id}
       >
-        <div style={transformStyle}>
+        <div className="h-full" style={{ position: 'relative' }}>
           <div className="flex h-full items-stretch">
             <div
               ref={timelineNodeRef}
@@ -287,7 +266,6 @@ export const SortableTimelineTaskItem = ({
                   nextTaskPriority={nextTask?.priority || 'none'}
                   isFocused={task.isFocused}
                   timeSpent={task.timeSpent || 0}
-                  {...attributes}
                   data-id={task.id}
                 />
               </div>
@@ -304,7 +282,6 @@ export const SortableTimelineTaskItem = ({
                 task={taskRef.current}
                 onEdit={() => onEdit(taskRef.current)}
                 effectiveDuration={effectiveDuration}
-                listeners={listeners}
               />
 
               {shouldShowOverlap && (

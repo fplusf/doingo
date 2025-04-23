@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CategorySectionProps, ONE_HOUR_IN_MS, OptimalTask } from '../../types';
 
 import { DottedConnector } from '../timeline/dotted-connector';
-import { SortableTimelineTaskItem } from './sortable-timeline-task-item';
+import { TimelineTaskItem } from './timeline-task-item';
 
 // Define 15 minutes in milliseconds
 const FIFTEEN_MINUTES_IN_MS = 15 * 60 * 1000;
@@ -456,7 +456,7 @@ export function CategorySection({
                   ...(isFirst && { marginTop: '24px' }),
                 }}
               >
-                <SortableTimelineTaskItem
+                <TimelineTaskItem
                   task={task}
                   onEdit={onEditTask}
                   isLastItem={isLast}
