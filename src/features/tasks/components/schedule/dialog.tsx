@@ -352,7 +352,7 @@ function TaskDialogContent({
   // Update handleClose to submit changes if title is valid and form is dirty
   const handleClose = () => {
     // Only submit if the form is dirty AND has a title
-    if (taskFormStore.state.isDirty && title && title.length > 0) {
+    if (title && title.length > 0) {
       // Submit changes before closing
       submitFormBatch();
     }
