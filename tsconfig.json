@@ -10,9 +10,7 @@
       "@/layouts/*": ["./src/layouts/*"],
       "@/features/tasks/*": ["./src/features/tasks/*"]
     },
-    "outDir": "dist",
-    "module": "esnext",
-    "moduleResolution": "bundler"
+    "outDir": "dist"
   },
   "include": ["src/**/*"]
 }
