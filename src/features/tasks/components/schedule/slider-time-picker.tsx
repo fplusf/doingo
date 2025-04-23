@@ -1,15 +1,46 @@
 'use client';
 
+import { taskFormStore, updateField } from '@/features/tasks/store/task-form.store';
 import { cn } from '@/lib/utils';
 import { Slider } from '@/shared/components/ui/slider';
+import { useStore } from '@tanstack/react-store';
 import type React from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type SliderProps = React.ComponentProps<typeof Slider>;
 
+// Helper to convert HH:MM string to minutes
+const parseTimeToMinutes = (timeString: string): number | null => {
+  if (!timeString || !/^[0-2][0-9]:[0-5][0-9]$/.test(timeString)) {
+    return null; // Return null for invalid format
+  }
+  const [hours, minutes] = timeString.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
 export function SliderTimePicker({ className, ...props }: SliderProps) {
-  const [time, setTime] = useState<number>(720); // Default to 12:00
+  // Read startTime from the store
+  const startTimeFromStore = useStore(taskFormStore, (state) => state.startTime);
+
+  // Local state for slider value in minutes
+  const [time, setTime] = useState<number>(() => {
+    // Initialize based on store value or default
+    const initialMinutes = parseTimeToMinutes(startTimeFromStore || '');
+    return initialMinutes !== null ? initialMinutes : 720; // Default 12:00
+  });
   const [isDragging, setIsDragging] = useState(false);
+
+  // Effect to sync slider with store changes
+  useEffect(() => {
+    const storeMinutes = parseTimeToMinutes(startTimeFromStore || '');
+    if (storeMinutes !== null && storeMinutes !== time) {
+      setTime(storeMinutes);
+    }
+    // If store time becomes invalid/null, reset to default? Or keep last valid? Let's keep last valid for now.
+    // else if (storeMinutes === null && time !== 720) {
+    //   setTime(720); // Reset to default if store value is cleared/invalid
+    // }
+  }, [startTimeFromStore]); // Rerun effect if store value changes
 
   // Convert minutes to HH:MM format
   const formatTime = (minutes: number) => {
@@ -18,9 +49,13 @@ export function SliderTimePicker({ className, ...props }: SliderProps) {
     return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
   };
 
-  // Handle slider value change
+  // Handle slider value change - update local state AND store
   const handleValueChange = (value: number[]) => {
-    setTime(value[0]);
+    const newMinutes = value[0];
+    setTime(newMinutes);
+    const formattedTime = formatTime(newMinutes);
+    // Update the store
+    updateField('startTime', formattedTime);
   };
 
   // Calculate working hours positions (9:00 - 17:00)
@@ -52,6 +87,7 @@ export function SliderTimePicker({ className, ...props }: SliderProps) {
         <div className="relative h-6">
           <Slider
             defaultValue={[720]}
+            value={[time]}
             max={1439}
             step={5} // 5-minute increments
             className={cn('time-picker-slider relative z-20 h-1 w-full cursor-move', className)}
@@ -63,18 +99,19 @@ export function SliderTimePicker({ className, ...props }: SliderProps) {
             {...props}
           />
 
-          {/* Tooltip visible only when dragging */}
-          {isDragging && (
-            <div
-              className="absolute top-2 z-30 select-none rounded bg-primary px-1.5 py-0.5 text-xs text-primary-foreground shadow"
-              style={{
-                left: `${(time / 1439) * 100}%`,
-                transform: 'translateX(-50%)',
-              }}
-            >
-              {formatTime(time)}
-            </div>
-          )}
+          {/* currently selected time */}
+          <div
+            className={cn(
+              'absolute top-2 z-30 select-none rounded border border-primary bg-gray-900 px-1.5 py-0.5 text-xs text-primary-foreground shadow',
+              isDragging ? 'bg-primary' : '',
+            )}
+            style={{
+              left: `${(time / 1439) * 100}%`,
+              transform: 'translateX(-50%)',
+            }}
+          >
+            {formatTime(time)}
+          </div>
 
           {/* Hour tick marks */}
           {Array.from({ length: 25 }).map((_, i) => (
@@ -109,12 +146,6 @@ export function SliderTimePicker({ className, ...props }: SliderProps) {
           `}</style>
         </div>
       </div>
-
-      {/* Display selected time */}
-      {/* <div className="mt-6 text-center">
-        <span className="text-2xl font-medium">{formatTime(time)}</span>
-        <p className="mt-1 text-sm text-muted-foreground">Selected Time</p>
-      </div> */}
     </div>
   );
 }
