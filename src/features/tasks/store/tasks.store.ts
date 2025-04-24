@@ -1,3 +1,4 @@
+import { findEmojiForTitle } from '@/lib/emoji-matcher';
 import {
   findNextAvailableTimeSlot,
   getNextFifteenMinuteInterval,
@@ -847,12 +848,18 @@ export const createNewTask = (
     // Calculate next start time
     const nextStartTime = addMilliseconds(startTime, duration);
 
+    // Create default repetition option if not provided
+    const defaultRepetition: RepetitionOption = {
+      type: 'once',
+      repeatInterval: 1,
+    };
+
     const taskId = uuidv4();
     const task: OptimalTask = {
       id: taskId,
       title: values.title,
       notes: values.notes || '',
-      emoji: values.emoji || '',
+      emoji: values.emoji || findEmojiForTitle(values.title),
       time: timeString,
       duration,
       dueDate: values.dueDate,
@@ -866,7 +873,7 @@ export const createNewTask = (
       progress: values.progress || 0,
       startTime,
       nextStartTime,
-      repetition: values.repetition || 'once',
+      repetition: values.repetition || defaultRepetition,
       timeSpent: 0, // Initialize time spent
     };
 
@@ -938,6 +945,12 @@ export const editExistingTask = (
       // Calculate next start time
       const nextStartTime = addMilliseconds(startTime, duration);
 
+      // Create default repetition option if not provided
+      const defaultRepetition: RepetitionOption = {
+        type: 'once',
+        repeatInterval: 1,
+      };
+
       const finalUpdatedValues = {
         ...updatedValues,
         time: timeString,
@@ -947,7 +960,7 @@ export const editExistingTask = (
         dueTime: values.dueTime,
         startTime,
         nextStartTime,
-        repetition: values.repetition || task.repetition || 'once',
+        repetition: values.repetition || task.repetition || defaultRepetition,
       };
 
       updateTask(task.id, finalUpdatedValues);

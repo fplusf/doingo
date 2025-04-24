@@ -1,3 +1,4 @@
+import { findEmojiForTitle } from '@/lib/emoji-matcher';
 import { Store } from '@tanstack/react-store';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -105,10 +106,20 @@ export const updateField = <K extends keyof TaskFormState>(field: K, value: Task
   const { mode, taskId } = taskFormStore.state;
 
   // Update form store first
-  taskFormStore.setState((state) => ({
-    ...state,
-    [field]: value,
-  }));
+  taskFormStore.setState((state) => {
+    const newState = { ...state, [field]: value };
+
+    // Always update emoji when title changes
+    if (field === 'title') {
+      const suggestedEmoji = findEmojiForTitle(value as string);
+      if (suggestedEmoji !== '📝') {
+        // Only update if we found a meaningful match
+        newState.emoji = suggestedEmoji;
+      }
+    }
+
+    return newState;
+  });
 
   // Optimistically update the task store for selected fields
   if (
@@ -121,7 +132,6 @@ export const updateField = <K extends keyof TaskFormState>(field: K, value: Task
 
     // Update the task in the store
     updateTask(taskId, update);
-    console.log(`Optimistically updated ${field} for task ${taskId}`);
   }
 };
 

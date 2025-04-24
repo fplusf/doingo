@@ -1,6 +1,4 @@
-import { EmojiPicker } from '@/features/tasks/components/schedule/emoji-picker';
 import { OptimalTask, Subtask, TaskCategory, TaskPriority } from '@/features/tasks/types';
-import { getSuggestedEmojiFromLLM } from '@/lib/groq';
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -33,6 +31,7 @@ import {
 } from '../../store/task-form.store';
 import { setEditingTaskId, tasksStore, updateTask } from '../../store/tasks.store';
 import { SubtaskList } from '../details/subtasks';
+import { EmojiPicker } from './emoji-picker';
 import { PriorityPicker } from './priority-picker';
 import { SliderTimePicker } from './slider-time-picker';
 import { TaskScheduler } from './task-scheduler';
@@ -61,88 +60,6 @@ interface TaskDialogProps {
   mode?: 'create' | 'edit';
   className?: string;
 }
-
-// Emoji suggestion mappings
-const emojiMappings = {
-  work: {
-    keywords: {
-      meeting: '👥',
-      email: '📧',
-      call: '📞',
-      report: '📊',
-      presentation: '🎯',
-      project: '📋',
-      deadline: '⏰',
-      review: '👀',
-      write: '✍️',
-      code: '💻',
-      debug: '🐛',
-      test: '🧪',
-      deploy: '🚀',
-    },
-    default: '💼',
-  },
-  passion: {
-    keywords: {
-      learn: '📚',
-      study: '🎓',
-      practice: '🎯',
-      create: '🎨',
-      design: '✨',
-      build: '🛠️',
-      research: '🔍',
-      write: '✍️',
-      blog: '📝',
-      video: '🎥',
-    },
-    default: '🌟',
-  },
-  play: {
-    keywords: {
-      exercise: '🏃',
-      gym: '💪',
-      yoga: '🧘',
-      game: '🎮',
-      read: '📚',
-      movie: '🎬',
-      music: '🎵',
-      cook: '👨‍🍳',
-      travel: '✈️',
-      relax: '😌',
-    },
-    default: '🎯',
-  },
-};
-
-const getSuggestedEmoji = (title: string, category: TaskCategory): string => {
-  const lowercaseTitle = title.toLowerCase();
-  const categoryMappings = emojiMappings[category];
-
-  for (const [keyword, emoji] of Object.entries(categoryMappings.keywords)) {
-    if (lowercaseTitle.includes(keyword)) {
-      return emoji;
-    }
-  }
-
-  return categoryMappings.default;
-};
-
-// Function to get emoji suggestion
-const getEmojiSuggestion = async (title: string, category: TaskCategory): Promise<string> => {
-  try {
-    // Try LLM-based suggestion first
-    const result = await getSuggestedEmojiFromLLM(title, category);
-    if (result.confidence > 0.7) {
-      return result.emoji;
-    }
-
-    // Fallback to rule-based suggestion
-    return getSuggestedEmoji(title, category);
-  } catch (error) {
-    console.error('Error getting LLM emoji suggestion:', error);
-    return getSuggestedEmoji(title, category);
-  }
-};
 
 function TaskDialogContent({
   onSubmit,
@@ -289,27 +206,6 @@ function TaskDialogContent({
       const currentTaskId = editingTaskId;
       onOpenChange(false);
       setEditingTaskId(null);
-
-      // If no emoji was set, get suggestion asynchronously and update the task
-      if (!emoji) {
-        getEmojiSuggestion(title, category || 'work')
-          .then((suggestedEmoji) => {
-            if (currentTaskId) {
-              // Update existing task
-              updateTask(currentTaskId, { emoji: suggestedEmoji });
-            } else {
-              // For new tasks, update the last created task
-              const tasks = tasksStore.state.tasks;
-              const lastTask = tasks[tasks.length - 1];
-              if (lastTask) {
-                updateTask(lastTask.id, { emoji: suggestedEmoji });
-              }
-            }
-          })
-          .catch((error) => {
-            console.error('Error updating task emoji:', error);
-          });
-      }
     }
   };
 
