@@ -10,9 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/shared/components/ui/sidebar';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
-import { toast } from '@/shared/hooks/use-toast';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
 import { Bell, Calendar1Icon, LucideFocus } from 'lucide-react';
@@ -29,7 +27,6 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const tasks = useStore(tasksStore, (state) => state.tasks) as OptimalTask[];
   const selectedDate = useStore(tasksStore, (state) => state.selectedDate);
-  const navigate = useNavigate();
   const today = format(new Date(), 'yyyy-MM-dd');
   const isToday = selectedDate === today;
 
@@ -43,6 +40,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return tasks.find((task) => !task.completed);
   }, [tasks]);
 
+  // Find today's focused task
+  const todayFocusedTask = React.useMemo(() => {
+    return tasks.find((task) => task.isFocused && task.taskDate === today);
+  }, [tasks, today]);
+
+  // Get today's first uncompleted task
+  const todayFirstUncompletedTask = React.useMemo(() => {
+    return tasks.find((task) => !task.completed && task.taskDate === today);
+  }, [tasks, today]);
+
+  // Determine the target task for the Focus button (today's focused or first uncompleted)
+  const targetTodayTask = todayFocusedTask || todayFirstUncompletedTask;
+
   // Clear focus on tasks from days other than today
   React.useEffect(() => {
     // Get all focused tasks that are not today's tasks
@@ -55,36 +65,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       });
     }
   }, [tasks, today]);
-
-  // Handle focusing the first available task if no task is focused
-  const handleFocusClick = (e: React.MouseEvent) => {
-    if (!isToday) {
-      e.preventDefault();
-      // Show toast notification for tasks from other days
-      toast({
-        title: 'Focus not available',
-        description:
-          "Focusing possible only on today's tasks. If you want to focus on a task, move it to today.",
-        duration: 5000,
-      });
-      return;
-    }
-
-    if (!focusedTask && firstUncompletedTask) {
-      e.preventDefault();
-      setFocused(firstUncompletedTask.id, true);
-    }
-  };
-
-  // Handle opening task details
-  const handleDetailsClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (focusedTask) {
-      navigate({ to: '/tasks/$taskId', params: { taskId: focusedTask.id } });
-    } else if (firstUncompletedTask) {
-      navigate({ to: '/tasks/$taskId', params: { taskId: firstUncompletedTask.id } });
-    }
-  };
 
   return (
     <Sidebar variant="inset" {...props}>
@@ -109,39 +89,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
         <SidebarMenu>
           <SidebarMenuItem className="flex flex-col items-center">
-            <SidebarMenuButton size="lg" asChild disabled={!isToday}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link
-                    to={focusedTask || firstUncompletedTask ? '/tasks/$taskId' : '/tasks'}
-                    params={
-                      focusedTask || firstUncompletedTask
-                        ? { taskId: focusedTask?.id || firstUncompletedTask?.id }
-                        : {}
-                    }
-                    activeProps={{ className: 'active' }}
-                    inactiveProps={{ className: 'inactive' }}
-                    onClick={(e) => {
-                      if (!isToday) {
-                        e.preventDefault();
-                        return;
-                      }
-                      handleDetailsClick(e);
-                    }}
-                    className={!isToday ? 'cursor-not-allowed opacity-50' : ''}
-                    aria-disabled={!isToday}
-                  >
-                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
-                      <LucideFocus className="size-4" />
-                    </div>
-                  </Link>
-                </TooltipTrigger>
-                {!isToday && (
-                  <TooltipContent side="right" className="z-50 text-xs">
-                    <p>Focus available only on today's tasks</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
+            <SidebarMenuButton size="lg" asChild>
+              <Link
+                to={targetTodayTask ? '/tasks/$taskId' : '/tasks'}
+                params={targetTodayTask ? { taskId: targetTodayTask.id } : {}}
+                activeProps={{ className: 'active' }}
+                inactiveProps={{ className: 'inactive' }}
+              >
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
+                  <LucideFocus className="size-4" />
+                </div>
+              </Link>
             </SidebarMenuButton>
             <span className="mt-2 truncate text-xs">Focus</span>
           </SidebarMenuItem>
