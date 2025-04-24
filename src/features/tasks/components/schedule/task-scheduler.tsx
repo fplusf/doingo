@@ -10,16 +10,15 @@ import {
   taskFormStore,
   updateDueDateTime,
   updateDuration,
+  updateRepeatInterval,
   updateRepetition,
   updateStartDateTime,
 } from '../../store/task-form.store';
 // import { pushForwardAffectedTasks } from '../../store/tasks.store'; // Removed - Logic now handled by setFocused
 import { useRouter } from '@tanstack/react-router';
+import { RepetitionType } from '../../types';
 import { DateTimePicker } from './date-time-picker';
 import { DurationPicker } from './duration-picker';
-import { RepetitionPicker } from './repetition-picker';
-
-export type RepetitionOption = 'once' | 'daily' | 'weekly' | 'custom';
 
 interface TaskSchedulerProps {
   className?: string;
@@ -35,6 +34,7 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
   const dueDate = useStore(taskFormStore, (state) => state.dueDate);
   const dueTime = useStore(taskFormStore, (state) => state.dueTime);
   const repetition = useStore(taskFormStore, (state) => state.repetition);
+  const repeatInterval = useStore(taskFormStore, (state) => state.repeatInterval);
   const currentTaskId = useStore(taskFormStore, (state) => state.taskId);
 
   // check if the component is used in a task document or in a task list
@@ -129,12 +129,30 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
     updateDuration(durationMs);
   };
 
+  // Separate handler for start date change from RepetitionPicker
+  const handleStartDateChange = (date: Date | undefined) => {
+    // We only get the date part from RepetitionPicker's adapter
+    // Keep existing time or default if needed
+    updateStartDateTime(date || new Date(), startTime); // Keep existing time
+  };
+
+  // Separate handler for end date change from RepetitionPicker
+  const handleEndDateChange = (date: Date | undefined) => {
+    // We only get the date part from RepetitionPicker's adapter
+    // Keep existing time or default if needed
+    updateDueDateTime(date, dueTime || ''); // Keep existing time or empty string
+  };
+
   const handleDueDateTimeChange = (date: Date | undefined, time: string) => {
     updateDueDateTime(date, time);
   };
 
-  const handleRepetitionChange = (repetitionValue: RepetitionOption) => {
+  const handleRepetitionChange = (repetitionValue: RepetitionType) => {
     updateRepetition(repetitionValue);
+  };
+
+  const handleRepeatIntervalChange = (interval: number) => {
+    updateRepeatInterval(interval); // Call the store action
   };
 
   return (
@@ -159,7 +177,17 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
           isDue={true}
         />
 
-        <RepetitionPicker value={repetition} onChange={handleRepetitionChange} />
+        {/* TODO: Enable and develop once the idea is validated */}
+        {/* <RepetitionPicker
+          frequency={repetition}
+          onFrequencyChange={handleRepetitionChange}
+          repeatInterval={repeatInterval}
+          onRepeatIntervalChange={handleRepeatIntervalChange}
+          repeatStartDate={startDate}
+          onRepeatStartDateChange={handleStartDateChange}
+          repeatEndDate={dueDate}
+          onRepeatEndDateChange={handleEndDateChange}
+        /> */}
       </div>
 
       {/* Show free time slot suggestions */}

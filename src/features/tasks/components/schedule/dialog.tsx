@@ -16,16 +16,9 @@ import {
   DialogTitle,
 } from '@/shared/components/ui/dialog';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui/select';
 import { useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
-import { ChevronDown, ChevronRight, Hash, ListPlus, Maximize2, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, ListPlus, Maximize2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { useSubtasksCollapse } from '../../hooks/use-subtasks-collapse';
@@ -554,7 +547,7 @@ function TaskDialogContent({
         <div className="mb-2 flex w-full items-center justify-between">
           <TaskScheduler className="text-muted-foreground" taskId={editingTaskId || undefined} />
           <div className="flex items-center gap-1">
-            <Select
+            {/* <Select
               value={category}
               onValueChange={(value: TaskCategory) => updateField('category', value)}
             >
@@ -589,7 +582,7 @@ function TaskDialogContent({
                   </div>
                 </SelectItem>
               </SelectContent>
-            </Select>
+            </Select> */}
 
             <PriorityPicker
               value={priority}

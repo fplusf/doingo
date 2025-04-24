@@ -58,8 +58,11 @@ export function PriorityPicker({ value, onValueChange, className }: PrioritySele
           onValueChange={(value: string) => onValueChange(value as TaskPriority)}
         >
           <TooltipTrigger asChild>
-            <SelectTrigger className={cn('h-8 w-[40px] justify-center px-0', className)}>
-              <div className="flex items-center justify-center">{selectedPriority.icon}</div>
+            <SelectTrigger className={cn('h-8 w-[6rem] px-0', className)}>
+              <div className="flex w-full items-center justify-between px-2">
+                <span className="text-xs">Priority</span>
+                <span className="text-xs">{selectedPriority.icon}</span>
+              </div>
             </SelectTrigger>
           </TooltipTrigger>
           <SelectContent align="end">

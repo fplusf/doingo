@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   ONE_HOUR_IN_MS,
   OptimalTask,
-  RepetitionOption,
+  RepetitionType,
   Subtask,
   TaskCategory,
   TaskPriority,
@@ -27,7 +27,8 @@ export interface TaskFormState {
   duration: number;
   dueDate?: Date;
   dueTime: string;
-  repetition: RepetitionOption;
+  repetition: RepetitionType;
+  repeatInterval: number;
 
   // Subtasks
   subtasks: Subtask[];
@@ -67,6 +68,7 @@ const initialState: TaskFormState = {
   dueDate: undefined,
   dueTime: '',
   repetition: 'once',
+  repeatInterval: 1,
 
   // Subtasks
   subtasks: [],
@@ -133,22 +135,7 @@ export const updateFields = (fields: Partial<TaskFormState>) => {
 };
 
 // Load values for editing an existing task
-export const loadTaskForEditing = (taskData: {
-  id: string;
-  title: string;
-  notes?: string;
-  emoji?: string;
-  category?: TaskCategory;
-  priority?: TaskPriority;
-  startTime?: Date;
-  time?: string;
-  duration?: number;
-  dueDate?: Date;
-  dueTime?: string;
-  repetition?: RepetitionOption;
-  subtasks?: Subtask[];
-  progress?: number;
-}) => {
+export const loadTaskForEditing = (taskData: OptimalTask) => {
   const startTimeString = taskData.time?.split('—')[0] || getDefaultStartTime();
 
   taskFormStore.setState((state) => ({
@@ -162,7 +149,8 @@ export const loadTaskForEditing = (taskData: {
     duration: taskData.duration || ONE_HOUR_IN_MS,
     dueDate: taskData.dueDate,
     dueTime: taskData.dueTime || '',
-    repetition: taskData.repetition || 'once',
+    repetition: taskData.repetition?.type || 'once',
+    repeatInterval: taskData.repetition?.repeatInterval || 1,
     subtasks: taskData.subtasks || [],
     progress: taskData.progress || 0,
     mode: 'edit',
@@ -286,10 +274,18 @@ export const updateDueDateTime = (date: Date | undefined, time: string) => {
   }));
 };
 
-export const updateRepetition = (repetition: RepetitionOption) => {
+export const updateRepetition = (repetition: RepetitionType) => {
   taskFormStore.setState((state) => ({
     ...state,
     repetition,
+    isDirty: true,
+  }));
+};
+
+export const updateRepeatInterval = (interval: number) => {
+  taskFormStore.setState((state) => ({
+    ...state,
+    repeatInterval: interval,
     isDirty: true,
   }));
 };
@@ -309,6 +305,7 @@ export const getFormValues = () => {
     dueDate: state.dueDate,
     dueTime: state.dueTime,
     repetition: state.repetition,
+    repeatInterval: state.repeatInterval,
     subtasks: state.subtasks,
     progress: state.progress,
     taskId: state.taskId,

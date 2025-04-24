@@ -5,7 +5,13 @@ export const FIFTEEN_MINUTES_IN_MS = 15 * 60 * 1000;
 export const TWENTY_MINUTES_IN_MS = 20 * 60 * 1000;
 export const CARD_MARGIN_BOTTOM = 30;
 
-export type RepetitionOption = 'once' | 'daily' | 'weekly' | 'custom';
+export type RepetitionType = 'once' | 'daily' | 'weekly' | 'monthly';
+export type RepetitionOption = {
+  type: RepetitionType;
+  repeatInterval?: number;
+  repeatStartDate?: Date;
+  repeatEndDate?: Date;
+};
 
 export type TaskPriority =
   | 'none'
