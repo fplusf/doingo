@@ -1,10 +1,10 @@
+import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { useState } from 'react';
 import { OptimalCalendar } from '../../../../shared/components/ui/optimal-calendar';
-
 interface DateTimeSelectorProps {
   date?: Date;
   time?: string;
@@ -13,9 +13,11 @@ interface DateTimeSelectorProps {
   icon?: React.ReactNode;
   buttonLabel?: string;
   isDue?: boolean;
+  className?: string;
 }
 
 export function DateTimePicker({
+  className,
   date,
   time,
   onChange,
@@ -37,7 +39,7 @@ export function DateTimePicker({
         <Button
           variant="outline"
           size="sm"
-          className="h-8 gap-1.5 px-2 text-sm text-muted-foreground"
+          className={cn('h-8 gap-1.5 px-2 text-sm text-muted-foreground', className)}
         >
           {date && time ? (
             <>

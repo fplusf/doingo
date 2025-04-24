@@ -68,8 +68,9 @@ export function SliderTimePicker({ className, ...props }: SliderProps) {
   const workDurationPercent = ((workEndMinutes - workStartMinutes) / totalMinutes) * 100;
 
   // Generate hour labels with correct positioning - every 4 hours
-  const hourLabels = Array.from({ length: 7 }).map((_, i) => {
-    const hour = i * 4; // Every 4 hours (00, 04, 08, 12, 16, 20)
+  const hourLabelsData = Array.from({ length: 6 }).map((_, i) => {
+    // Changed length to 6 (0, 4, 8, 12, 16, 20)
+    const hour = i * 4;
     const minutes = hour * 60;
     const position = (minutes / totalMinutes) * 100;
 
@@ -80,8 +81,15 @@ export function SliderTimePicker({ className, ...props }: SliderProps) {
     };
   });
 
+  // Add the final 23:59 label
+  hourLabelsData.push({
+    hour: 23,
+    position: 100,
+    label: '23:59',
+  });
+
   return (
-    <div className="w-full px-4 opacity-30 transition-opacity duration-300 hover:opacity-100">
+    <div className="w-full px-4 opacity-50 transition-opacity duration-300 hover:opacity-100">
       <div className="relative">
         {/* Tick marks */}
         <div className="relative h-6">
@@ -90,7 +98,10 @@ export function SliderTimePicker({ className, ...props }: SliderProps) {
             value={[time]}
             max={1439}
             step={5} // 5-minute increments
-            className={cn('time-picker-slider relative z-20 h-1 w-full cursor-move', className)}
+            className={cn(
+              'time-picker-slider relative z-20 h-1 w-full cursor-col-resize',
+              className,
+            )}
             onValueChange={handleValueChange}
             onPointerDown={() => setIsDragging(true)}
             onPointerUp={() => setIsDragging(false)}
@@ -121,12 +132,12 @@ export function SliderTimePicker({ className, ...props }: SliderProps) {
                 'absolute w-px -translate-x-1/2 transform bg-gray-100',
                 i % 4 === 0 ? 'h-2' : 'h-1',
               )}
-              style={{ left: `${(i / 24) * 100}%`, bottom: '16px' }}
+              style={{ left: `${((i * 60) / totalMinutes) * 100}%`, bottom: '16px' }}
             />
           ))}
 
           {/* Hour labels with 24-hour format */}
-          {hourLabels.map((item, i) => (
+          {hourLabelsData.map((item, i) => (
             <div
               key={i}
               className="absolute -translate-x-1/2 transform text-xs font-medium text-gray-400"

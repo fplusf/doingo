@@ -141,6 +141,7 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
     <div className="flex flex-col gap-1">
       <div className={cn('flex items-center gap-1.5', className)}>
         <DateTimePicker
+          className="w-[8rem]"
           date={startDate}
           time={startTime}
           onChange={handleStartDateTimeChange}
