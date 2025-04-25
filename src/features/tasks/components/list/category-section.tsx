@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import { addMilliseconds, differenceInMilliseconds } from 'date-fns';
 import { Clock, Coffee, Plus } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CategorySectionProps, ONE_HOUR_IN_MS, OptimalTask } from '../../types';
 
 import { DottedConnector } from '../timeline/dotted-connector';
@@ -43,6 +43,24 @@ export function CategorySection({
   const containerRef = useRef<HTMLDivElement>(null);
   const [connectorSegments, setConnectorSegments] = useState<ConnectorSegment[]>([]);
   const nowRef = useRef(new Date()); // Use ref to keep 'now' consistent across renders
+
+  // Find the earliest focused task that is currently in progress
+  const earliestFocusedTask = useMemo(() => {
+    const now = new Date();
+    return tasks
+      .filter(
+        (task) =>
+          task.isFocused &&
+          !task.isGap &&
+          task.startTime &&
+          task.duration &&
+          task.startTime <= now &&
+          addMilliseconds(task.startTime, task.duration) > now,
+      )
+      .sort((a, b) =>
+        a.startTime && b.startTime ? a.startTime.getTime() - b.startTime.getTime() : 0,
+      )[0];
+  }, [tasks]);
 
   // Get color for a task based on its priority
   const getTaskColor = (task?: OptimalTask): string => {
@@ -462,6 +480,7 @@ export function CategorySection({
                   isLastItem={isLast}
                   nextTask={!isLast ? tasks[index + 1] : undefined}
                   overlapsWithNext={overlaps.get(task.id) || false}
+                  isEarliestFocused={task.id === earliestFocusedTask?.id}
                 />
               </div>
             );

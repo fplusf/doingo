@@ -40,6 +40,7 @@ interface TimelineItemProps extends React.HTMLAttributes<HTMLDivElement> {
   nextTaskPriority?: TaskPriority;
   isFocused?: boolean;
   timeSpent?: number;
+  isEarliestFocused?: boolean;
 }
 
 export const TimelineItem = ({
@@ -61,6 +62,7 @@ export const TimelineItem = ({
   nextTaskPriority = 'none',
   isFocused = false,
   timeSpent = 0,
+  isEarliestFocused = false,
   ...rest
 }: TimelineItemProps) => {
   const timeDiffMinutes = React.useMemo(() => {
@@ -174,6 +176,7 @@ export const TimelineItem = ({
           prevTaskEndTime={isLastItem ? undefined : nextStartTime}
           isFocused={isFocused}
           timeSpent={timeSpent}
+          isEarliestFocused={isEarliestFocused}
         />
       </div>
     </div>

@@ -19,6 +19,7 @@ interface TimelineNodeProps {
   hideEndTime?: boolean; // Flag to hide end time (when it matches next task's start time)
   isFocused?: boolean;
   timeSpent?: number;
+  isEarliestFocused?: boolean; // New prop to determine if this is the earliest focused task
 }
 
 export function TimelineNode({
@@ -36,6 +37,7 @@ export function TimelineNode({
   hideEndTime = false,
   isFocused = false,
   timeSpent = 0,
+  isEarliestFocused = false, // Default to false
 }: TimelineNodeProps) {
   const [progress, setProgress] = useState(0);
   const [timeStatus, setTimeStatus] = useState<'past' | 'present' | 'future'>('future');
@@ -298,7 +300,7 @@ export function TimelineNode({
         }}
       >
         {/* Progress fill */}
-        {timeStatus === 'present' && !completed && (
+        {timeStatus === 'present' && !completed && isEarliestFocused && (
           <>
             <div style={getProgressFillStyle()} />
             {Array.from({ length: 35 }).map((_, index) => (

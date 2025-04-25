@@ -29,6 +29,7 @@ interface TimelineTaskItemProps {
   isLastItem?: boolean;
   nextTask?: OptimalTask;
   overlapsWithNext?: boolean;
+  isEarliestFocused?: boolean;
 }
 
 // Helper function to get tasks sorted by start time for a given date
@@ -44,6 +45,7 @@ export const TimelineTaskItem = ({
   isLastItem = false,
   nextTask,
   overlapsWithNext = false,
+  isEarliestFocused = false,
 }: TimelineTaskItemProps) => {
   const timelineNodeRef = useRef<HTMLDivElement>(null);
   const taskCardRef = useRef<HTMLDivElement>(null);
@@ -267,6 +269,7 @@ export const TimelineTaskItem = ({
                   isFocused={task.isFocused}
                   timeSpent={task.timeSpent || 0}
                   data-id={task.id}
+                  isEarliestFocused={isEarliestFocused}
                 />
               </div>
             </div>
