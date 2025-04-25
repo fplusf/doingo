@@ -15,16 +15,10 @@ import {
   DialogTitle,
 } from '@/shared/components/ui/dialog';
 import { ToastAction } from '@/shared/components/ui/toast';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/shared/components/ui/tooltip';
 import { toast } from '@/shared/hooks/use-toast';
 import { useNavigate } from '@tanstack/react-router';
 import { addMilliseconds, format, isSameDay } from 'date-fns';
-import { ArrowRight, GripVertical, LucideFocus, Trash2 } from 'lucide-react';
+import { GripVertical, Trash2 } from 'lucide-react';
 import React, { useRef } from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import {
@@ -34,6 +28,7 @@ import {
   undoLastFocusAction,
 } from '../../store/tasks.store';
 import { ONE_HOUR_IN_MS, TaskCardProps } from '../../types';
+import { TaskItemActionButtons } from './task-item-action-buttons';
 
 interface TaskItemProps extends TaskCardProps {
   listeners?: Record<string, any>;
@@ -216,7 +211,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
     return `${format(startDate, 'HH:mm')}-${endTimeFormatted}`;
   }
 
-  const handleFocusClick = (e: React.MouseEvent) => {
+  const handleFocusClick = (e: React.MouseEvent<HTMLButtonElement | HTMLDivElement>) => {
     e.stopPropagation();
 
     if (task.completed) {
@@ -231,7 +226,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
     applyTaskFocus();
   };
 
-  const handleDetailsClick = (e: React.MouseEvent) => {
+  const handleDetailsClick = (e: React.MouseEvent<HTMLButtonElement | HTMLDivElement>) => {
     e.stopPropagation();
     navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
   };
@@ -290,8 +285,8 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                       'flex w-full',
                       'flex-col py-0',
                       displayDuration <= ONE_HOUR_IN_MS * 2
-                        ? 'h-full justify-center pr-12'
-                        : 'justify-between py-1',
+                        ? 'h-full justify-center pr-16'
+                        : 'justify-between py-1 pr-2',
                     )}
                     ref={titleContainerRef}
                   >
@@ -311,22 +306,12 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                       >
                         {task.title}
                       </h3>
-                      {/* TODO: add back after launch & idea validtion*/}
-                      {/* {task.isFocused && task.startTime && (
-                        <TaskTimer
-                          key={`timer-${task.id}-${task.startTime.getTime()}`}
-                          taskId={task.id}
-                          initialTimeSpent={task.timeSpent || 0}
-                          className="absolute right-2 top-2"
-                        />
-                      )} */}
                     </div>
 
                     {/* Short Duration Time Display */}
                     {displayDuration <= ONE_HOUR_IN_MS * 2 && task.startTime && (
                       <div className="mr-2 flex items-center justify-between">
                         <div className="flex items-baseline">
-                          {/* Apply dangerouslySetInnerHTML for compact time */}
                           <span
                             className="whitespace-nowrap text-xs opacity-50"
                             dangerouslySetInnerHTML={{
@@ -336,7 +321,6 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                               ),
                             }}
                           />
-                          {/* Always show duration for 1-2 hour range */}
                           <span className="ml-1 whitespace-nowrap text-xs opacity-40">
                             ({formatDurationForDisplay(displayDuration || ONE_HOUR_IN_MS)})
                           </span>
@@ -344,92 +328,39 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                       </div>
                     )}
 
-                    {/* Long Duration Time Display & Controls */}
-                    {displayDuration > ONE_HOUR_IN_MS * 2 && (
+                    {/* Long Duration Time Display */}
+                    {displayDuration > ONE_HOUR_IN_MS * 2 && task.startTime && (
                       <section className="mr-2 mt-auto flex items-center justify-between">
                         <div className="text-xs opacity-50">
-                          {task.startTime ? (
-                            /* Apply dangerouslySetInnerHTML for full time range */
-                            <span
-                              className="whitespace-nowrap"
-                              dangerouslySetInnerHTML={{
-                                __html: formatTimeRange(
-                                  task.startTime,
-                                  displayDuration || ONE_HOUR_IN_MS,
-                                ),
-                              }}
-                            />
-                          ) : (
-                            /* Fallback to just duration if no start time */
-                            <span className="whitespace-nowrap">
-                              {formatDurationForDisplay(displayDuration || ONE_HOUR_IN_MS)}
-                            </span>
-                          )}
+                          <span
+                            className="whitespace-nowrap"
+                            dangerouslySetInnerHTML={{
+                              __html: formatTimeRange(
+                                task.startTime,
+                                displayDuration || ONE_HOUR_IN_MS,
+                              ),
+                            }}
+                          />
                         </div>
-
-                        {/* Controls (Focus/Details buttons) */}
-                        <div className="flex items-center">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={(e: React.MouseEvent<HTMLButtonElement>) =>
-                                    handleFocusClick(e)
-                                  }
-                                  className={cn(
-                                    'flex h-7 w-7 bg-transparent p-0 opacity-0 hover:bg-transparent',
-                                    task.completed && 'hidden',
-                                    isHovered && 'opacity-100',
-                                  )}
-                                >
-                                  <LucideFocus
-                                    className={cn(
-                                      'ml-2 h-4 w-4 transition-all duration-200',
-                                      task.isFocused
-                                        ? 'fill-blue-500 text-blue-500'
-                                        : 'text-muted-foreground',
-                                      'hover:scale-125 hover:fill-blue-500 hover:text-blue-500 hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]',
-                                    )}
-                                  />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom" className="p-0.5 text-[10px] uppercase">
-                                <p>Focus (F)</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={(e: React.MouseEvent<HTMLButtonElement>) =>
-                                    handleDetailsClick(e)
-                                  }
-                                  className="flex h-7 w-7 bg-transparent p-0 hover:bg-transparent"
-                                >
-                                  <ArrowRight className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom" className="p-0.5 text-[10px] uppercase">
-                                <p>Details (D)</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                      </section>
+                    )}
+                    {/* Fallback for long duration with no start time */}
+                    {displayDuration > ONE_HOUR_IN_MS * 2 && !task.startTime && (
+                      <section className="mr-2 mt-auto flex items-center justify-between">
+                        <div className="text-xs opacity-50">
+                          <span className="whitespace-nowrap">
+                            {formatDurationForDisplay(displayDuration || ONE_HOUR_IN_MS)}
+                          </span>
                         </div>
                       </section>
                     )}
 
-                    {/* Progress bar - Now positioned absolutely */}
+                    {/* Progress bar - Still absolutely positioned */}
                     {hasSubtasks &&
                       task.subtasks &&
                       task.subtasks.length > 0 &&
                       !task.completed && (
-                        <div className="absolute bottom-2 right-2 z-10 flex items-center gap-2">
+                        <div className="absolute bottom-2 right-[70px] z-10 flex items-center gap-2">
                           <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted/30">
                             <div
                               className="h-full bg-green-500 transition-all duration-300"
@@ -443,6 +374,15 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                       )}
                   </div>
                 </div>
+
+                {/* Render the Action Buttons component here, outside the main flex flow */}
+                <TaskItemActionButtons
+                  isHovered={isHovered}
+                  isCompleted={task.completed ?? false}
+                  isFocused={task.isFocused ?? false}
+                  onFocusClick={handleFocusClick}
+                  onDetailsClick={handleDetailsClick}
+                />
               </div>
             </div>
           </ContextMenuTrigger>
