@@ -106,35 +106,37 @@ export function SliderTimePicker({ className, ...props }: SliderProps) {
             onPointerDown={() => setIsDragging(true)}
             onPointerUp={() => setIsDragging(false)}
             onPointerLeave={() => setIsDragging(false)}
+            timeValue={formatTime(time)}
+            isDragging={isDragging}
             aria-label="Select time"
             {...props}
           />
 
-          {/* currently selected time */}
-          <div
-            className={cn(
-              'absolute top-2 z-30 select-none rounded border border-primary bg-gray-900 px-1.5 py-0.5 text-xs text-primary-foreground shadow',
-              isDragging ? 'bg-primary' : '',
-            )}
-            style={{
-              left: `${(time / 1439) * 100}%`,
-              transform: 'translateX(-50%)',
-            }}
-          >
-            {formatTime(time)}
-          </div>
-
           {/* Hour tick marks */}
           {Array.from({ length: 25 }).map((_, i) => (
             <div
-              key={i}
+              key={`hour-${i}`}
               className={cn(
-                'absolute w-px -translate-x-1/2 transform bg-gray-100',
-                i % 4 === 0 ? 'h-2' : 'h-1',
+                'absolute w-px -translate-x-1/2 transform',
+                i % 4 === 0 ? 'h-3 bg-gray-100' : 'h-2 bg-gray-200/80',
               )}
               style={{ left: `${((i * 60) / totalMinutes) * 100}%`, bottom: '16px' }}
             />
           ))}
+
+          {/* Minute tick marks - every 15 minutes */}
+          {Array.from({ length: 24 * 4 }).map((_, i) => {
+            // Skip marks that already have hour marks (every 60 minutes)
+            if (i % 4 === 0) return null;
+
+            return (
+              <div
+                key={`minute-${i}`}
+                className="absolute h-1 w-px -translate-x-1/2 transform bg-gray-300/60"
+                style={{ left: `${((i * 15) / totalMinutes) * 100}%`, bottom: '16px' }}
+              />
+            );
+          })}
 
           {/* Hour labels with 24-hour format */}
           {hourLabelsData.map((item, i) => (
