@@ -8,9 +8,10 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { gsap } from 'gsap';
 import { Draggable } from 'gsap/Draggable';
-import { Blend, ChevronsRight } from 'lucide-react';
+import { Blend, ChevronDown, ChevronsDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { ONE_HOUR_IN_MS, OptimalTask } from '../../types';
+import { findNextAvailableSlot } from '../../utils/time-slots';
 import { TimelineItem } from '../timeline/timeline';
 import { TaskItem } from './task-item';
 
@@ -216,22 +217,94 @@ export const TimelineTaskItem = ({
 
   const [showResolveButton, setShowResolveButton] = useState(false);
 
-  const handleResolveOverlap = () => {
-    if (!nextTask || !nextTask.id || !effectiveEndTime) return;
-
-    // Update the next task's start time to be the current task's end time
-    updateTask(nextTask.id, {
-      startTime: effectiveEndTime,
-      // Recalculate the next task's end time based on its duration
-      nextStartTime: nextTask.duration
-        ? new Date(effectiveEndTime.getTime() + nextTask.duration)
-        : undefined,
+  const animateTaskMovement = (taskElement: HTMLElement, fromY: number, toY: number) => {
+    return gsap.to(taskElement, {
+      y: toY - fromY,
+      duration: 0.5,
+      ease: 'power2.out',
+      onComplete: () => {
+        // Reset the transform after animation as the actual position will be updated by React
+        gsap.set(taskElement, { clearProps: 'transform' });
+      },
     });
+  };
+
+  const handleResolveOverlap = () => {
+    if (!nextTask?.id || !effectiveEndTime || !nextTask.duration) return;
+
+    const tasks = tasksStore.state.tasks;
+    const nextAvailableSlot = findNextAvailableSlot(
+      effectiveEndTime,
+      nextTask.duration,
+      tasks,
+      task.id,
+      nextTask.id,
+      task.taskDate,
+    );
+
+    // Find the task element to animate
+    const taskElement = document.querySelector(`[data-task-id="${nextTask.id}"]`) as HTMLElement;
+    if (taskElement) {
+      const fromY = taskElement.getBoundingClientRect().top;
+
+      // Update the task's times
+      updateTask(nextTask.id, {
+        startTime: nextAvailableSlot,
+        nextStartTime: new Date(nextAvailableSlot.getTime() + nextTask.duration),
+      });
+
+      // Wait for React to update the DOM
+      requestAnimationFrame(() => {
+        const toY = taskElement.getBoundingClientRect().top;
+        animateTaskMovement(taskElement, fromY, toY);
+      });
+    } else {
+      // Fallback if element not found - just update without animation
+      updateTask(nextTask.id, {
+        startTime: nextAvailableSlot,
+        nextStartTime: new Date(nextAvailableSlot.getTime() + nextTask.duration),
+      });
+    }
 
     // Force a state update to trigger overlap recalculation
     tasksStore.setState((state) => ({
       ...state,
-      lastUpdate: new Date().getTime(), // Add a timestamp to force recalculation
+      lastUpdate: new Date().getTime(),
+    }));
+  };
+
+  const handleResolveAllOverlaps = () => {
+    if (!effectiveEndTime) return;
+
+    const tasks = tasksStore.state.tasks;
+    const sortedTasks = getSortedTasksForDate(tasks, task.taskDate);
+    const currentTaskIndex = sortedTasks.findIndex((t) => t.id === task.id);
+
+    if (currentTaskIndex === -1) return;
+
+    let currentEndTime = effectiveEndTime;
+
+    // Update all subsequent tasks
+    for (let i = currentTaskIndex + 1; i < sortedTasks.length; i++) {
+      const nextTask = sortedTasks[i];
+      if (!nextTask.id) continue;
+
+      updateTask(nextTask.id, {
+        startTime: currentEndTime,
+        nextStartTime: nextTask.duration
+          ? new Date(currentEndTime.getTime() + nextTask.duration)
+          : undefined,
+      });
+
+      if (nextTask.duration) {
+        currentEndTime = new Date(currentEndTime.getTime() + nextTask.duration);
+      }
+    }
+
+    // Force a state update to trigger overlap recalculation
+    tasksStore.setState((state) => ({
+      ...state,
+      lastUpdate: new Date().getTime(),
     }));
   };
 
@@ -242,6 +315,7 @@ export const TimelineTaskItem = ({
         style={outerContainerStyle}
         className={outerContainerClasses}
         data-id={task.id}
+        data-task-id={task.id}
       >
         <div className="h-full" style={{ position: 'relative' }}>
           <div className="flex h-full items-stretch">
@@ -288,34 +362,70 @@ export const TimelineTaskItem = ({
               />
 
               {shouldShowOverlap && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
+                <div
+                  className="absolute -bottom-5 right-20 z-10 flex items-center"
+                  onMouseEnter={() => setShowResolveButton(true)}
+                  onMouseLeave={() => setShowResolveButton(false)}
+                >
+                  {showResolveButton && (
                     <div
-                      className={`absolute -bottom-5 right-20 z-10 flex items-center gap-1 text-xs text-yellow-500`}
-                      onMouseEnter={() => setShowResolveButton(true)}
-                      onMouseLeave={() => setShowResolveButton(false)}
+                      className="mr-2 flex items-center gap-1 transition-all duration-200 ease-in-out"
+                      style={{
+                        transform: showResolveButton ? 'translateX(0)' : 'translateX(100%)',
+                        opacity: showResolveButton ? 1 : 0,
+                      }}
                     >
-                      <Blend className="h-4 w-4" />
-                      {showResolveButton && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleResolveOverlap();
-                          }}
-                          className="ml-1 flex items-center gap-0.5 rounded bg-blue-500 px-1 py-0.5 text-[10px] text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          aria-label="Resolve time overlap"
-                          tabIndex={0}
-                        >
-                          <span>Resolve</span>
-                          <ChevronsRight className="h-3 w-3" />
-                        </button>
-                      )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleResolveAllOverlaps();
+                            }}
+                            className="flex items-center gap-0.5 rounded bg-blue-500 p-1 text-[10px] text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            aria-label="Resolve all overlaps"
+                            tabIndex={0}
+                          >
+                            <ChevronsDown className="h-3 w-3" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent className="px-1.5 py-1">
+                          <span className="text-[10px]">Resolve all overlaps</span>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleResolveOverlap();
+                            }}
+                            className="flex items-center gap-0.5 rounded bg-blue-500 p-1 text-[10px] text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            aria-label="Resolve next overlap"
+                            tabIndex={0}
+                          >
+                            <ChevronDown className="h-3 w-3" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent className="px-1.5 py-1">
+                          <span className="text-[10px]">Resolve next overlap</span>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent className="px-1.5 py-1">
-                    <span className="text-[10px]">Time overlap</span>
-                  </TooltipContent>
-                </Tooltip>
+                  )}
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center">
+                        <Blend className="h-4 w-4 text-yellow-500" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="px-1.5 py-1">
+                      <span className="text-[10px]">Time overlap</span>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               )}
             </div>
           </div>
