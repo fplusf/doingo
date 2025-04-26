@@ -1,5 +1,7 @@
 import { cn } from '@/lib/utils';
 import React, { useEffect, useRef, useState } from 'react';
+import { useTaskHistory } from '../../hooks/useTaskHistory';
+import { tasksStore } from '../../stores/tasks.store';
 import { ONE_HOUR_IN_MS, TaskCategory, TaskPriority } from '../../types';
 import { TimelineNode } from './timeline-node';
 
@@ -73,6 +75,8 @@ export const TimelineItem = ({
 
   const [nodeHeight, setNodeHeight] = useState('0px');
   const contentRef = useRef<HTMLDivElement>(null);
+
+  const { addCompleteTaskAction } = useTaskHistory();
 
   // Get height based on task duration
   const getHeightFromDuration = () => {
@@ -150,6 +154,37 @@ export const TimelineItem = ({
     }
   };
 
+  // Add a handler for task completion that includes history tracking
+  const handleCompletedChange = (isCompleted: boolean) => {
+    // Find the task to get its previous state
+    if (taskId) {
+      const task = tasksStore.state.tasks.find((t) => t.id === taskId);
+
+      if (task) {
+        // Store task's previous state before toggling completion
+        const taskBeforeToggle = { ...task };
+
+        // Call the original onCompletedChange callback
+        if (onCompletedChange) {
+          onCompletedChange(isCompleted);
+        }
+
+        // Add to history for undo/redo
+        addCompleteTaskAction(taskId, taskBeforeToggle);
+      } else {
+        // Fallback if task not found
+        if (onCompletedChange) {
+          onCompletedChange(isCompleted);
+        }
+      }
+    } else {
+      // Fallback if no taskId provided
+      if (onCompletedChange) {
+        onCompletedChange(isCompleted);
+      }
+    }
+  };
+
   return (
     <div
       ref={contentRef}
@@ -180,6 +215,7 @@ export const TimelineItem = ({
           timeSpent={timeSpent}
           isEarliestFocused={isEarliestFocused}
           isTimeFixed={isTimeFixed}
+          onCompletedChange={handleCompletedChange}
         />
       </div>
     </div>

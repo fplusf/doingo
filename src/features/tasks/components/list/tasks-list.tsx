@@ -1,4 +1,4 @@
-import { resetForm } from '@/features/tasks/store/task-form.store';
+import { resetForm } from '@/features/tasks/stores/task-form.store';
 import {
   createNewTask,
   editExistingTask,
@@ -9,7 +9,7 @@ import {
   setEditingTaskId,
   setSelectedDate,
   tasksStore,
-} from '@/features/tasks/store/tasks.store';
+} from '@/features/tasks/stores/tasks.store';
 import {
   FIFTEEN_MINUTES_IN_MS,
   ONE_HOUR_IN_MS,

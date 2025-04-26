@@ -1,4 +1,4 @@
-import { tasksStore } from '@/features/tasks/store/tasks.store';
+import { tasksStore } from '@/features/tasks/stores/tasks.store';
 import { useStore } from '@tanstack/react-store';
 
 export const useTasksProgress = () => {

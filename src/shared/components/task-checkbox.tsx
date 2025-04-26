@@ -1,6 +1,8 @@
 import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
 import React from 'react';
+import { useTaskHistory } from '../../features/tasks/hooks/useTaskHistory';
+import { tasksStore } from '../../features/tasks/stores/tasks.store';
 
 interface TaskCheckboxProps {
   checked?: boolean;
@@ -11,6 +13,7 @@ interface TaskCheckboxProps {
   playSound?: boolean;
   soundSrc?: string;
   ariaLabel?: string;
+  'data-task-id'?: string;
 }
 
 export const TaskCheckbox = React.forwardRef<HTMLButtonElement, TaskCheckboxProps>(
@@ -24,9 +27,12 @@ export const TaskCheckbox = React.forwardRef<HTMLButtonElement, TaskCheckboxProp
       playSound = true,
       soundSrc = '/complete-task.mp3',
       ariaLabel = 'Toggle task completion',
+      'data-task-id': taskId,
     },
     ref,
   ) => {
+    const { addCompleteTaskAction } = useTaskHistory();
+
     const sizeClasses = {
       sm: 'h-4 w-4',
       md: 'h-5 w-5',
@@ -40,6 +46,26 @@ export const TaskCheckbox = React.forwardRef<HTMLButtonElement, TaskCheckboxProp
     };
 
     const handleCheckedChange = (newChecked: boolean) => {
+      if (taskId) {
+        const task = tasksStore.state.tasks.find((t) => t.id === taskId);
+
+        if (task) {
+          const taskBeforeToggle = { ...task };
+
+          if (onCheckedChange) {
+            onCheckedChange(newChecked);
+
+            if (newChecked && playSound) {
+              const audio = new Audio(soundSrc);
+              audio.play().catch(console.error);
+            }
+          }
+
+          addCompleteTaskAction(taskId, taskBeforeToggle);
+          return;
+        }
+      }
+
       if (onCheckedChange) {
         onCheckedChange(newChecked);
         if (newChecked && playSound) {
@@ -74,6 +100,7 @@ export const TaskCheckbox = React.forwardRef<HTMLButtonElement, TaskCheckboxProp
         aria-checked={checked}
         aria-label={ariaLabel}
         tabIndex={0}
+        data-task-id={taskId}
       >
         <Check
           className={cn(

@@ -1,4 +1,4 @@
-import { tasksStore } from '@/features/tasks/store/tasks.store';
+import { tasksStore } from '@/features/tasks/stores/tasks.store';
 import { OptimalTask } from '@/features/tasks/types';
 import { ONE_HOUR_IN_MS } from '@/features/tasks/types/task.types';
 import { format, isValid, parse } from 'date-fns';

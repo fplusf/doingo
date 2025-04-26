@@ -23854,23 +23854,23 @@
       "angle": 0,
       "fillStyle": "solid",
       "strokeWidth": 4,
-      "version": 2391,
+      "version": 2617,
       "roundness": {
         "type": 3
       },
       "type": "rectangle",
-      "updated": 1745603841405,
+      "updated": 1745666483875,
       "id": "_W4ABRzzfHSZ1kAOuRSt5",
       "x": -7519.10139626984,
       "seed": 119326581,
       "boundElements": [],
-      "y": 3631.0586907024544,
+      "y": 3554.526482821933,
       "opacity": 100,
-      "height": 286.0915449091375,
+      "height": 363.9316361563982,
       "width": 4.943532090137521,
       "frameId": null,
       "strokeStyle": "solid",
-      "versionNonce": 1510222101
+      "versionNonce": 610827835
     },
     {
       "isDeleted": false,

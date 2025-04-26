@@ -28,8 +28,8 @@ import {
   taskFormStore,
   updateField,
   updateFields,
-} from '../../store/task-form.store';
-import { setEditingTaskId, tasksStore, updateTask } from '../../store/tasks.store';
+} from '../../stores/task-form.store';
+import { setEditingTaskId, tasksStore, updateTask } from '../../stores/tasks.store';
 import { SubtaskList } from '../details/subtasks';
 import { EmojiPicker } from './emoji-picker';
 import { PriorityPicker } from './priority-picker';

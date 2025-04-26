@@ -1,6 +1,6 @@
 'use client';
 
-import { taskFormStore, updateField } from '@/features/tasks/store/task-form.store';
+import { taskFormStore, updateField } from '@/features/tasks/stores/task-form.store';
 import { cn } from '@/lib/utils';
 import { Slider } from '@/shared/components/ui/slider';
 import { useStore } from '@tanstack/react-store';

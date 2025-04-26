@@ -15,7 +15,7 @@ import {
   updateRepetition,
   updateStartDateTime,
   updateTimeFixed,
-} from '../../store/task-form.store';
+} from '../../stores/task-form.store';
 // import { pushForwardAffectedTasks } from '../../store/tasks.store'; // Removed - Logic now handled by setFocused
 import { useRouter } from '@tanstack/react-router';
 import { RepetitionType } from '../../types';
@@ -46,10 +46,10 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
   // Sync with task store when taskId changes or when task is updated
   useEffect(() => {
     if (taskId) {
-      import('../../store/tasks.store').then(({ tasksStore }) => {
+      import('../../stores/tasks.store').then(({ tasksStore }) => {
         const task = tasksStore.state.tasks.find((t) => t.id === taskId);
         if (task && taskId !== currentTaskId) {
-          import('../../store/task-form.store').then(({ loadTaskForEditing }) => {
+          import('../../stores/task-form.store').then(({ loadTaskForEditing }) => {
             loadTaskForEditing(task);
           });
         }
@@ -112,7 +112,7 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
 
       // If the task exists AND the date has changed, we need to update the task in the main store
       if (isDateChanged) {
-        import('../../store/tasks.store').then(({ updateTaskStartDateTime }) => {
+        import('../../stores/tasks.store').then(({ updateTaskStartDateTime }) => {
           // Update the task in the main store which will handle moving it to the new date
           updateTaskStartDateTime(taskId, date, time);
 

@@ -20,6 +20,8 @@ interface TimelineNodeProps {
   isFocused?: boolean;
   timeSpent?: number;
   isEarliestFocused?: boolean; // New prop to determine if this is the earliest focused task
+  isTimeFixed?: boolean; // Add this prop for time-fixed tasks
+  onCompletedChange?: (completed: boolean) => void; // Add this prop for task completion
 }
 
 export function TimelineNode({
@@ -38,6 +40,8 @@ export function TimelineNode({
   isFocused = false,
   timeSpent = 0,
   isEarliestFocused = false, // Default to false
+  isTimeFixed = false, // Default to false
+  onCompletedChange,
 }: TimelineNodeProps) {
   const [progress, setProgress] = useState(0);
   const [timeStatus, setTimeStatus] = useState<'past' | 'present' | 'future'>('future');
@@ -50,6 +54,15 @@ export function TimelineNode({
     e.stopPropagation();
     if (onClick) {
       onClick();
+    }
+  };
+
+  // Handle completion change
+  const handleCompletedChange = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onCompletedChange) {
+      onCompletedChange(!completed);
     }
   };
 

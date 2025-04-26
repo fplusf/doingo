@@ -1,6 +1,6 @@
 import { useStore } from '@tanstack/react-store';
 import { useEffect } from 'react';
-import { tasksStore } from '../store/tasks.store';
+import { tasksStore } from '../stores/tasks.store';
 import { OptimalTask } from '../types/task.types';
 
 // Define the interface for the exposed Electron API

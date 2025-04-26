@@ -1,4 +1,4 @@
-import { tasksStore, updateTask, updateTaskTimeSpent } from '@/features/tasks/store/tasks.store';
+import { tasksStore, updateTask, updateTaskTimeSpent } from '@/features/tasks/stores/tasks.store';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import {

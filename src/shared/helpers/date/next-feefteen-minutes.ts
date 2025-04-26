@@ -1,5 +1,5 @@
 // Calculate the next 15-minute interval from the current time
-import { tasksStore } from '@/features/tasks/store/tasks.store';
+import { tasksStore } from '@/features/tasks/stores/tasks.store';
 import {
   addMilliseconds,
   addMinutes,

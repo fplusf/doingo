@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import React, { useCallback } from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
-import { toggleTaskCompletion, updateTask } from '../../store/tasks.store';
+import { toggleTaskCompletion, updateTask } from '../../stores/tasks.store';
 import CollapsedContainer from '../schedule/collapsed-container';
 import { TaskScheduler } from '../schedule/task-scheduler';
 import TaskNotes from './notes';

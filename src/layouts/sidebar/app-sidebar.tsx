@@ -1,4 +1,4 @@
-import { setFocused, tasksStore } from '@/features/tasks/store/tasks.store';
+import { setFocused, tasksStore } from '@/features/tasks/stores/tasks.store';
 import { OptimalTask } from '@/features/tasks/types/index';
 import { NavUser } from '@/layouts/sidebar/nav-user';
 import {

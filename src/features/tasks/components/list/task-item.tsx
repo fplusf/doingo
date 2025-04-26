@@ -21,12 +21,13 @@ import { addMilliseconds, format, isSameDay } from 'date-fns';
 import { GripVertical, Trash2 } from 'lucide-react';
 import React, { useRef } from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
+import { useTaskHistoryContext } from '../../providers/task-history-provider';
 import {
   deleteTask,
   setFocused,
   toggleTaskCompletion,
   undoLastFocusAction,
-} from '../../store/tasks.store';
+} from '../../stores/tasks.store';
 import { ONE_HOUR_IN_MS, TaskCardProps } from '../../types';
 import { TaskItemActionButtons } from './task-item-action-buttons';
 
@@ -46,6 +47,8 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
   const isToday = task.taskDate === format(today, 'yyyy-MM-dd');
 
   const displayDuration = effectiveDuration ?? task.duration ?? ONE_HOUR_IN_MS;
+
+  const { addDeleteTaskAction } = useTaskHistoryContext();
 
   const applyTaskFocus = React.useCallback(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
@@ -234,6 +237,17 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
   const hasSubtasks = task.subtasks && task.subtasks.length > 0;
   const progress = task.progress ?? 0;
 
+  const handleDeleteTask = () => {
+    // Store the task before deletion
+    const taskToDelete = { ...task };
+
+    // Delete the task
+    deleteTask(task.id);
+
+    // Add to history for undo/redo
+    addDeleteTaskAction(task.id, taskToDelete);
+  };
+
   return (
     <>
       <div className="group relative h-full">
@@ -278,6 +292,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                     size="lg"
                     checked={task.completed}
                     onCheckedChange={() => toggleTaskCompletion(task.id)}
+                    data-task-id={task.id}
                   />
 
                   <div
@@ -398,10 +413,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
             >
               Focus
             </ContextMenuItem>
-            <ContextMenuItem
-              className="text-red-500 focus:text-red-600"
-              onClick={() => deleteTask(task.id)}
-            >
+            <ContextMenuItem className="text-red-500 focus:text-red-600" onClick={handleDeleteTask}>
               Delete
               <Trash2 className="ml-auto h-4 w-4" />
             </ContextMenuItem>

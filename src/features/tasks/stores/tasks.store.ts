@@ -374,6 +374,9 @@ export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
 };
 
 export const deleteTask = (id: string) => {
+  // Find the task before deletion to store in history
+  const taskToDelete = tasksStore.state.tasks.find((task) => task.id === id);
+
   // remove the canvas data from local storage
   if (id) {
     localStorage.removeItem(`canvas_${id}`);
@@ -383,6 +386,9 @@ export const deleteTask = (id: string) => {
     ...state,
     tasks: state.tasks.filter((task: OptimalTask) => task.id !== id),
   }));
+
+  // Return the deleted task for history tracking
+  return taskToDelete;
 };
 
 export const setFocusedTaskId = (taskId: string | null) => {
@@ -549,6 +555,9 @@ export const calculateTaskProgress = (task: OptimalTask): number => {
 };
 
 export const toggleTaskCompletion = (id: string) => {
+  // Find the task before toggling to store its previous state
+  const taskBeforeToggle = tasksStore.state.tasks.find((t) => t.id === id);
+
   updateStateAndStorage((state) => {
     const task = state.tasks.find((t) => t.id === id);
     if (!task) return state;
@@ -593,6 +602,9 @@ export const toggleTaskCompletion = (id: string) => {
       ),
     };
   });
+
+  // Return the previous task state for undo/redo
+  return taskBeforeToggle;
 };
 
 export const toggleSubtaskCompletion = (taskId: string, subtaskId: string) => {

@@ -1,4 +1,4 @@
-import {} from '@/features/tasks/store/tasks.store';
+import {} from '@/features/tasks/stores/tasks.store';
 import { Excalidraw } from '@excalidraw/excalidraw';
 import { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types/types';
 import { useSearch } from '@tanstack/react-router';

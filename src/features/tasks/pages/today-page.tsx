@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { useEffect, useRef } from 'react';
 import { TasksList, TasksListHandle } from '../components/list/tasks-list';
 import { WeekNavigator } from '../components/weekly-calendar/week-navigator';
-import { isResizeInProgress, setFocused, tasksStore } from '../store/tasks.store';
+import { isResizeInProgress, setFocused, tasksStore } from '../stores/tasks.store';
 
 // Add a helper function to clear a stale resize flag after a timeout
 const clearStaleResizeFlag = () => {

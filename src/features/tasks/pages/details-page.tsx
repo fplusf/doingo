@@ -1,4 +1,4 @@
-import { tasksStore, updateTask } from '@/features/tasks/store/tasks.store';
+import { tasksStore, updateTask } from '@/features/tasks/stores/tasks.store';
 import { useSidebar } from '@/shared/components/ui/sidebar';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
@@ -6,7 +6,7 @@ import React, { useEffect } from 'react';
 import { toggleSidebarState } from '../../../layouts/store/layout.store';
 import { TaskDetailsRoute } from '../../../routes/routes';
 import { TaskDetails } from '../components';
-import { loadTaskForEditing, resetForm } from '../store/task-form.store';
+import { loadTaskForEditing, resetForm } from '../stores/task-form.store';
 import { OptimalTask } from '../types';
 
 interface TaskDetailsPageProps {

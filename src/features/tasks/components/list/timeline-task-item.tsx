@@ -4,12 +4,13 @@ import {
   tasksStore,
   toggleTaskCompletion,
   updateTask,
-} from '@/features/tasks/store/tasks.store';
+} from '@/features/tasks/stores/tasks.store';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { gsap } from 'gsap';
 import { Draggable } from 'gsap/Draggable';
 import { Blend, ChevronDown, ChevronsDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useTaskHistoryContext } from '../../providers/task-history-provider';
 import { ONE_HOUR_IN_MS, OptimalTask } from '../../types';
 import { TimelineItem } from '../timeline/timeline';
 import { TaskItem } from './task-item';
@@ -229,11 +230,17 @@ export const TimelineTaskItem = ({
     });
   };
 
+  const { addOverlapResolverAction } = useTaskHistoryContext();
+
   const handleResolveOverlap = () => {
     if (!nextTask?.id || !effectiveEndTime || !nextTask.duration) return;
 
     // Skip if the next task is time-fixed
     if (nextTask.isTimeFixed) return;
+
+    // Store the previous states for undo/redo
+    const currentTaskPreviousState = { ...taskRef.current };
+    const nextTaskPreviousState = { ...nextTask };
 
     // Simply move the next task to start at the end of the current task
     updateTask(nextTask.id, {
@@ -246,6 +253,14 @@ export const TimelineTaskItem = ({
       ...state,
       lastUpdate: new Date().getTime(),
     }));
+
+    // Add to history for undo/redo
+    addOverlapResolverAction(
+      taskRef.current.id,
+      currentTaskPreviousState,
+      nextTask.id,
+      nextTaskPreviousState,
+    );
   };
 
   const handleResolveAllOverlaps = () => {
@@ -256,6 +271,11 @@ export const TimelineTaskItem = ({
     const currentTaskIndex = sortedTasks.findIndex((t) => t.id === task.id);
 
     if (currentTaskIndex === -1) return;
+
+    // Store current task's previous state for undo/redo
+    const currentTaskPreviousState = { ...taskRef.current };
+    // Store affected tasks' previous states
+    const affectedTasksPreviousStates = new Map<string, OptimalTask>();
 
     let currentEndTime = effectiveEndTime;
     let hasOverlappingTasks = true;
@@ -277,6 +297,9 @@ export const TimelineTaskItem = ({
 
       // Only update if there's an actual overlap
       if (nextTaskStart < currentEndTimeMs) {
+        // Store the task's previous state before updating
+        affectedTasksPreviousStates.set(nextTask.id, { ...nextTask });
+
         updateTask(nextTask.id, {
           startTime: currentEndTime,
           nextStartTime: nextTask.duration
@@ -295,6 +318,21 @@ export const TimelineTaskItem = ({
       ...state,
       lastUpdate: new Date().getTime(),
     }));
+
+    // Find the first affected task for simplicity (in a real app you might want to track all)
+    if (affectedTasksPreviousStates.size > 0) {
+      const [firstAffectedTaskId, firstAffectedTaskPreviousState] = [
+        ...affectedTasksPreviousStates.entries(),
+      ][0];
+
+      // Add to history for undo/redo (first affected task only for simplicity)
+      addOverlapResolverAction(
+        taskRef.current.id,
+        currentTaskPreviousState,
+        firstAffectedTaskId,
+        firstAffectedTaskPreviousState,
+      );
+    }
   };
 
   return (

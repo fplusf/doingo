@@ -1,4 +1,4 @@
-import { updateField } from '@/features/tasks/store/task-form.store';
+import { updateField } from '@/features/tasks/stores/task-form.store';
 import { Subtask } from '@/features/tasks/types/task.types';
 import { cn } from '@/lib/utils';
 import {
