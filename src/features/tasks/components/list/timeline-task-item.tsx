@@ -11,7 +11,6 @@ import { Draggable } from 'gsap/Draggable';
 import { Blend, ChevronDown, ChevronsDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { ONE_HOUR_IN_MS, OptimalTask } from '../../types';
-import { findNextAvailableSlot } from '../../utils/time-slots';
 import { TimelineItem } from '../timeline/timeline';
 import { TaskItem } from './task-item';
 
@@ -214,6 +213,7 @@ export const TimelineTaskItem = ({
   const outerContainerClasses = `group relative ${resizing ? 'z-50' : ''}`;
 
   const shouldShowOverlap = overlapsWithNext && !taskRef.current.completed;
+  const isNextTaskFixed = nextTask?.isTimeFixed || false;
 
   const [showResolveButton, setShowResolveButton] = useState(false);
 
@@ -232,39 +232,14 @@ export const TimelineTaskItem = ({
   const handleResolveOverlap = () => {
     if (!nextTask?.id || !effectiveEndTime || !nextTask.duration) return;
 
-    const tasks = tasksStore.state.tasks;
-    const nextAvailableSlot = findNextAvailableSlot(
-      effectiveEndTime,
-      nextTask.duration,
-      tasks,
-      task.id,
-      nextTask.id,
-      task.taskDate,
-    );
+    // Skip if the next task is time-fixed
+    if (nextTask.isTimeFixed) return;
 
-    // Find the task element to animate
-    const taskElement = document.querySelector(`[data-task-id="${nextTask.id}"]`) as HTMLElement;
-    if (taskElement) {
-      const fromY = taskElement.getBoundingClientRect().top;
-
-      // Update the task's times
-      updateTask(nextTask.id, {
-        startTime: nextAvailableSlot,
-        nextStartTime: new Date(nextAvailableSlot.getTime() + nextTask.duration),
-      });
-
-      // Wait for React to update the DOM
-      requestAnimationFrame(() => {
-        const toY = taskElement.getBoundingClientRect().top;
-        animateTaskMovement(taskElement, fromY, toY);
-      });
-    } else {
-      // Fallback if element not found - just update without animation
-      updateTask(nextTask.id, {
-        startTime: nextAvailableSlot,
-        nextStartTime: new Date(nextAvailableSlot.getTime() + nextTask.duration),
-      });
-    }
+    // Simply move the next task to start at the end of the current task
+    updateTask(nextTask.id, {
+      startTime: effectiveEndTime,
+      nextStartTime: new Date(effectiveEndTime.getTime() + nextTask.duration),
+    });
 
     // Force a state update to trigger overlap recalculation
     tasksStore.setState((state) => ({
@@ -283,21 +258,35 @@ export const TimelineTaskItem = ({
     if (currentTaskIndex === -1) return;
 
     let currentEndTime = effectiveEndTime;
+    let hasOverlappingTasks = true;
 
-    // Update all subsequent tasks
-    for (let i = currentTaskIndex + 1; i < sortedTasks.length; i++) {
+    // Update only tasks that are actually overlapping
+    for (let i = currentTaskIndex + 1; i < sortedTasks.length && hasOverlappingTasks; i++) {
       const nextTask = sortedTasks[i];
-      if (!nextTask.id) continue;
+      if (!nextTask.id || nextTask.isTimeFixed) continue; // Skip time-fixed tasks
 
-      updateTask(nextTask.id, {
-        startTime: currentEndTime,
-        nextStartTime: nextTask.duration
-          ? new Date(currentEndTime.getTime() + nextTask.duration)
-          : undefined,
-      });
+      // Check if this task overlaps with the current end time
+      const nextTaskStart = nextTask.startTime?.getTime() || 0;
+      const currentEndTimeMs = currentEndTime.getTime();
 
-      if (nextTask.duration) {
-        currentEndTime = new Date(currentEndTime.getTime() + nextTask.duration);
+      // If there's no overlap with the current task, and it's not the first iteration, stop processing
+      if (i > currentTaskIndex + 1 && nextTaskStart >= currentEndTimeMs) {
+        hasOverlappingTasks = false;
+        continue;
+      }
+
+      // Only update if there's an actual overlap
+      if (nextTaskStart < currentEndTimeMs) {
+        updateTask(nextTask.id, {
+          startTime: currentEndTime,
+          nextStartTime: nextTask.duration
+            ? new Date(currentEndTime.getTime() + nextTask.duration)
+            : undefined,
+        });
+
+        if (nextTask.duration) {
+          currentEndTime = new Date(currentEndTime.getTime() + nextTask.duration);
+        }
       }
     }
 
@@ -344,6 +333,7 @@ export const TimelineTaskItem = ({
                   timeSpent={task.timeSpent || 0}
                   data-id={task.id}
                   isEarliestFocused={isEarliestFocused}
+                  isTimeFixed={task.isTimeFixed}
                 />
               </div>
             </div>
@@ -367,7 +357,7 @@ export const TimelineTaskItem = ({
                   onMouseEnter={() => setShowResolveButton(true)}
                   onMouseLeave={() => setShowResolveButton(false)}
                 >
-                  {showResolveButton && (
+                  {showResolveButton && !isNextTaskFixed && (
                     <div
                       className="mr-2 flex items-center gap-1 transition-all duration-200 ease-in-out"
                       style={{
@@ -418,11 +408,22 @@ export const TimelineTaskItem = ({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="flex items-center">
-                        <Blend className="h-4 w-4 text-yellow-500" />
+                        <Blend
+                          className={`h-4 w-4 ${isNextTaskFixed ? 'text-red-500' : 'text-yellow-500'}`}
+                        />
                       </div>
                     </TooltipTrigger>
                     <TooltipContent className="px-1.5 py-1">
-                      <span className="text-[10px]">Time overlap</span>
+                      <span className="text-[10px]">
+                        {isNextTaskFixed ? (
+                          <span className="w-[150px]">
+                            Can't resolve overlap, <br />
+                            next task is time-sensitive
+                          </span>
+                        ) : (
+                          'Time overlap'
+                        )}
+                      </span>
                     </TooltipContent>
                   </Tooltip>
                 </div>

@@ -41,6 +41,7 @@ interface TimelineItemProps extends React.HTMLAttributes<HTMLDivElement> {
   isFocused?: boolean;
   timeSpent?: number;
   isEarliestFocused?: boolean;
+  isTimeFixed?: boolean;
 }
 
 export const TimelineItem = ({
@@ -63,6 +64,7 @@ export const TimelineItem = ({
   isFocused = false,
   timeSpent = 0,
   isEarliestFocused = false,
+  isTimeFixed = false,
   ...rest
 }: TimelineItemProps) => {
   const timeDiffMinutes = React.useMemo(() => {
@@ -177,6 +179,7 @@ export const TimelineItem = ({
           isFocused={isFocused}
           timeSpent={timeSpent}
           isEarliestFocused={isEarliestFocused}
+          isTimeFixed={isTimeFixed}
         />
       </div>
     </div>

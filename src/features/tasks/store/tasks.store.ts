@@ -1021,8 +1021,9 @@ const calculateAffectedTaskUpdates = (
     getHours(focusedTaskNewStartTime) * 60 + getMinutes(focusedTaskNewStartTime);
   const endTimeInMinutes = startTimeInMinutes + focusedTaskDuration / (60 * 1000);
 
-  const affectedTasks = tasksOnDate.filter((task) => {
-    if (!task.time || task.completed) return false;
+  // Find the first overlapping task
+  const overlappingTask = tasksOnDate.find((task) => {
+    if (!task.time || task.completed || task.isTimeFixed) return false;
 
     const [taskStartTimeStr] = task.time.split('—');
     const [taskHours, taskMinutes] = taskStartTimeStr.split(':').map(Number);
@@ -1037,45 +1038,23 @@ const calculateAffectedTaskUpdates = (
     return !noOverlap;
   });
 
-  if (affectedTasks.length === 0) return [];
+  if (!overlappingTask) return [];
 
-  const sortedTasks = [...affectedTasks].sort((a, b) => {
-    if (!a.time || !b.time) return 0;
-    const [aStartTimeStr] = a.time.split('—');
-    const [bStartTimeStr] = b.time.split('—');
-    const [aHours, aMinutes] = aStartTimeStr.split(':').map(Number);
-    const [bHours, bMinutes] = bStartTimeStr.split(':').map(Number);
-    if (isNaN(aHours) || isNaN(aMinutes) || isNaN(bHours) || isNaN(bMinutes)) return 0;
-    const aStartInMinutes = aHours * 60 + aMinutes;
-    const bStartInMinutes = bHours * 60 + bMinutes;
-    return aStartInMinutes - bStartInMinutes;
-  });
-
-  // Calculate the next 5-minute block after the focused task's end time
+  // Calculate the next time slot for the overlapping task
   const focusedTaskEndTime = addMilliseconds(focusedTaskNewStartTime, focusedTaskDuration);
   const nextFiveMinBlock = getNextFiveMinuteInterval(focusedTaskEndTime);
-  let previousTaskEndTime = nextFiveMinBlock;
-  const focusedDateStr = format(focusedTaskNewStartTime, 'yyyy-MM-dd');
+  const newStartTime = new Date(nextFiveMinBlock);
+  const newEndTime = addMilliseconds(newStartTime, overlappingTask.duration || ONE_HOUR_IN_MS);
 
-  for (const taskToUpdate of sortedTasks) {
-    const currentTaskDuration = taskToUpdate.duration || ONE_HOUR_IN_MS;
-    const newStartTime = new Date(previousTaskEndTime);
-    const newEndTime = addMilliseconds(newStartTime, currentTaskDuration);
-
-    if (format(newStartTime, 'yyyy-MM-dd') === focusedDateStr) {
-      const taskUpdate: Partial<OptimalTask> = {
-        taskDate: focusedDateStr,
-        startTime: newStartTime,
-        nextStartTime: newEndTime,
-        time: `${format(newStartTime, 'HH:mm')}—${format(newEndTime, 'HH:mm')}`,
-      };
-      updatesToApply.push({ id: taskToUpdate.id, updates: taskUpdate });
-
-      // For the next task, use the next 5-minute block after this task's end time
-      previousTaskEndTime = getNextFiveMinuteInterval(newEndTime);
-    } else {
-      break;
-    }
+  // Only update the first overlapping task
+  if (format(newStartTime, 'yyyy-MM-dd') === taskDate) {
+    const taskUpdate: Partial<OptimalTask> = {
+      taskDate: taskDate,
+      startTime: newStartTime,
+      nextStartTime: newEndTime,
+      time: `${format(newStartTime, 'HH:mm')}—${format(newEndTime, 'HH:mm')}`,
+    };
+    updatesToApply.push({ id: overlappingTask.id, updates: taskUpdate });
   }
 
   return updatesToApply;

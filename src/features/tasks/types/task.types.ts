@@ -71,6 +71,8 @@ export interface OptimalTask {
   timeSpent: number; // Total time spent on task in milliseconds
   // Next day indicator
   endsNextDay?: boolean; // Indicates if the task ends on the next day
+  // Time-sensitive task indicator
+  isTimeFixed?: boolean; // Indicates if the task's time is fixed and shouldn't be adjusted by overlap resolvers
 }
 
 export interface TaskHistoryEntry {

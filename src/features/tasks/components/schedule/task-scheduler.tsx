@@ -1,10 +1,11 @@
 import { hasTimeOverlapWithExistingTasks } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
+import { Checkbox } from '@/shared/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import { findFreeTimeSlots } from '@/shared/helpers/date/next-feefteen-minutes';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
-import { ArrowLeftRight, Clock, Flag } from 'lucide-react';
+import { Flag, Info } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   taskFormStore,
@@ -13,6 +14,7 @@ import {
   updateRepeatInterval,
   updateRepetition,
   updateStartDateTime,
+  updateTimeFixed,
 } from '../../store/task-form.store';
 // import { pushForwardAffectedTasks } from '../../store/tasks.store'; // Removed - Logic now handled by setFocused
 import { useRouter } from '@tanstack/react-router';
@@ -36,6 +38,7 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
   const repetition = useStore(taskFormStore, (state) => state.repetition);
   const repeatInterval = useStore(taskFormStore, (state) => state.repeatInterval);
   const currentTaskId = useStore(taskFormStore, (state) => state.taskId);
+  const isTimeFixed = useStore(taskFormStore, (state) => state.isTimeFixed);
 
   // check if the component is used in a task document or in a task list
   const isTaskDocument = useRouter().state.location.pathname.includes('document');
@@ -177,6 +180,36 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
           isDue={true}
         />
 
+        <div className="flex items-center gap-1.5">
+          <Checkbox
+            id="isTimeFixed"
+            checked={isTimeFixed}
+            onCheckedChange={(checked) => updateTimeFixed(checked as boolean)}
+            className="data-[state=checked]:border-red-500 data-[state=checked]:bg-red-500"
+          />
+          <div className="flex items-center gap-1">
+            <label
+              htmlFor="isTimeFixed"
+              className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Time sensitive
+            </label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button type="button" className="group">
+                  <Info className="h-2 w-2 text-muted-foreground transition-colors group-hover:text-muted-foreground/80" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[150px] p-2" side="bottom">
+                <p className="text-[10px] leading-normal">
+                  Mark this task as time-sensitive to prevent its start time from being adjusted by
+                  overlap resolvers
+                </p>
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
         {/* TODO: Enable and develop once the idea is validated */}
         {/* <RepetitionPicker
           frequency={repetition}
@@ -191,7 +224,7 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
       </div>
 
       {/* Show free time slot suggestions */}
-      {freeTimeSlots.length > 0 && (
+      {/* {freeTimeSlots.length > 0 && (
         <div className="mt-1 flex items-center gap-1.5 text-xs text-blue-500">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -215,7 +248,7 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
             Add to free slot at {freeTimeSlots[0]}
           </button>
         </div>
-      )}
+      )} */}
 
       {/* {hasOverlap && !isTaskDocument && (
         <div className="mt-1 flex items-center gap-1.5 text-xs text-amber-500">

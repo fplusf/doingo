@@ -30,6 +30,7 @@ export interface TaskFormState {
   dueTime: string;
   repetition: RepetitionType;
   repeatInterval: number;
+  isTimeFixed: boolean;
 
   // Subtasks
   subtasks: Subtask[];
@@ -70,6 +71,7 @@ const initialState: TaskFormState = {
   dueTime: '',
   repetition: 'once',
   repeatInterval: 1,
+  isTimeFixed: false,
 
   // Subtasks
   subtasks: [],
@@ -148,7 +150,7 @@ export const updateFields = (fields: Partial<TaskFormState>) => {
 export const loadTaskForEditing = (taskData: OptimalTask) => {
   const startTimeString = taskData.time?.split('—')[0] || getDefaultStartTime();
 
-  taskFormStore.setState((state) => ({
+  taskFormStore.setState(() => ({
     title: taskData.title || '',
     notes: taskData.notes || '',
     emoji: taskData.emoji || '',
@@ -161,6 +163,7 @@ export const loadTaskForEditing = (taskData: OptimalTask) => {
     dueTime: taskData.dueTime || '',
     repetition: taskData.repetition?.type || 'once',
     repeatInterval: taskData.repetition?.repeatInterval || 1,
+    isTimeFixed: taskData.isTimeFixed || false,
     subtasks: taskData.subtasks || [],
     progress: taskData.progress || 0,
     mode: 'edit',
@@ -298,6 +301,22 @@ export const updateRepeatInterval = (interval: number) => {
     repeatInterval: interval,
     isDirty: true,
   }));
+};
+
+export const updateTimeFixed = (isFixed: boolean) => {
+  const { mode, taskId } = taskFormStore.state;
+
+  // Update form store
+  taskFormStore.setState((state) => ({
+    ...state,
+    isTimeFixed: isFixed,
+    isDirty: true,
+  }));
+
+  // If in edit mode, update the task store
+  if (mode === 'edit' && taskId) {
+    updateTask(taskId, { isTimeFixed: isFixed });
+  }
 };
 
 // Generate full form data for submission
