@@ -34,6 +34,7 @@ import { addMilliseconds, differenceInMilliseconds, format, parse } from 'date-f
 import React, { ForwardedRef, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { TasksRoute } from '../../../../routes/routes';
+import { GapType } from '../../types';
 import { TaskDialog } from '../schedule/dialog';
 import { CategorySection } from './category-section';
 import { TaskMoveToast } from './task-move-toast';
@@ -63,6 +64,10 @@ const processTasksWithGaps = (tasks: OptimalTask[]): OptimalTask[] => {
 
   if (sortedTasks.length === 0) return []; // Return empty if no valid tasks
 
+  // Get end of day (23:59:59)
+  const endOfDay = new Date(now);
+  endOfDay.setHours(23, 59, 59, 999);
+
   result.push(sortedTasks[0]);
 
   for (let i = 0; i < sortedTasks.length - 1; i++) {
@@ -84,10 +89,12 @@ const processTasksWithGaps = (tasks: OptimalTask[]): OptimalTask[] => {
     const hasSmallGap = gapDuration > 0 && gapDuration < FIFTEEN_MINUTES_IN_MS;
     const isBreakGap = isPastGap && gapDuration > TWENTY_MINUTES_IN_MS;
 
-    if (hasFreeSlot) {
-      let gapType: 'break' | 'free-slot' | 'get-ready' | 'major-strides' = 'free-slot';
-      if (isBreakGap) gapType = 'break';
+    // Don't add gaps if the current task ends after 23:59
+    if (hasFreeSlot && currentTaskEnd <= endOfDay) {
+      let gapType: GapType = 'free-slot';
+      if (isBreakGap && !isCurrentTaskEndInPast) gapType = 'break';
       else if (hasSmallGap && isFutureGap) gapType = 'get-ready';
+      else if (isPastGap) gapType = 'idle-time';
 
       // Create a deterministic gap ID based on surrounding tasks and gap type
       const gapId = `gap-${currentTask.id}-${nextTask.id}-${gapType}`;
@@ -117,38 +124,41 @@ const processTasksWithGaps = (tasks: OptimalTask[]): OptimalTask[] => {
     result.push(nextTask);
   }
 
-  // Add major strides gap (logic seems okay, ensure lastTask exists)
+  // Add free slot gap at the end of the day if there's significant time left
   const lastTask = sortedTasks[sortedTasks.length - 1];
   if (lastTask && lastTask.startTime && lastTask.duration) {
     const lastTaskEnd = addMilliseconds(lastTask.startTime, lastTask.duration);
-    const endOfDay = new Date(lastTaskEnd);
-    endOfDay.setHours(22, 0, 0, 0);
-    const remainingTime = differenceInMilliseconds(endOfDay, lastTaskEnd);
 
-    if (remainingTime > ONE_HOUR_IN_MS) {
-      // Create a deterministic gap ID for major strides based on the last task
-      const gapId = `gap-${lastTask.id}-end-major-strides`;
-      const majorStridesGap: OptimalTask = {
-        id: gapId,
-        title: 'Gap - major-strides',
-        startTime: lastTaskEnd,
-        nextStartTime: endOfDay,
-        duration: remainingTime,
-        completed: false,
-        isFocused: false,
-        taskDate: lastTask.taskDate,
-        time: `${format(lastTaskEnd, 'HH:mm')}—${format(endOfDay, 'HH:mm')}`,
-        priority: 'none',
-        category: lastTask.category || 'work',
-        isGap: true,
-        gapType: 'major-strides',
-        gapStartTime: lastTaskEnd,
-        gapEndTime: endOfDay,
-        subtasks: [],
-        progress: 0,
-        timeSpent: 0,
-      };
-      result.push(majorStridesGap);
+    // Only show end of day gap if last task ends before 23:59
+    if (lastTaskEnd <= endOfDay) {
+      const remainingTime = differenceInMilliseconds(endOfDay, lastTaskEnd);
+
+      if (remainingTime > ONE_HOUR_IN_MS) {
+        const now = new Date();
+        const gapType: GapType = lastTaskEnd < now ? 'idle-time' : 'free-slot';
+        const gapId = `gap-${lastTask.id}-end-${gapType}`;
+        const endGap: OptimalTask = {
+          id: gapId,
+          title: `Gap - ${gapType}`,
+          startTime: lastTaskEnd,
+          nextStartTime: endOfDay,
+          duration: remainingTime,
+          completed: false,
+          isFocused: false,
+          taskDate: lastTask.taskDate,
+          time: `${format(lastTaskEnd, 'HH:mm')}—${format(endOfDay, 'HH:mm')}`,
+          priority: 'none',
+          category: lastTask.category || 'work',
+          isGap: true,
+          gapType: gapType,
+          gapStartTime: lastTaskEnd,
+          gapEndTime: endOfDay,
+          subtasks: [],
+          progress: 0,
+          timeSpent: 0,
+        };
+        result.push(endGap);
+      }
     }
   }
 

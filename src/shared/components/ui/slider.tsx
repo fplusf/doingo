@@ -25,7 +25,7 @@ const Slider = React.forwardRef<React.ElementRef<typeof SliderPrimitive.Root>, S
             <div className="h-3.5 w-0.5 rounded-full bg-background" />
           </div>
         </div>
-        {isDragging && timeValue && (
+        {timeValue && (
           <div className="absolute -bottom-5 left-1/2 z-50 -translate-x-1/2 transform rounded bg-gray-900/90 px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
             {timeValue}
           </div>

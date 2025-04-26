@@ -22,7 +22,7 @@ export type TaskPriority =
   | undefined;
 export type TaskCategory = 'work' | 'passion' | 'play';
 
-export type GapType = 'break' | 'free-slot' | 'get-ready' | 'major-strides';
+export type GapType = 'break' | 'free-slot' | 'get-ready' | 'idle-time';
 
 export interface Subtask {
   id: string;

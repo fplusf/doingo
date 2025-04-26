@@ -335,6 +335,8 @@ export function CategorySection({
 
     const gapType = task.gapType;
     const duration = task.duration || 0;
+    const now = new Date();
+    const isInPast = task.startTime ? task.startTime < now : false;
 
     switch (gapType) {
       case 'break':
@@ -342,7 +344,13 @@ export function CategorySection({
           <div className="flex items-center gap-1.5">
             <Coffee className="h-3.5 w-3.5" />
             <span>
-              Need a break of <em className="font-medium">{formatDuration(duration)}</em>?
+              {isInPast ? (
+                `Idle time - ${formatDuration(duration)}`
+              ) : (
+                <>
+                  Need a break of <em className="font-medium">{formatDuration(duration)}</em>?
+                </>
+              )}
             </span>
           </div>
         );
@@ -350,8 +358,10 @@ export function CategorySection({
         return (
           <div className="flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5" />
-            <span>Free slot - {formatDuration(duration)}</span>
-            {task.gapStartTime && (
+            <span>
+              {isInPast ? 'Idle time' : 'Free slot'} - {formatDuration(duration)}
+            </span>
+            {!isInPast && task.gapStartTime && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -371,13 +381,11 @@ export function CategorySection({
             <span>Get ready for the next task!</span>
           </div>
         );
-      case 'major-strides':
+      case 'idle-time':
         return (
           <div className="flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5" />
-            <span>
-              Major strides in <em className="font-medium">{formatDuration(duration)}</em>?
-            </span>
+            <span>Idle time - {formatDuration(duration)}</span>
           </div>
         );
       default:
