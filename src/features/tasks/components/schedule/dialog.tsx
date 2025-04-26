@@ -96,6 +96,9 @@ function TaskDialogContent({
   // Show subtasks section automatically if there are existing subtasks
   const [showSubtasks, setShowSubtasks] = useState(Boolean(subtasks && subtasks.length > 0));
 
+  // Loading state for AI task splitting
+  const [isSplittingTask, setIsSplittingTask] = useState(false);
+
   // Initialize form when dialog opens
   useEffect(() => {
     if (open) {
@@ -419,8 +422,7 @@ function TaskDialogContent({
                             .filter((s) => s.title.trim().length > 0)
                             .filter((s) => s.isCompleted).length
                         }
-                        /{subtasks.filter((s) => s.title.trim().length > 0).length}
-                        &nbsp; completed
+                        /{subtasks.filter((s) => s.title.trim().length > 0).length} completed
                       </span>
                     )}
                   </CollapsibleTrigger>
@@ -429,6 +431,7 @@ function TaskDialogContent({
                     <SubtaskList
                       subtasks={subtasks || []}
                       onSubtasksChange={handleSubtasksChange}
+                      taskTitle={title || ''}
                     />
                   </CollapsibleContent>
                 </Collapsible>

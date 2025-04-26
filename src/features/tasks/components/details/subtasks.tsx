@@ -1,12 +1,15 @@
 import { updateField } from '@/features/tasks/stores/task-form.store';
 import { Subtask } from '@/features/tasks/types/task.types';
+import { generateSubtasksWithLLM } from '@/lib/groq-service';
 import { cn } from '@/lib/utils';
+import { Button } from '@/shared/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu';
+import { Input } from '@/shared/components/ui/input';
 import {
   DndContext,
   DragEndEvent,
@@ -24,9 +27,10 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, MoreVertical } from 'lucide-react';
+import { GripVertical, Loader2, MoreVertical, Sparkles } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
+import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 
@@ -34,6 +38,7 @@ interface SubtaskListProps {
   subtasks: Subtask[];
   onSubtasksChange?: (subtasks: Subtask[]) => void;
   className?: string;
+  taskTitle?: string;
 }
 
 const SortableSubtaskItem = ({
@@ -66,7 +71,7 @@ const SortableSubtaskItem = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn('group flex items-baseline gap-2', isDragging && 'opacity-70', className)}
+      className={cn('group flex items-start gap-2', isDragging && 'opacity-70', className)}
     >
       <div
         {...attributes}
@@ -82,18 +87,22 @@ const SortableSubtaskItem = ({
         className="mt-0.5"
         ariaLabel={`Toggle subtask: ${subtask.title}`}
       />
-      <TextareaAutosize
-        ref={textareaRef}
-        value={subtask.title}
-        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onEdit(subtask.id, e.target.value)}
-        onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => onKeyDown(e, subtask.id)}
-        placeholder="Subtask description..."
-        className={cn(
-          'w-full resize-none bg-transparent text-sm font-medium text-foreground focus:outline-none',
-          subtask.isCompleted && 'opacity-80',
-        )}
-        minRows={1}
-      />
+      <div className="relative flex-1">
+        <TextareaAutosize
+          ref={textareaRef}
+          value={subtask.title}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+            onEdit(subtask.id, e.target.value)
+          }
+          onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => onKeyDown(e, subtask.id)}
+          placeholder="Subtask description..."
+          className={cn(
+            'mt-0.5 w-full resize-none bg-transparent text-sm font-medium text-foreground focus:outline-none',
+            subtask.isCompleted && 'opacity-80',
+          )}
+          minRows={1}
+        />
+      </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
@@ -111,13 +120,23 @@ const SortableSubtaskItem = ({
   );
 };
 
-export function SubtaskList({ subtasks = [], onSubtasksChange, className }: SubtaskListProps) {
+export function SubtaskList({
+  subtasks = [],
+  onSubtasksChange,
+  className,
+  taskTitle,
+}: SubtaskListProps) {
   // Internal state for subtasks
   const [internalSubtasks, setInternalSubtasks] = useState<Subtask[]>([]);
   const [emptyFieldValue, setEmptyFieldValue] = useState('');
   const [lastAddedSubtaskId, setLastAddedSubtaskId] = useState<string | null>(null);
   const inputRefs = useRef<Record<string, React.RefObject<HTMLTextAreaElement>>>({});
   const emptyInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // AI subtask generator state
+  const [isGeneratingSubtasks, setIsGeneratingSubtasks] = useState(false);
+  const [subtaskCount, setSubtaskCount] = useState(3);
+  const [error, setError] = useState('');
 
   // Initialize internal state from props
   useEffect(() => {
@@ -399,8 +418,137 @@ export function SubtaskList({ subtasks = [], onSubtasksChange, className }: Subt
     setEmptyFieldValue(e.target.value);
   };
 
+  // Handle AI task splitting
+  const handleAiSplitTask = async () => {
+    // Validate input
+    if (subtaskCount < 1 || subtaskCount > 15) {
+      setError('Please enter a number between 1 and 15');
+      return;
+    }
+
+    setError('');
+
+    if (isGeneratingSubtasks) {
+      toast.error('Already generating subtasks. Please wait.');
+      return;
+    }
+
+    try {
+      setIsGeneratingSubtasks(true);
+
+      // Get the task title from props or use a default
+      const taskTitleToUse = taskTitle
+        ? taskTitle
+        : internalSubtasks.length > 0
+          ? internalSubtasks[0].title
+          : 'Task';
+
+      // Generate subtasks using Groq LLM
+      generateSubtasksWithLLM(taskTitleToUse, subtaskCount)
+        .then((generatedSubtasks) => {
+          if (!generatedSubtasks || generatedSubtasks.length === 0) {
+            toast.error('Unable to generate subtasks. Please try again.');
+            return;
+          }
+
+          // Calculate base order for new subtasks
+          const baseOrder =
+            internalSubtasks.length > 0
+              ? Math.max(...internalSubtasks.map((s) => s.order || 0)) + 1000
+              : 0;
+
+          // Create new subtasks from the generated content
+          const newSubtasks = generatedSubtasks.map((subtaskTitle, index) => ({
+            id: uuidv4(),
+            title: subtaskTitle,
+            isCompleted: false,
+            order: baseOrder + index * 100,
+          }));
+
+          // Add the new subtasks to existing ones
+          const finalSubtasks = [...internalSubtasks, ...newSubtasks];
+
+          // Update with all subtasks
+          updateSubtasks(finalSubtasks);
+          toast.success(`Generated ${newSubtasks.length} subtasks!`);
+        })
+        .catch((error) => {
+          console.error('Error splitting task with AI:', error);
+          toast.error('Failed to generate subtasks. Please try again.');
+        })
+        .finally(() => {
+          setIsGeneratingSubtasks(false);
+        });
+    } catch (error) {
+      console.error('Error in AI task splitting:', error);
+      toast.error('Failed to generate subtasks. Please try again.');
+      setIsGeneratingSubtasks(false);
+    }
+  };
+
+  // Handle the input change for subtask count
+  const handleSubtaskCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
+    if (isNaN(value)) {
+      setSubtaskCount(3); // Default to 3 if input is invalid
+      setError('');
+    } else if (value > 15) {
+      setSubtaskCount(15);
+      setError('Maximum 15 subtasks allowed');
+    } else if (value < 1) {
+      setSubtaskCount(1);
+      setError('Minimum 1 subtask required');
+    } else {
+      setSubtaskCount(value);
+      setError('');
+    }
+  };
+
   return (
-    <div className={cn('space-y-2', className)}>
+    <div className={cn('space-y-4', className)}>
+      {/* AI Task Generator UI */}
+      <div className="flex items-center gap-3 px-1 pl-5 pt-1">
+        <div className="flex h-8 items-center gap-1 text-sm text-muted-foreground">
+          <Sparkles className="h-4 w-4" />
+          <span>AI Generate</span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <Input
+            type="number"
+            value={subtaskCount}
+            onChange={handleSubtaskCountChange}
+            className="h-8 w-16 text-xs"
+            min={1}
+            max={15}
+            disabled={isGeneratingSubtasks}
+          />
+          <span className="text-xs text-muted-foreground">subtasks</span>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleAiSplitTask}
+          disabled={isGeneratingSubtasks}
+          className="ml-6 h-8 w-32 px-2 text-xs"
+        >
+          {isGeneratingSubtasks ? (
+            <span className="flex items-center">
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin text-blue-500" />
+              <span>Generating</span>
+            </span>
+          ) : internalSubtasks.length > 0 ? (
+            'Break Down More'
+          ) : (
+            'Break Down'
+          )}
+        </Button>
+      </div>
+
+      {/* Only show error message when there is an error */}
+      {error && <p className="px-1 pl-5 text-xs text-destructive">{error}</p>}
+
       {/* Create initial subtask if none exist */}
       {sortedSubtasks.length === 0 && (
         <div className="ml-6 flex items-center gap-2">
@@ -438,7 +586,7 @@ export function SubtaskList({ subtasks = [], onSubtasksChange, className }: Subt
               }
             }}
             placeholder="Subtask description..."
-            className="w-full resize-none bg-transparent text-sm font-medium text-foreground focus:outline-none"
+            className="mt-0.5 w-full resize-none bg-transparent text-sm font-medium text-foreground focus:outline-none"
             minRows={1}
             autoFocus
           />
