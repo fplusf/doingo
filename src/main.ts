@@ -19,7 +19,7 @@ const formatTrayTitle = (timeString: string): string => {
 // Function to update the tray timer display
 const updateTrayTimer = (timeString: string) => {
   if (tray && typeof timeString === 'string') {
-    if (/^\d{1,3}:\d{2}$/.test(timeString) || timeString === '--:--') {
+    if (/^\d{2}:\d{2}:\d{2}$/.test(timeString) || timeString === '--:--:--') {
       console.log(`[Main Process] Setting tray title to: ${timeString}`);
       tray.setTitle(formatTrayTitle(timeString));
       const newContextMenu = Menu.buildFromTemplate([
@@ -37,7 +37,7 @@ const updateTrayTimer = (timeString: string) => {
       tray.setContextMenu(newContextMenu);
     } else {
       console.warn(`[Main Process] Invalid time format: ${timeString}`);
-      tray.setTitle(formatTrayTitle('--:--'));
+      tray.setTitle(formatTrayTitle('--:--:--'));
     }
   }
 };
@@ -49,7 +49,7 @@ const clearCountdown = () => {
     countdownInterval = null;
   }
   countdownEndTime = null;
-  updateTrayTimer('--:--');
+  updateTrayTimer('--:--:--');
 };
 
 // Function to start countdown
@@ -67,9 +67,10 @@ const startCountdown = (endTime: number) => {
       return;
     }
 
-    const minutes = Math.floor(remaining / 60000);
+    const hours = Math.floor(remaining / 3600000);
+    const minutes = Math.floor((remaining % 3600000) / 60000);
     const seconds = Math.floor((remaining % 60000) / 1000);
-    const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     updateTrayTimer(timeString);
   };
 
@@ -156,10 +157,10 @@ app.whenReady().then(() => {
   tray = new Tray(icon);
 
   // Set initial title with fixed width
-  tray.setTitle(formatTrayTitle('--:--'));
+  tray.setTitle(formatTrayTitle('--:--:--'));
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: '--:--', enabled: false },
+    { label: '--:--:--', enabled: false },
     { type: 'separator' },
     {
       label: 'Hide',
@@ -179,7 +180,7 @@ app.whenReady().then(() => {
   ipcMain.on('update-timer', (event, timeString: string) => {
     console.log(`[Main Process] Received timer update: ${timeString}`);
     if (tray && typeof timeString === 'string') {
-      if (/^\d{1,3}:\d{2}$/.test(timeString) || timeString === '--:--') {
+      if (/^\d{2}:\d{2}:\d{2}$/.test(timeString) || timeString === '--:--:--') {
         console.log(`[Main Process] Setting tray title to: ${timeString}`);
         // Use the formatTrayTitle function to ensure fixed width
         tray.setTitle(formatTrayTitle(timeString));
@@ -199,7 +200,7 @@ app.whenReady().then(() => {
         tray.setContextMenu(newContextMenu);
       } else {
         console.warn(`[Main Process] Invalid time format: ${timeString}`);
-        tray.setTitle(formatTrayTitle('--:--'));
+        tray.setTitle(formatTrayTitle('--:--:--'));
       }
     }
   });
