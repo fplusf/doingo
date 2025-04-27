@@ -5,12 +5,22 @@ import BulletList from '@tiptap/extension-bullet-list';
 import { Code as CodeExtension } from '@tiptap/extension-code';
 import { HorizontalRule } from '@tiptap/extension-horizontal-rule';
 import Link from '@tiptap/extension-link';
+import { ListItem } from '@tiptap/extension-list-item';
+import { OrderedList } from '@tiptap/extension-ordered-list';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
 import { BubbleMenu, EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { Bold, Code, Heading2, Italic, Link as LinkIcon, Strikethrough } from 'lucide-react';
+import {
+  Bold,
+  Code,
+  Heading2,
+  Italic,
+  Link as LinkIcon,
+  ListOrdered,
+  Strikethrough,
+} from 'lucide-react';
 import { debounce } from 'radash';
 import React, { memo } from 'react';
 
@@ -32,7 +42,7 @@ function TaskNotes({ initialContent, onContentChange, className }: TaskNotesProp
     editorProps: {
       attributes: {
         class:
-          'prose prose-sm dark:prose-invert h-full max-w-none p-4 [&_*:focus]:outline-none [&_.is-editor-empty]:relative [&_.is-editor-empty]:before:pointer-events-none [&_.is-editor-empty]:before:absolute [&_.is-editor-empty]:before:left-0 [&_.is-editor-empty]:before:float-left [&_.is-editor-empty]:before:text-muted-foreground [&_.is-editor-empty]:before:content-[attr(data-placeholder)] [&_p:empty]:min-h-[1em] [&_pre]:bg-zinc-900 [&_pre]:p-4 [&_pre]:rounded-lg [&_code]:text-sm [&_code]:font-mono',
+          'prose prose-sm dark:prose-invert h-full max-w-none py-4 [&_*:focus]:outline-none [&_.is-editor-empty]:relative [&_.is-editor-empty]:before:pointer-events-none [&_.is-editor-empty]:before:absolute [&_.is-editor-empty]:before:left-0 [&_.is-editor-empty]:before:float-left [&_.is-editor-empty]:before:text-muted-foreground [&_.is-editor-empty]:before:content-[attr(data-placeholder)] [&_p:empty]:min-h-[1em] [&_pre]:bg-zinc-900 [&_pre]:p-4 [&_pre]:rounded-lg [&_code]:text-sm [&_code]:font-mono',
       },
     },
     extensions: [
@@ -45,8 +55,18 @@ function TaskNotes({ initialContent, onContentChange, className }: TaskNotesProp
       }),
       StarterKit.configure({
         bulletList: false,
+        orderedList: false,
+        listItem: false,
         code: false,
       }),
+      OrderedList.configure({
+        HTMLAttributes: {
+          class: 'list-decimal ml-4',
+        },
+        keepMarks: true,
+        keepAttributes: false,
+      }),
+      ListItem,
       HorizontalRule.configure({
         HTMLAttributes: {
           class: 'inline-block my-8 h-1 w-full',
@@ -61,7 +81,7 @@ function TaskNotes({ initialContent, onContentChange, className }: TaskNotesProp
       TaskItem.configure({
         nested: true,
         HTMLAttributes: {
-          class: 'flex gap-2',
+          class: 'flex gap-2 [&_div>p]:pl-1',
         },
       }),
       Link.configure({
@@ -125,6 +145,12 @@ function TaskNotes({ initialContent, onContentChange, className }: TaskNotesProp
           >
             <Heading2 className="h-4 w-4" />
           </button>
+          <button
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            className={`p-2 hover:bg-accent/50 ${editor.isActive('orderedList') ? 'bg-accent/25' : ''}`}
+          >
+            <ListOrdered className="h-4 w-4" />
+          </button>
           <Popover>
             <PopoverTrigger asChild>
               <button
@@ -162,7 +188,7 @@ function TaskNotes({ initialContent, onContentChange, className }: TaskNotesProp
       )}
       <EditorContent
         editor={editor}
-        className="prose prose-sm dark:prose-invert mb-72 h-full max-w-none [&_*:focus]:outline-none [&_.is-editor-empty]:relative [&_.is-editor-empty]:before:pointer-events-none [&_.is-editor-empty]:before:absolute [&_.is-editor-empty]:before:left-0 [&_.is-editor-empty]:before:float-left [&_.is-editor-empty]:before:text-muted-foreground [&_.is-editor-empty]:before:content-[attr(data-placeholder)] [&_a:hover]:text-blue-600 dark:[&_a:hover]:text-blue-300 [&_a]:cursor-pointer [&_a]:text-blue-500 [&_a]:transition-colors dark:[&_a]:text-blue-400 [&_code]:whitespace-pre-wrap [&_code]:break-all [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-xl [&_h2]:font-semibold [&_pre]:whitespace-pre-wrap [&_pre]:break-all"
+        className="prose prose-sm dark:prose-invert mb-72 h-full max-w-none [&_*:focus]:outline-none [&_.is-editor-empty]:relative [&_.is-editor-empty]:before:pointer-events-none [&_.is-editor-empty]:before:absolute [&_.is-editor-empty]:before:left-0 [&_.is-editor-empty]:before:float-left [&_.is-editor-empty]:before:text-muted-foreground [&_.is-editor-empty]:before:content-[attr(data-placeholder)] [&_a:hover]:text-blue-600 dark:[&_a:hover]:text-blue-300 [&_a]:cursor-pointer [&_a]:text-blue-500 [&_a]:transition-colors dark:[&_a]:text-blue-400 [&_code]:whitespace-pre-wrap [&_code]:break-all [&_h2]:my-6 [&_h2]:text-xl [&_h2]:font-semibold [&_p]:mb-4 [&_pre]:whitespace-pre-wrap [&_pre]:break-all"
       />
     </div>
   );

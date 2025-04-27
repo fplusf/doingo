@@ -97,7 +97,7 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
         </section>
 
         <SubtaskList
-          className="z-40 mb-6"
+          className="z-40 mb-10"
           isDetailsPage={true}
           subtasks={task.subtasks || []}
           onSubtasksChange={(updatedSubtasks) => {
