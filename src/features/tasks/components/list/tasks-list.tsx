@@ -15,6 +15,8 @@ import {
   FIFTEEN_MINUTES_IN_MS,
   ONE_HOUR_IN_MS,
   OptimalTask,
+  RepetitionOption,
+  RepetitionType,
   TWENTY_MINUTES_IN_MS,
   TaskCategory,
   TaskPriority,
@@ -33,7 +35,8 @@ import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-ki
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { addMilliseconds, differenceInMilliseconds, format, parse } from 'date-fns';
-import React, { ForwardedRef, useEffect, useRef, useState } from 'react';
+import gsap from 'gsap';
+import React, { ForwardedRef, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { TasksRoute } from '../../../../routes/routes';
 import { GapType } from '../../types';
@@ -210,6 +213,9 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
     const tasksRef = useRef<HTMLDivElement | null>(null);
     const viewportRef = useRef<HTMLDivElement | null>(null);
 
+    // Store previous tasks positions to calculate animation
+    const taskPositionsRef = useRef<Map<string, DOMRect>>(new Map());
+
     // Effects for date changes, highlighting, keydown...
     React.useEffect(() => {
       if (search.date && search.date !== selectedDate) {
@@ -225,6 +231,91 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
     const tasksWithGaps = React.useMemo(() => {
       return processTasksWithGaps(basicTasks);
     }, [basicTasks]);
+
+    // Memoize tasksByCategory based on tasksWithGaps
+    const tasksByCategory = React.useMemo(() => {
+      const sortedTasks = tasksWithGaps; // Already processed with gaps
+      const overlaps = new Map<string, boolean>();
+      const realTasks = sortedTasks.filter((task) => !task.isGap);
+      realTasks.forEach((task, index) => {
+        if (index < realTasks.length - 1) {
+          overlaps.set(task.id, hasTimeOverlap(task, realTasks[index + 1]));
+        }
+      });
+      return { tasks: sortedTasks, overlaps };
+    }, [tasksWithGaps, tasksStore.state.lastUpdate]);
+
+    // Capture current positions of task elements before update
+    const captureTaskPositions = () => {
+      const positions = new Map<string, DOMRect>();
+
+      if (tasksRef.current) {
+        // Find all task elements (not gap elements)
+        const taskElements = tasksRef.current.querySelectorAll('[data-task-id]');
+        taskElements.forEach((el) => {
+          const taskId = el.getAttribute('data-task-id');
+          if (taskId && !taskId.includes('gap-')) {
+            positions.set(taskId, el.getBoundingClientRect());
+          }
+        });
+      }
+
+      return positions;
+    };
+
+    // Capture positions after initial render
+    useEffect(() => {
+      taskPositionsRef.current = captureTaskPositions();
+    }, []);
+
+    // Use layout effect to run GSAP animations when tasks change
+    useLayoutEffect(() => {
+      // Skip animation on initial render
+      if (prevTasksRef.current.length === 0) return;
+
+      // Capture current positions after render
+      const prevPositions = taskPositionsRef.current;
+      const currentPositions = captureTaskPositions();
+
+      // Store current positions for next update
+      taskPositionsRef.current = currentPositions;
+
+      // Find elements that need to be animated
+      if (tasksRef.current) {
+        const taskElements = tasksRef.current.querySelectorAll('[data-task-id]');
+
+        // Animate each task element
+        taskElements.forEach((el) => {
+          const taskId = el.getAttribute('data-task-id');
+          if (!taskId || taskId.includes('gap-')) return;
+
+          const prevRect = prevPositions.get(taskId);
+          const currentRect = currentPositions.get(taskId);
+
+          // Only animate if we have both positions and they're different
+          if (prevRect && currentRect) {
+            const deltaY = prevRect.top - currentRect.top;
+
+            if (Math.abs(deltaY) > 5) {
+              // Only animate noticeable changes
+              // Set initial position
+              gsap.set(el, { y: deltaY });
+
+              // Animate to final position
+              gsap.to(el, {
+                y: 0,
+                duration: 0.5,
+                ease: 'power2.out',
+                onComplete: () => {
+                  // Clean up
+                  gsap.set(el, { clearProps: 'y' });
+                },
+              });
+            }
+          }
+        });
+      }
+    }, [tasksWithGaps]);
 
     // Effect for detecting date changes on edit...
     React.useEffect(() => {
@@ -288,19 +379,6 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
         }
       },
     }));
-
-    // Memoize tasksByCategory based on tasksWithGaps
-    const tasksByCategory = React.useMemo(() => {
-      const sortedTasks = tasksWithGaps; // Already processed with gaps
-      const overlaps = new Map<string, boolean>();
-      const realTasks = sortedTasks.filter((task) => !task.isGap);
-      realTasks.forEach((task, index) => {
-        if (index < realTasks.length - 1) {
-          overlaps.set(task.id, hasTimeOverlap(task, realTasks[index + 1]));
-        }
-      });
-      return { tasks: sortedTasks, overlaps };
-    }, [tasksWithGaps, tasksStore.state.lastUpdate]);
 
     // Effect to update end time (ensure safety)...
     useEffect(() => {
@@ -530,9 +608,6 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
           open={isCreating}
           onOpenChange={(open) => {
             if (!open) setIsCreating(false);
-            else {
-              /* Logic moved to handleAddTask/imperativeHandle */
-            }
           }}
           mode="create"
           initialValues={{
@@ -546,7 +621,16 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
             repetition: 'once',
           }}
           onSubmit={(values) => {
-            createNewTask(values);
+            // Convert the simple string repetition to RepetitionOption object
+            const formValues = {
+              ...values,
+              repetition: {
+                type:
+                  values.repetition === 'custom' ? 'once' : (values.repetition as RepetitionType),
+                repeatInterval: 1,
+              } as RepetitionOption,
+            };
+            createNewTask(formValues);
             setIsCreating(false);
           }}
           onRequestPriorityPrediction={handlePriorityPrediction}
@@ -565,6 +649,21 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
             initialValues={(() => {
               const task = basicTasks.find((t) => t.id === editingTask);
               if (!task) return {};
+
+              // Map RepetitionType to TaskFormValues repetition string
+              let repetitionValue: 'once' | 'daily' | 'weekly' | 'custom' = 'once';
+              if (task.repetition?.type) {
+                if (
+                  task.repetition.type === 'once' ||
+                  task.repetition.type === 'daily' ||
+                  task.repetition.type === 'weekly'
+                ) {
+                  repetitionValue = task.repetition.type;
+                } else {
+                  repetitionValue = 'custom';
+                }
+              }
+
               // Populate initial values from the found task
               return {
                 title: task.title || '',
@@ -578,13 +677,26 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
                 notes: task.notes || '',
                 subtasks: task.subtasks || [],
                 progress: task.progress || 0,
-                repetition: task.repetition || 'once',
+                repetition: repetitionValue,
               };
             })()}
             onSubmit={(values) => {
               const taskToEdit = basicTasks.find((t) => t.id === editingTask);
               if (taskToEdit) {
-                editExistingTask(taskToEdit, values);
+                // Convert form values to proper RepetitionOption
+                const formValues = {
+                  ...values,
+                  repetition: {
+                    type:
+                      values.repetition === 'custom'
+                        ? 'once'
+                        : (values.repetition as RepetitionType),
+                    repeatInterval: taskToEdit.repetition?.repeatInterval || 1,
+                    repeatStartDate: taskToEdit.repetition?.repeatStartDate,
+                    repeatEndDate: taskToEdit.repetition?.repeatEndDate,
+                  } as RepetitionOption,
+                };
+                editExistingTask(taskToEdit, formValues);
               }
               setEditingTask(null);
               setEditingTaskId(null);

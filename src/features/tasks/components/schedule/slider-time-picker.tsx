@@ -1,6 +1,5 @@
-'use client';
-
 import { taskFormStore, updateField } from '@/features/tasks/stores/task-form.store';
+import { updateTaskStartDateTime } from '@/features/tasks/stores/tasks.store';
 import { cn } from '@/lib/utils';
 import { Slider } from '@/shared/components/ui/slider';
 import { useStore } from '@tanstack/react-store';
@@ -19,8 +18,10 @@ const parseTimeToMinutes = (timeString: string): number | null => {
 };
 
 export function SliderTimePicker({ className, ...props }: SliderProps) {
-  // Read startTime from the store
+  // Read startTime and other necessary values from the store
   const startTimeFromStore = useStore(taskFormStore, (state) => state.startTime);
+  const startDate = useStore(taskFormStore, (state) => state.startDate);
+  const taskId = useStore(taskFormStore, (state) => state.taskId);
 
   // Local state for slider value in minutes
   const [time, setTime] = useState<number>(() => {
@@ -54,8 +55,20 @@ export function SliderTimePicker({ className, ...props }: SliderProps) {
     const newMinutes = value[0];
     setTime(newMinutes);
     const formattedTime = formatTime(newMinutes);
-    // Update the store
+    // Update the form store
     updateField('startTime', formattedTime);
+  };
+
+  // Handle slider release - sync with central store
+  const handleSliderRelease = () => {
+    setIsDragging(false);
+
+    // Only update the central store if we have a taskId (editing mode)
+    if (taskId) {
+      const formattedTime = formatTime(time);
+      // Update the central task store with the new time
+      updateTaskStartDateTime(taskId, startDate, formattedTime);
+    }
   };
 
   // Calculate working hours positions (9:00 - 17:00)
@@ -104,8 +117,12 @@ export function SliderTimePicker({ className, ...props }: SliderProps) {
             )}
             onValueChange={handleValueChange}
             onPointerDown={() => setIsDragging(true)}
-            onPointerUp={() => setIsDragging(false)}
-            onPointerLeave={() => setIsDragging(false)}
+            onPointerUp={handleSliderRelease}
+            onPointerLeave={() => {
+              if (isDragging) {
+                handleSliderRelease();
+              }
+            }}
             timeValue={formatTime(time)}
             isDragging={isDragging}
             aria-label="Select time"

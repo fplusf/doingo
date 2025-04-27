@@ -1,10 +1,17 @@
+import { taskFormStore } from '@/features/tasks/stores/task-form.store';
+import {
+  updateTaskDueDateTime,
+  updateTaskStartDateTime,
+} from '@/features/tasks/stores/tasks.store';
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
+import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { useState } from 'react';
 import { OptimalCalendar } from '../../../../shared/components/ui/optimal-calendar';
+
 interface DateTimeSelectorProps {
   date?: Date;
   time?: string;
@@ -28,8 +35,24 @@ export function DateTimePicker({
 }: DateTimeSelectorProps) {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
+  // Get the task ID from the store for central store updates
+  const taskId = useStore(taskFormStore, (state) => state.taskId);
+
   const handleDateTimeSelection = (selectedDate: Date, selectedTime: string) => {
+    // Call the parent component's onChange handler
     onChange(selectedDate, selectedTime);
+
+    // If we have a task ID, also update the central task store immediately
+    if (taskId) {
+      if (isDue) {
+        // Update due date/time in the central store
+        updateTaskDueDateTime(taskId, selectedDate, selectedTime);
+      } else {
+        // Update start date/time in the central store
+        updateTaskStartDateTime(taskId, selectedDate, selectedTime);
+      }
+    }
+
     setIsPopoverOpen(false);
   };
 

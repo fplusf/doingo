@@ -341,8 +341,13 @@ export const TimelineTaskItem = ({
         ref={handleRefUpdate}
         style={outerContainerStyle}
         className={outerContainerClasses}
-        data-id={task.id}
         data-task-id={task.id}
+        onClick={(e) => {
+          // Prevent opening task when clicking resize handle
+          if (!resizingRef.current) {
+            onEdit(taskRef.current);
+          }
+        }}
       >
         <div className="h-full" style={{ position: 'relative' }}>
           <div className="flex h-full items-stretch">

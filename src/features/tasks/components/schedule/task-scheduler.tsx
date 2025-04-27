@@ -117,14 +117,17 @@ export function TaskScheduler({
       const newTaskDate = format(date, 'yyyy-MM-dd');
       const currentTaskDate = format(startDate, 'yyyy-MM-dd');
       const isDateChanged = newTaskDate !== currentTaskDate;
+      const isTimeChanged = time !== startTime;
 
       // Update the task form state
       updateStartDateTime(date, time);
 
-      // If the task exists AND the date has changed, we need to update the task in the main store
-      if (isDateChanged) {
+      // Update the task in the main store regardless if date or time changed
+      // This ensures real-time updates in the tasks list
+      if (isDateChanged || isTimeChanged) {
         import('../../stores/tasks.store').then(({ updateTaskStartDateTime }) => {
           // Update the task in the main store which will handle moving it to the new date
+          // or reordering within the same date
           updateTaskStartDateTime(taskId, date, time);
 
           // Clear any overlap indicators

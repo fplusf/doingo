@@ -1,3 +1,5 @@
+import { taskFormStore } from '@/features/tasks/stores/task-form.store';
+import { updateTaskDuration } from '@/features/tasks/stores/tasks.store';
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
@@ -10,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
+import { useStore } from '@tanstack/react-store';
 import { Clock, LoaderCircle, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -50,6 +53,9 @@ export function DurationPicker({
   onRequestAiEstimate,
   taskTitle,
 }: DurationPickerProps) {
+  // Get task ID from store to update central store
+  const taskId = useStore(taskFormStore, (state) => state.taskId);
+
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [customHours, setCustomHours] = useState('');
   const [customMinutes, setCustomMinutes] = useState('');
@@ -109,13 +115,25 @@ export function DurationPicker({
     return mins === 0 ? `${hours} hr` : `${hours}.${mins} hr`;
   };
 
+  // Update both form and central store
+  const updateDuration = (durationMs: number) => {
+    // Update form via parent component's onChange
+    onChange(durationMs);
+
+    // If we have a taskId, update the central store too
+    if (taskId) {
+      updateTaskDuration(taskId, durationMs);
+    }
+  };
+
   const handleDurationSelectChange = (value: string) => {
     const minutes = parseInt(value, 10);
     if (!isNaN(minutes)) {
-      onChange(minutes * 60 * 1000);
+      const durationMs = minutes * 60 * 1000;
+      updateDuration(durationMs);
       setSelectedDuration(value);
       setCustomDurationSet(false);
-      prevValueRef.current = minutes * 60 * 1000;
+      prevValueRef.current = durationMs;
     }
   };
 
@@ -126,7 +144,7 @@ export function DurationPicker({
 
     if (totalMinutes > 0) {
       const durationMs = totalMinutes * 60 * 1000;
-      onChange(durationMs);
+      updateDuration(durationMs);
       setSelectedDuration(`custom:${totalMinutes}`);
       setCustomDurationSet(true);
       setIsSelectOpen(false);
