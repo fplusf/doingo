@@ -219,8 +219,7 @@ export function TaskScheduler({
               </PopoverTrigger>
               <PopoverContent className="w-[150px] p-2" side="bottom">
                 <p className="text-[10px] leading-normal">
-                  Mark this task as time-sensitive to prevent its start time from being adjusted by
-                  overlap resolvers
+                  To prevent its start time from being adjusted by overlap resolvers
                 </p>
               </PopoverContent>
             </Popover>
