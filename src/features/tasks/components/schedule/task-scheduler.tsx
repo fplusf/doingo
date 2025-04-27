@@ -26,9 +26,20 @@ interface TaskSchedulerProps {
   className?: string;
   // Optional taskId only for checking overlaps with existing tasks
   taskId?: string;
+  // New prop to indicate if AI is estimating the duration
+  isEstimating?: boolean;
+  // New props for AI estimation
+  onRequestAiEstimate?: () => void;
+  taskTitle?: string;
 }
 
-export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
+export function TaskScheduler({
+  className,
+  taskId,
+  isEstimating = false,
+  onRequestAiEstimate,
+  taskTitle,
+}: TaskSchedulerProps) {
   // Use the store for all form values
   const startDate = useStore(taskFormStore, (state) => state.startDate);
   const startTime = useStore(taskFormStore, (state) => state.startTime);
@@ -169,7 +180,13 @@ export function TaskScheduler({ className, taskId }: TaskSchedulerProps) {
           buttonLabel="Start"
         />
 
-        <DurationPicker value={duration} onChange={handleDurationChange} />
+        <DurationPicker
+          value={duration}
+          onChange={handleDurationChange}
+          isEstimating={isEstimating}
+          onRequestAiEstimate={onRequestAiEstimate}
+          taskTitle={taskTitle}
+        />
 
         <DateTimePicker
           date={dueDate}

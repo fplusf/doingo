@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
@@ -9,12 +10,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
-import { Clock } from 'lucide-react';
+import { Clock, LoaderCircle, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 interface DurationPickerProps {
-  value: number; // in milliseconds
-  onChange: (durationMs: number) => void;
+  value: number; // milliseconds
+  onChange: (duration: number) => void;
+  className?: string;
+  isEstimating?: boolean;
+  onRequestAiEstimate?: () => void;
+  taskTitle?: string;
 }
 
 const PRESET_DURATIONS = [
@@ -37,7 +42,14 @@ const PRESET_DURATIONS = [
   { label: '8 hr', value: 480 },
 ];
 
-export function DurationPicker({ value, onChange }: DurationPickerProps) {
+export function DurationPicker({
+  value,
+  onChange,
+  className,
+  isEstimating = false,
+  onRequestAiEstimate,
+  taskTitle,
+}: DurationPickerProps) {
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [customHours, setCustomHours] = useState('');
   const [customMinutes, setCustomMinutes] = useState('');
@@ -46,21 +58,47 @@ export function DurationPicker({ value, onChange }: DurationPickerProps) {
   const selectTriggerRef = useRef<HTMLButtonElement>(null);
   const prevValueRef = useRef<number>(value);
 
+  // Store initial value to prevent unwanted changes
+  const initialValueRef = useRef<number>(value);
+
+  // Update custom hours and minutes when dropdown opens
+  useEffect(() => {
+    if (isSelectOpen) {
+      const totalMinutes = Math.round(value / (60 * 1000));
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+
+      setCustomHours(hours > 0 ? hours.toString() : '');
+      setCustomMinutes(minutes > 0 ? minutes.toString() : '');
+    }
+  }, [isSelectOpen, value]);
+
   // Update selectedDuration when value prop changes externally
   useEffect(() => {
-    if (value !== prevValueRef.current && !customDurationSet) {
-      const minutes = Math.round(value / (60 * 1000));
-      // Check if the new duration matches any of our preset values
-      const matchingPreset = PRESET_DURATIONS.find((preset) => preset.value === minutes);
-      if (matchingPreset) {
-        setSelectedDuration(matchingPreset.value.toString());
-      } else {
-        // If it doesn't match preset, mark as custom
-        setSelectedDuration(`custom:${minutes}`);
-        setCustomDurationSet(true);
-      }
-      prevValueRef.current = value;
+    // Skip if value hasn't changed or is very close to previous value (within 1 minute)
+    if (value === prevValueRef.current || Math.abs(value - prevValueRef.current) < 60 * 1000) {
+      return;
     }
+
+    // Only update if value changed significantly from both previous and initial
+    const minutes = Math.round(value / (60 * 1000));
+
+    console.log('Duration value changed:', {
+      from: prevValueRef.current / (60 * 1000),
+      to: value / (60 * 1000),
+      initialValue: initialValueRef.current / (60 * 1000),
+    });
+
+    // Check if the new duration matches any of our preset values
+    const matchingPreset = PRESET_DURATIONS.find((preset) => preset.value === minutes);
+    if (matchingPreset) {
+      setSelectedDuration(matchingPreset.value.toString());
+    } else {
+      // If it doesn't match preset, mark as custom
+      setSelectedDuration(`custom:${minutes}`);
+      setCustomDurationSet(true);
+    }
+    prevValueRef.current = value;
   }, [value, customDurationSet]);
 
   const formatDurationDisplay = (minutes: number): string => {
@@ -119,72 +157,102 @@ export function DurationPicker({ value, onChange }: DurationPickerProps) {
 
   const durationMinutes = Math.round(value / (60 * 1000));
 
-  return (
-    <Select
-      value={selectedDuration || durationMinutes.toString()}
-      onValueChange={handleDurationSelectChange}
-      open={isSelectOpen}
-      onOpenChange={setIsSelectOpen}
-    >
-      <SelectTrigger ref={selectTriggerRef} className="h-8 w-28">
-        <div className="flex items-center gap-1.5">
-          <Clock className="h-3.5 w-3.5" />
-          <SelectValue placeholder="Duration">
-            {customDurationSet && selectedDuration.includes(':')
-              ? formatDurationDisplay(parseInt(selectedDuration.split(':')[1], 10))
-              : formatDurationDisplay(durationMinutes)}
-          </SelectValue>
-        </div>
-      </SelectTrigger>
-      <SelectContent className="max-h-[300px] w-48">
-        <div className="border-b border-border p-2">
-          <div className="mb-1 text-xs text-muted-foreground">Custom duration:</div>
-          <div className="flex items-center gap-1">
-            <Input
-              className="h-8 w-12 text-center text-xs"
-              placeholder="0h"
-              value={customHours}
-              onChange={handleCustomHoursChange}
-              type="text"
-              inputMode="numeric"
-              onKeyDown={(e) => {
-                e.stopPropagation();
-                if (e.key === 'Enter') handleCustomDurationSubmit();
-              }}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <span className="text-sm">:</span>
-            <Input
-              className="h-8 w-12 text-center text-xs"
-              placeholder="0m"
-              value={customMinutes}
-              onChange={handleCustomMinutesChange}
-              type="text"
-              inputMode="numeric"
-              min="0"
-              max="59"
-              onKeyDown={(e) => {
-                e.stopPropagation();
-                if (e.key === 'Enter') handleCustomDurationSubmit();
-              }}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <Button size="sm" className="ml-2 h-8 px-2" onClick={handleCustomDurationSubmit}>
-              Set
-            </Button>
-          </div>
-        </div>
+  const handleAiEstimateClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onRequestAiEstimate) {
+      onRequestAiEstimate();
+    }
+  };
 
-        <ScrollArea className="h-[220px]">
-          <SelectGroup>
-            {PRESET_DURATIONS.map((duration) => (
-              <SelectItem key={duration.value} value={duration.value.toString()}>
-                {duration.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </ScrollArea>
-      </SelectContent>
-    </Select>
+  return (
+    <div className="relative">
+      {isEstimating && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-background/80 backdrop-blur-[1px]">
+          <LoaderCircle className="h-4 w-4 animate-spin text-primary" />
+        </div>
+      )}
+
+      <Select
+        value={selectedDuration || durationMinutes.toString()}
+        onValueChange={handleDurationSelectChange}
+        open={isSelectOpen}
+        onOpenChange={setIsSelectOpen}
+      >
+        <SelectTrigger ref={selectTriggerRef} className={cn('h-8', className)}>
+          <div className="flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            <SelectValue placeholder="Duration">
+              {customDurationSet && selectedDuration.includes(':')
+                ? formatDurationDisplay(parseInt(selectedDuration.split(':')[1], 10))
+                : formatDurationDisplay(durationMinutes)}
+            </SelectValue>
+          </div>
+        </SelectTrigger>
+        <SelectContent className="max-h-[320px] w-48">
+          {onRequestAiEstimate && (
+            <div className="border-b border-border p-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex w-full items-center justify-center gap-1.5 text-xs"
+                onClick={handleAiEstimateClick}
+                disabled={isEstimating || !taskTitle || taskTitle.length < 5}
+              >
+                <Sparkles className="h-3 w-3 text-amber-500" />
+                AI estimate
+              </Button>
+            </div>
+          )}
+
+          <div className="border-b border-border p-2">
+            <div className="mb-1 text-xs text-muted-foreground">Custom duration:</div>
+            <div className="flex items-center gap-1">
+              <Input
+                className="h-8 w-12 text-center text-xs"
+                placeholder="0h"
+                value={customHours}
+                onChange={handleCustomHoursChange}
+                type="text"
+                inputMode="numeric"
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === 'Enter') handleCustomDurationSubmit();
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+              <span className="text-sm">:</span>
+              <Input
+                className="h-8 w-12 text-center text-xs"
+                placeholder="0m"
+                value={customMinutes}
+                onChange={handleCustomMinutesChange}
+                type="text"
+                inputMode="numeric"
+                min="0"
+                max="59"
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === 'Enter') handleCustomDurationSubmit();
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+              <Button size="sm" className="ml-2 h-8 px-2" onClick={handleCustomDurationSubmit}>
+                Set
+              </Button>
+            </div>
+          </div>
+
+          <ScrollArea className="h-[200px]">
+            <SelectGroup>
+              {PRESET_DURATIONS.map((duration) => (
+                <SelectItem key={duration.value} value={duration.value.toString()}>
+                  {duration.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </ScrollArea>
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

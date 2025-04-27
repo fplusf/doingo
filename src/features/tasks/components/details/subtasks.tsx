@@ -508,11 +508,6 @@ export function SubtaskList({
     <div className={cn('space-y-4', className)}>
       {/* AI Task Generator UI */}
       <div className="flex items-center gap-3 px-1 pl-5 pt-1">
-        <div className="flex h-8 items-center gap-1 text-sm text-muted-foreground">
-          <Sparkles className="h-4 w-4" />
-          <span>AI Generate</span>
-        </div>
-
         <div className="flex items-center gap-1.5">
           <Input
             type="number"
@@ -531,17 +526,18 @@ export function SubtaskList({
           size="sm"
           onClick={handleAiSplitTask}
           disabled={isGeneratingSubtasks}
-          className="ml-6 h-8 w-32 px-2 text-xs"
+          className="ml-6 h-8 px-3 text-xs"
         >
           {isGeneratingSubtasks ? (
             <span className="flex items-center">
               <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin text-blue-500" />
               <span>Generating</span>
             </span>
-          ) : internalSubtasks.length > 0 ? (
-            'Break Down More'
           ) : (
-            'Break Down'
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+              <span>AI split task</span>
+            </span>
           )}
         </Button>
       </div>

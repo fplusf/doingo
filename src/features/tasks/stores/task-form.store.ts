@@ -43,14 +43,30 @@ export interface TaskFormState {
   isDirty: boolean;
 }
 
-// Get today's date
-const today = new Date();
+// Get the current time for default values
+const now = new Date();
 
-// Get the default start time
-const defaultTimeString = getDefaultStartTime();
-const [hours, minutes] = defaultTimeString.split(':').map(Number);
-const defaultStartTime = new Date(today);
-defaultStartTime.setHours(hours, minutes, 0, 0);
+// Default to current hour, rounded to the nearest 15 minutes
+// Get the current date
+const defaultStartTime = now;
+// Round minutes to the nearest 15
+const minutes = Math.round(now.getMinutes() / 15) * 15;
+// Set the rounded minutes
+defaultStartTime.setMinutes(minutes % 60);
+// If we rounded up to 60, increment the hour
+if (minutes === 60) {
+  defaultStartTime.setHours(defaultStartTime.getHours() + 1);
+  defaultStartTime.setMinutes(0);
+}
+// Clear seconds and milliseconds
+defaultStartTime.setSeconds(0);
+defaultStartTime.setMilliseconds(0);
+
+// Get the default time as string
+const defaultTimeString = `${defaultStartTime.getHours().toString().padStart(2, '0')}:${defaultStartTime
+  .getMinutes()
+  .toString()
+  .padStart(2, '0')}`;
 
 // Initialize the default state
 const initialState: TaskFormState = {
@@ -66,7 +82,8 @@ const initialState: TaskFormState = {
   // Scheduling
   startDate: defaultStartTime,
   startTime: defaultTimeString,
-  duration: ONE_HOUR_IN_MS, // 1 hour in ms
+  // Change default duration to 45 minutes (from 1 hour)
+  duration: 45 * 60 * 1000, // 45 minutes in ms
   dueDate: undefined,
   dueTime: '',
   repetition: 'once',
@@ -87,57 +104,41 @@ const initialState: TaskFormState = {
 // Create the store
 export const taskFormStore = new Store<TaskFormState>(initialState);
 
-// Helper function to reset the form to its initial state
-export const resetForm = () => {
-  // Generate fresh default time values
-  const freshDefaultTimeString = getDefaultStartTime();
-  const [h, m] = freshDefaultTimeString.split(':').map(Number);
-  const freshStartTime = new Date();
-  freshStartTime.setHours(h, m, 0, 0);
-
-  taskFormStore.setState((state) => ({
-    ...initialState,
-    startDate: freshStartTime,
-    startTime: freshDefaultTimeString,
-  }));
-};
-
-// Enhanced updateField function with optimistic updates
+// Update a single field with setting the dirty flag
 export const updateField = <K extends keyof TaskFormState>(field: K, value: TaskFormState[K]) => {
-  // Get current state
-  const { mode, taskId } = taskFormStore.state;
+  taskFormStore.setState((state) => ({
+    ...state,
+    [field]: value,
+    isDirty: true,
+  }));
 
-  // Update form store first
-  taskFormStore.setState((state) => {
-    const newState = { ...state, [field]: value };
+  // If this is a title update and we're in create mode, automatically suggest an emoji
+  if (field === 'title' && typeof value === 'string' && taskFormStore.state.mode === 'create') {
+    const emoji = findEmojiForTitle(value);
+    // Debug log to see what's happening
+    console.log('Title update triggered emoji suggestion:', {
+      title: value,
+      suggestedEmoji: emoji,
+      currentEmoji: taskFormStore.state.emoji,
+    });
 
-    // Always update emoji when title changes
-    if (field === 'title') {
-      const suggestedEmoji = findEmojiForTitle(value as string);
-      if (suggestedEmoji !== '📝') {
-        // Only update if we found a meaningful match
-        newState.emoji = suggestedEmoji;
-      }
+    // Force update the emoji for testing - this should always work
+    if (emoji) {
+      console.log('Updating emoji to:', emoji);
+      taskFormStore.setState((state) => ({
+        ...state,
+        emoji,
+      }));
+
+      // Double check that it was updated
+      setTimeout(() => {
+        console.log('Emoji after update:', taskFormStore.state.emoji);
+      }, 0);
     }
-
-    return newState;
-  });
-
-  // Optimistically update the task store for selected fields
-  if (
-    mode === 'edit' &&
-    taskId &&
-    (field === 'title' || field === 'emoji' || field === 'priority')
-  ) {
-    // Create an update object with just this field
-    const update = { [field]: value } as Partial<OptimalTask>;
-
-    // Update the task in the store
-    updateTask(taskId, update);
   }
 };
 
-// Helper function to update multiple fields at once
+// Update multiple fields at once
 export const updateFields = (fields: Partial<TaskFormState>) => {
   taskFormStore.setState((state) => ({
     ...state,
@@ -171,6 +172,156 @@ export const loadTaskForEditing = (taskData: OptimalTask) => {
     isSubmitting: false,
     isDirty: false,
   }));
+};
+
+// Reset the form to the default state
+export const resetForm = () => {
+  // Get the previous duration to preserve it
+  const previousDuration = taskFormStore.state.duration;
+
+  // Get fresh defaults for time
+  const now = new Date();
+  const defaultStartTime = new Date();
+  const minutes = Math.round(now.getMinutes() / 15) * 15;
+  defaultStartTime.setMinutes(minutes % 60);
+  if (minutes === 60) {
+    defaultStartTime.setHours(defaultStartTime.getHours() + 1);
+    defaultStartTime.setMinutes(0);
+  }
+  defaultStartTime.setSeconds(0);
+  defaultStartTime.setMilliseconds(0);
+  const defaultTimeString = `${defaultStartTime.getHours().toString().padStart(2, '0')}:${defaultStartTime
+    .getMinutes()
+    .toString()
+    .padStart(2, '0')}`;
+
+  taskFormStore.setState(() => ({
+    // Basic task info
+    title: '',
+    notes: '',
+    emoji: '',
+
+    // Task categorization
+    category: 'work',
+    priority: 'medium',
+
+    // Scheduling
+    startDate: defaultStartTime,
+    startTime: defaultTimeString,
+    // Preserve the previous duration instead of resetting to default
+    duration: previousDuration,
+    dueDate: undefined,
+    dueTime: '',
+    repetition: 'once',
+    repeatInterval: 1,
+    isTimeFixed: false,
+
+    // Subtasks
+    subtasks: [],
+    progress: 0,
+
+    // Form state
+    mode: 'create',
+    taskId: null,
+    isSubmitting: false,
+    isDirty: false,
+  }));
+};
+
+// Submit the form values, directly returning the current state
+export const submitForm = () => {
+  // Set isSubmitting true - this could be used for UI loading states
+  taskFormStore.setState((state) => ({
+    ...state,
+    isSubmitting: true,
+  }));
+
+  // Get the current form values
+  const formValues = { ...taskFormStore.state };
+
+  // Reset isSubmitting and isDirty, but keep the form values
+  // (allows reviewing the submitted values if needed)
+  taskFormStore.setState((state) => ({
+    ...state,
+    isSubmitting: false,
+    isDirty: false,
+  }));
+
+  return formValues;
+};
+
+export const updateStartDateTime = (date: Date, time: string) => {
+  taskFormStore.setState((state) => ({
+    ...state,
+    startDate: date,
+    startTime: time,
+    isDirty: true,
+  }));
+};
+
+export const updateDueDateTime = (date: Date | undefined, time: string) => {
+  taskFormStore.setState((state) => ({
+    ...state,
+    dueDate: date,
+    dueTime: time,
+    isDirty: true,
+  }));
+};
+
+export const updateRepetition = (repetition: RepetitionType) => {
+  taskFormStore.setState((state) => ({
+    ...state,
+    repetition,
+    isDirty: true,
+  }));
+};
+
+export const updateRepeatInterval = (repeatInterval: number) => {
+  taskFormStore.setState((state) => ({
+    ...state,
+    repeatInterval,
+    isDirty: true,
+  }));
+};
+
+export const updateDuration = (durationMs: number) => {
+  console.log(`updateDuration called with ${durationMs}ms (${durationMs / (60 * 1000)} minutes)`);
+
+  // Get current state for reference
+  const currentState = taskFormStore.state;
+  const { mode, taskId } = currentState;
+
+  // Update the form store first
+  taskFormStore.setState((state) => ({
+    ...state,
+    duration: durationMs,
+    isDirty: true,
+  }));
+
+  // If we're in edit mode and have a valid taskId, optimistically update the task store too
+  if (mode === 'edit' && taskId) {
+    // Apply the same duration update to the actual task
+    updateTaskDuration(taskId, durationMs);
+
+    // No need to wait for confirmation since this is optimistic
+    console.log(`Optimistically updated duration for task ${taskId} to ${durationMs}ms`);
+  }
+};
+
+export const updateTimeFixed = (isFixed: boolean) => {
+  const { mode, taskId } = taskFormStore.state;
+
+  // Update form store
+  taskFormStore.setState((state) => ({
+    ...state,
+    isTimeFixed: isFixed,
+    isDirty: true,
+  }));
+
+  // If in edit mode, update the task store
+  if (mode === 'edit' && taskId) {
+    updateTask(taskId, { isTimeFixed: isFixed });
+  }
 };
 
 // Helper functions for subtasks
@@ -216,134 +367,4 @@ export const deleteSubtask = (subtaskId: string) => {
       isDirty: true,
     };
   });
-};
-
-// Scheduling helpers
-export const updateStartDateTime = (date: Date, time: string | null | undefined) => {
-  taskFormStore.setState((state) => {
-    // Ensure time is a string and not empty
-    const timeString = typeof time === 'string' && time.length > 0 ? time : '';
-
-    // Parse the start time
-    const startTimeComponents = timeString.split(':').map(Number);
-    const newStartDate = new Date(date);
-
-    // Only set hours and minutes if we have valid components
-    if (
-      startTimeComponents.length >= 2 &&
-      !isNaN(startTimeComponents[0]) &&
-      !isNaN(startTimeComponents[1])
-    ) {
-      newStartDate.setHours(startTimeComponents[0], startTimeComponents[1], 0, 0);
-
-      // If we're in edit mode and have a taskId, sync with main store
-      // Only sync if we have valid time components and a non-empty timeString
-      if (state.mode === 'edit' && state.taskId && timeString) {
-        const validTimeString: string = timeString; // Type assertion after validation
-        import('./tasks.store').then(({ updateTaskStartDateTime }) => {
-          updateTaskStartDateTime(state.taskId!, newStartDate, validTimeString);
-        });
-      }
-    }
-
-    return {
-      ...state,
-      startDate: newStartDate,
-      startTime: timeString,
-      isDirty: true,
-    };
-  });
-};
-
-export const updateDuration = (durationMs: number) => {
-  // Get current state for reference
-  const currentState = taskFormStore.state;
-  const { mode, taskId } = currentState;
-
-  // Update the form store first
-  taskFormStore.setState((state) => ({
-    ...state,
-    duration: durationMs,
-    // If we're changing duration, we may need to recalculate other timing fields
-    // This depends on your specific requirements
-  }));
-
-  // If we're in edit mode and have a valid taskId, optimistically update the task store too
-  if (mode === 'edit' && taskId) {
-    // Apply the same duration update to the actual task
-    updateTaskDuration(taskId, durationMs);
-
-    // No need to wait for confirmation since this is optimistic
-    console.log(`Optimistically updated duration for task ${taskId} to ${durationMs}ms`);
-  }
-};
-
-export const updateDueDateTime = (date: Date | undefined, time: string) => {
-  taskFormStore.setState((state) => ({
-    ...state,
-    dueDate: date,
-    dueTime: time,
-    isDirty: true,
-  }));
-};
-
-export const updateRepetition = (repetition: RepetitionType) => {
-  taskFormStore.setState((state) => ({
-    ...state,
-    repetition,
-    isDirty: true,
-  }));
-};
-
-export const updateRepeatInterval = (interval: number) => {
-  taskFormStore.setState((state) => ({
-    ...state,
-    repeatInterval: interval,
-    isDirty: true,
-  }));
-};
-
-export const updateTimeFixed = (isFixed: boolean) => {
-  const { mode, taskId } = taskFormStore.state;
-
-  // Update form store
-  taskFormStore.setState((state) => ({
-    ...state,
-    isTimeFixed: isFixed,
-    isDirty: true,
-  }));
-
-  // If in edit mode, update the task store
-  if (mode === 'edit' && taskId) {
-    updateTask(taskId, { isTimeFixed: isFixed });
-  }
-};
-
-// Generate full form data for submission
-export const getFormValues = () => {
-  const state = taskFormStore.state;
-  return {
-    title: state.title,
-    notes: state.notes,
-    emoji: state.emoji,
-    category: state.category,
-    priority: state.priority,
-    startDate: state.startDate,
-    startTime: state.startTime,
-    duration: state.duration,
-    dueDate: state.dueDate,
-    dueTime: state.dueTime,
-    repetition: state.repetition,
-    repeatInterval: state.repeatInterval,
-    subtasks: state.subtasks,
-    progress: state.progress,
-    taskId: state.taskId,
-  };
-};
-
-// Submit the form - just logs the values for now
-export const submitForm = () => {
-  const formValues = getFormValues();
-  console.log('Submitting task form:', formValues);
-  return formValues;
 };

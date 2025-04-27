@@ -1,4 +1,5 @@
 import { OptimalTask, Subtask, TaskCategory, TaskPriority } from '@/features/tasks/types';
+import { estimateTaskDuration } from '@/lib/groq-service';
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -84,6 +85,16 @@ function TaskDialogContent({
   const priority = useStore(taskFormStore, (state) => state.priority);
   const subtasks = useStore(taskFormStore, (state) => state.subtasks);
   const progress = useStore(taskFormStore, (state) => state.progress);
+  const duration = useStore(taskFormStore, (state) => state.duration);
+
+  // Force re-render for emoji changes
+  const [emojiKey, setEmojiKey] = useState(0);
+
+  // Effect to update emoji key when emoji changes
+  useEffect(() => {
+    console.log('Emoji changed to:', emoji);
+    setEmojiKey((prev) => prev + 1);
+  }, [emoji]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
@@ -98,6 +109,10 @@ function TaskDialogContent({
 
   // Loading state for AI task splitting
   const [isSplittingTask, setIsSplittingTask] = useState(false);
+
+  // AI estimation state
+  const [isDurationEstimating, setIsDurationEstimating] = useState(false);
+  const [lastEstimatedTitle, setLastEstimatedTitle] = useState('');
 
   // Initialize form when dialog opens
   useEffect(() => {
@@ -174,6 +189,24 @@ function TaskDialogContent({
     }
   }, [mode, subtasks, showSubtasks]);
 
+  // Create a dedicated function for AI estimation that can be passed to the DurationPicker
+  const requestAiEstimate = async () => {
+    if (!title || title.trim().length < 5) return;
+
+    console.log('Manual AI duration estimate requested for:', title);
+    setIsDurationEstimating(true);
+
+    try {
+      const estimatedDuration = await estimateTaskDuration(title);
+      console.log('Setting duration to:', estimatedDuration);
+      updateField('duration', estimatedDuration);
+    } catch (error) {
+      console.error('Failed to estimate duration:', error);
+    } finally {
+      setIsDurationEstimating(false);
+    }
+  };
+
   // Create a unified batch submission function for clean submission
   const submitFormBatch = () => {
     if (!title) return;
@@ -193,6 +226,7 @@ function TaskDialogContent({
         progress,
         category,
         priority,
+        // Do NOT include duration in edit mode unless explicitly changed
       };
 
       // Update the task with all changes at once
@@ -243,9 +277,10 @@ function TaskDialogContent({
   };
 
   // Update handleClose to submit changes if title is valid and form is dirty
-  const handleClose = () => {
-    // Only submit if the form is dirty AND has a title
-    if (title && title.length > 0) {
+  const handleClose = async () => {
+    // Only submit if we have a title and either this is a "create" action or the form is dirty
+    // This prevents accidental changes to the duration when just opening and closing the dialog
+    if (title && title.length > 0 && (mode === 'create' ? taskFormStore.state.isDirty : true)) {
       // Submit changes before closing
       submitFormBatch();
     }
@@ -280,6 +315,11 @@ function TaskDialogContent({
     }
   };
 
+  // Remove automatic estimation on blur
+  const handleTitleBlur = () => {
+    // No automatic estimation anymore
+  };
+
   return (
     <DialogContent
       overlayClassName="bg-black/10"
@@ -305,6 +345,7 @@ function TaskDialogContent({
         {/* Emoji picker on the left */}
         <div className="-ml-2 flex items-center">
           <EmojiPicker
+            key={`emoji-picker-${emojiKey}`}
             emoji={emoji || ''}
             onEmojiSelect={(newEmoji) => updateField('emoji', newEmoji)}
           />
@@ -386,6 +427,7 @@ function TaskDialogContent({
                     ref={textareaRef}
                     value={title || ''}
                     onChange={handleTitleChange}
+                    onBlur={handleTitleBlur}
                     onKeyDown={handleKeyDown}
                     rows={1}
                     placeholder="Task description"
@@ -444,7 +486,13 @@ function TaskDialogContent({
       {/* Fixed footer */}
       <div className="flex flex-col gap-2 border-t border-border bg-card p-2">
         <div className="mb-2 flex w-full items-center justify-between">
-          <TaskScheduler className="text-muted-foreground" taskId={editingTaskId || undefined} />
+          <TaskScheduler
+            className="text-muted-foreground"
+            taskId={editingTaskId || undefined}
+            isEstimating={isDurationEstimating}
+            onRequestAiEstimate={requestAiEstimate}
+            taskTitle={title}
+          />
           <div className="flex items-center gap-1">
             {/* <Select
               value={category}
