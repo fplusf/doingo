@@ -572,7 +572,7 @@ export const toggleTaskCompletion = (id: string) => {
 
     // If completing the task and it has a start time, update the duration
     let updatedTask = { ...task };
-    if (newCompleted && task.startTime) {
+    if (newCompleted && task.startTime && task.isFocused) {
       const currentTime = new Date();
       const actualDuration = currentTime.getTime() - task.startTime.getTime();
 
