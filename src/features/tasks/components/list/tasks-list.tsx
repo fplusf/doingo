@@ -9,6 +9,7 @@ import {
   setEditingTaskId,
   setSelectedDate,
   tasksStore,
+  updateTask,
 } from '@/features/tasks/stores/tasks.store';
 import {
   FIFTEEN_MINUTES_IN_MS,
@@ -18,6 +19,7 @@ import {
   TaskCategory,
   TaskPriority,
 } from '@/features/tasks/types/task.types';
+import { predictTaskPriority } from '@/lib/groq-service';
 import { hasTimeOverlap } from '@/lib/task-utils';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import {
@@ -429,6 +431,60 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
       });
     };
 
+    // Handle priority prediction requests from dialog
+    const handlePriorityPrediction = async (
+      taskData: { taskId?: string; title: string },
+      callback: (priority: TaskPriority) => void,
+    ) => {
+      const { taskId, title } = taskData;
+
+      if (!title || title.trim().length < 3) {
+        console.log('Title too short for priority prediction');
+        callback('none'); // Always call callback even for invalid data
+        return;
+      }
+
+      // Store taskId for tasks being edited - needed in case dialog closes during prediction
+      const currentEditingTaskId = taskId || editingTaskId;
+
+      console.log(
+        `Parent component handling priority prediction for: "${title}" (taskId: ${currentEditingTaskId || 'new task'})`,
+      );
+
+      try {
+        // Make the API call to predict priority
+        const predictedPriority = await predictTaskPriority(title);
+        console.log('Received priority prediction in parent:', predictedPriority);
+
+        // If we have a task ID, update the existing task
+        if (currentEditingTaskId) {
+          console.log(`Updating task ${currentEditingTaskId} with priority ${predictedPriority}`);
+
+          // Update the task in the store - this will affect the UI even if dialog is closed
+          updateTask(currentEditingTaskId, { priority: predictedPriority });
+
+          // Find the task in the basic tasks (without gaps) to confirm update
+          const updatedTask = basicTasks.find((t) => t.id === currentEditingTaskId);
+          if (updatedTask) {
+            console.log('Task found and updated in store:', updatedTask.id);
+          } else {
+            console.warn('Task not found in basic tasks after update. This might be a new task.');
+          }
+        } else {
+          // For new tasks, update the newTask state for future dialog opens
+          console.log('Setting priority for new task:', predictedPriority);
+          setNewTask((prev) => ({ ...prev, priority: predictedPriority }));
+        }
+
+        // Call the callback to notify the dialog component that prediction is complete
+        callback(predictedPriority);
+      } catch (error) {
+        console.error('Error handling priority prediction in parent:', error);
+        // Call callback with a safe default in case of error
+        callback('none');
+      }
+    };
+
     // --- Component Return (JSX) ---
     return (
       <ScrollArea viewportRef={viewportRef} className="relative h-full w-full">
@@ -493,6 +549,7 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
             createNewTask(values);
             setIsCreating(false);
           }}
+          onRequestPriorityPrediction={handlePriorityPrediction}
         />
 
         {editingTask && (
@@ -532,6 +589,7 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
               setEditingTask(null);
               setEditingTaskId(null);
             }}
+            onRequestPriorityPrediction={handlePriorityPrediction}
           />
         )}
 

@@ -1,3 +1,4 @@
+import { TaskPriority } from '@/features/tasks/types';
 import Groq from 'groq-sdk';
 
 // @ts-ignore - this is a valid environment variable
@@ -48,7 +49,7 @@ export const estimateTaskDuration = async (taskTitle: string): Promise<number> =
         {
           role: 'system',
           content: `You are a time management AI assistant. Analyze task titles and estimate how long they would take to complete.
-            - For small/simple tasks: 15-60 minutes
+            - For small/simple tasks: 5-60 minutes
             - For medium tasks: 1-3 hours
             - For large tasks: 3-8 hours
             - Never assign more than 8 hours (28800000ms) for any task
@@ -82,7 +83,7 @@ export const estimateTaskDuration = async (taskTitle: string): Promise<number> =
     }
 
     // Quick sanity check - if response is way too small, it's probably wrong
-    if (durationMs < 15 * 60 * 1000) {
+    if (durationMs < 5 * 60 * 1000) {
       console.warn('Duration suspiciously small, might be in wrong units. Using default.');
       return getDefaultDuration();
     }
@@ -161,3 +162,97 @@ export async function generateSubtasksWithLLM(taskTitle: string, count = 3): Pro
     return [];
   }
 }
+
+/**
+ * Predicts task priority based on task title using Groq AI
+ * @param taskTitle The title of the task to predict priority for
+ * @returns Predicted priority as TaskPriority type ('high', 'medium', 'low', 'none')
+ */
+export const predictTaskPriority = async (taskTitle: string): Promise<TaskPriority> => {
+  if (!taskTitle || taskTitle.trim().split(/\s+/).length < 3) {
+    console.log('Task title too short, using default priority (none)');
+    return 'none'; // Default to lowest priority for very short titles
+  }
+
+  try {
+    console.log(`Predicting priority for task: "${taskTitle}"`);
+
+    // Check if API key is available
+    if (!apiKey) {
+      console.warn('GROQ API key not found, using default priority');
+      return 'none';
+    }
+
+    // Use the Groq SDK client
+    const groq = getGroqClient();
+
+    const completion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: 'system',
+          content: `You are a productivity AI assistant that helps classify tasks according to the Eisenhower Matrix:
+
+                    1. Urgent & Important (high priority) - Tasks that require immediate attention and have significant impact.
+                      Examples: Deadline-critical work, emergencies, critical issues to resolve
+
+                    2. Not Urgent but Important (medium priority) - Tasks that matter but don't need immediate action.
+                      Examples: Planning, preparation, relationship building, personal development
+
+                    3. Urgent but Not Important (low priority) - Tasks with deadlines but less impact.
+                      Examples: Some emails, some calls, interruptions, many meetings
+
+                    4. Not Urgent & Not Important (none priority) - Tasks with minimal impact.
+                      Examples: Time wasters, trivial tasks, some emails, excessive social media
+
+                    Analyze the task title and determine its most appropriate category. 
+                    Return ONLY one of these values without explanation: "high", "medium", "low", or "none".`,
+        },
+        {
+          role: 'user',
+          content: `Classify this task using the Eisenhower Matrix (respond with only high, medium, low, or none): "${taskTitle}"`,
+        },
+      ],
+      model: 'llama3-8b-8192',
+      temperature: 0.2,
+      max_tokens: 10,
+    });
+
+    const priorityText = completion.choices[0]?.message?.content?.trim().toLowerCase();
+    console.log('Priority prediction from AI:', priorityText);
+
+    // Validate and map the response
+    if (
+      priorityText === 'high' ||
+      priorityText === 'medium' ||
+      priorityText === 'low' ||
+      priorityText === 'none'
+    ) {
+      return priorityText as TaskPriority;
+    }
+
+    // If we got a reasonable text but not exact match, try to map it
+    if (
+      priorityText?.includes('high') ||
+      (priorityText?.includes('urgent') && priorityText?.includes('important'))
+    ) {
+      return 'high';
+    } else if (
+      priorityText?.includes('medium') ||
+      (priorityText?.includes('important') && !priorityText?.includes('urgent'))
+    ) {
+      return 'medium';
+    } else if (
+      priorityText?.includes('low') ||
+      (priorityText?.includes('urgent') && !priorityText?.includes('important'))
+    ) {
+      return 'low';
+    }
+
+    // Default fallback
+    console.warn('Could not parse priority response, using default');
+    return 'none';
+  } catch (error) {
+    console.error('Error predicting task priority:', error);
+    return 'none';
+  }
+};

@@ -35,6 +35,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 
 interface SubtaskListProps {
+  isDetailsPage?: boolean;
   subtasks: Subtask[];
   onSubtasksChange?: (subtasks: Subtask[]) => void;
   className?: string;
@@ -121,6 +122,7 @@ const SortableSubtaskItem = ({
 };
 
 export function SubtaskList({
+  isDetailsPage = false,
   subtasks = [],
   onSubtasksChange,
   className,
@@ -507,40 +509,44 @@ export function SubtaskList({
   return (
     <div className={cn('space-y-4', className)}>
       {/* AI Task Generator UI */}
-      <div className="flex items-center gap-3 px-1 pl-5 pt-1">
-        <div className="flex items-center gap-1.5">
-          <Input
-            type="number"
-            value={subtaskCount}
-            onChange={handleSubtaskCountChange}
-            className="h-8 w-16 text-xs"
-            min={1}
-            max={15}
-            disabled={isGeneratingSubtasks}
-          />
-          <span className="text-xs text-muted-foreground">subtasks</span>
-        </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleAiSplitTask}
-          disabled={isGeneratingSubtasks}
-          className="ml-6 h-8 px-3 text-xs"
-        >
-          {isGeneratingSubtasks ? (
-            <span className="flex items-center">
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin text-blue-500" />
-              <span>Generating</span>
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-              <span>AI split task</span>
-            </span>
-          )}
-        </Button>
-      </div>
+      {/* show only in the dialog not in the task details page */}
+      {!isDetailsPage && (
+        <div className="flex items-center gap-3 px-1 pl-5 pt-1">
+          <div className="flex items-center gap-1.5">
+            <Input
+              type="number"
+              value={subtaskCount}
+              onChange={handleSubtaskCountChange}
+              className="h-8 w-16 text-xs"
+              min={1}
+              max={15}
+              disabled={isGeneratingSubtasks}
+            />
+            <span className="text-xs text-muted-foreground">subtasks</span>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAiSplitTask}
+            disabled={isGeneratingSubtasks}
+            className="ml-6 h-8 px-3 text-xs"
+          >
+            {isGeneratingSubtasks ? (
+              <span className="flex items-center">
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin text-blue-500" />
+                <span>Generating</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                <span>AI split task</span>
+              </span>
+            )}
+          </Button>
+        </div>
+      )}
 
       {/* Only show error message when there is an error */}
       {error && <p className="px-1 pl-5 text-xs text-destructive">{error}</p>}

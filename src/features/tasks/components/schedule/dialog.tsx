@@ -1,5 +1,4 @@
 import { OptimalTask, Subtask, TaskCategory, TaskPriority } from '@/features/tasks/types';
-import { estimateTaskDuration } from '@/lib/groq-service';
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -19,6 +18,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { ChevronDown, ChevronRight, ListPlus, Maximize2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { estimateTaskDuration } from '../../../../lib/groq-service';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { useSubtasksCollapse } from '../../hooks/use-subtasks-collapse';
 import {
@@ -60,6 +60,10 @@ interface TaskDialogProps {
   onSubmit: (values: TaskFormValues) => void;
   mode?: 'create' | 'edit';
   className?: string;
+  onRequestPriorityPrediction?: (
+    taskData: { taskId?: string; title: string },
+    callback: (priority: TaskPriority) => void,
+  ) => void;
 }
 
 function TaskDialogContent({
@@ -69,6 +73,7 @@ function TaskDialogContent({
   onOpenChange,
   open,
   initialValues,
+  onRequestPriorityPrediction,
 }: {
   onSubmit: (values: TaskFormValues) => void;
   mode?: 'create' | 'edit';
@@ -76,6 +81,10 @@ function TaskDialogContent({
   onOpenChange: (open: boolean) => void;
   open: boolean;
   initialValues?: Partial<TaskFormValues>;
+  onRequestPriorityPrediction?: (
+    taskData: { taskId?: string; title: string },
+    callback: (priority: TaskPriority) => void,
+  ) => void;
 }) {
   // Use the store for all form values
   const title = useStore(taskFormStore, (state) => state.title);
@@ -87,6 +96,13 @@ function TaskDialogContent({
   const progress = useStore(taskFormStore, (state) => state.progress);
   const duration = useStore(taskFormStore, (state) => state.duration);
 
+  // Track original title for edit mode
+  const [originalTitle, setOriginalTitle] = useState<string>('');
+  const [titleHasChanged, setTitleHasChanged] = useState(false);
+
+  // Tracking flag for prediction requests to avoid duplicates
+  const [predictionRequested, setPredictionRequested] = useState(false);
+
   // Force re-render for emoji changes
   const [emojiKey, setEmojiKey] = useState(0);
 
@@ -95,6 +111,19 @@ function TaskDialogContent({
     console.log('Emoji changed to:', emoji);
     setEmojiKey((prev) => prev + 1);
   }, [emoji]);
+
+  // Effect to track title changes
+  useEffect(() => {
+    if (
+      mode === 'edit' &&
+      title !== originalTitle &&
+      Math.abs(title.length - originalTitle.length) >= 5
+    ) {
+      setTitleHasChanged(true);
+      // Reset prediction flag when title changes significantly
+      setPredictionRequested(false);
+    }
+  }, [title, originalTitle, mode]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
@@ -114,6 +143,9 @@ function TaskDialogContent({
   const [isDurationEstimating, setIsDurationEstimating] = useState(false);
   const [lastEstimatedTitle, setLastEstimatedTitle] = useState('');
 
+  // AI priority prediction state
+  const [isPriorityPredicting, setIsPriorityPredicting] = useState(false);
+
   // Initialize form when dialog opens
   useEffect(() => {
     if (open) {
@@ -121,8 +153,10 @@ function TaskDialogContent({
       if (mode === 'create') {
         // Reset form to default values
         resetForm();
-
         setShowSubtasks(false);
+        setTitleHasChanged(false);
+        setOriginalTitle('');
+        setPredictionRequested(false);
 
         // Apply any initial values passed to the component
         if (initialValues) {
@@ -137,6 +171,11 @@ function TaskDialogContent({
         if (taskToEdit) {
           // Load task data into form
           loadTaskForEditing(taskToEdit);
+
+          // Set the original title to track changes
+          setOriginalTitle(taskToEdit.title || '');
+          setTitleHasChanged(false);
+          setPredictionRequested(false);
         }
       }
     }
@@ -189,27 +228,51 @@ function TaskDialogContent({
     }
   }, [mode, subtasks, showSubtasks]);
 
-  // Create a dedicated function for AI estimation that can be passed to the DurationPicker
-  const requestAiEstimate = async () => {
-    if (!title || title.trim().length < 5) return;
+  // Helper function to check if we should request priority prediction
+  const shouldRequestPriorityPrediction = () => {
+    return (
+      title &&
+      title.trim().length > 3 &&
+      onRequestPriorityPrediction &&
+      !predictionRequested && // Only request if we haven't already
+      (mode === 'create' || (mode === 'edit' && titleHasChanged))
+    );
+  };
 
-    console.log('Manual AI duration estimate requested for:', title);
-    setIsDurationEstimating(true);
-
-    try {
-      const estimatedDuration = await estimateTaskDuration(title);
-      console.log('Setting duration to:', estimatedDuration);
-      updateField('duration', estimatedDuration);
-    } catch (error) {
-      console.error('Failed to estimate duration:', error);
-    } finally {
-      setIsDurationEstimating(false);
+  // Helper to emit priority prediction request to parent with callback
+  const requestPriorityPrediction = () => {
+    if (!shouldRequestPriorityPrediction() || !onRequestPriorityPrediction) {
+      return;
     }
+
+    // Mark prediction as requested to prevent duplicates
+    setPredictionRequested(true);
+    setIsPriorityPredicting(true);
+
+    // Call parent with a callback to handle prediction completion
+    onRequestPriorityPrediction(
+      {
+        taskId: mode === 'edit' && editingTaskId ? editingTaskId : undefined,
+        title,
+      },
+      (predictedPriority) => {
+        // Update local state with the predicted priority
+        updateField('priority', predictedPriority);
+
+        // Reset the predicting state when complete
+        setIsPriorityPredicting(false);
+      },
+    );
   };
 
   // Create a unified batch submission function for clean submission
   const submitFormBatch = () => {
     if (!title) return;
+
+    // Trigger priority prediction if needed
+    if (shouldRequestPriorityPrediction()) {
+      requestPriorityPrediction();
+    }
 
     // Get all form values and submit them
     const formValues = submitForm();
@@ -234,15 +297,84 @@ function TaskDialogContent({
     }
   };
 
-  // Update handleSubmit to be non-blocking
+  // Update handleSubmit to remove direct prediction request
   const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     if (e) e.preventDefault();
+
+    // Prediction request is handled within submitFormBatch
+
     if (title && title.length > 0) {
       // Submit the form immediately
       submitFormBatch();
-      const currentTaskId = editingTaskId;
       onOpenChange(false);
       setEditingTaskId(null);
+    }
+  };
+
+  // Handle when title input loses focus
+  const handleTitleBlur = () => {
+    // Request priority prediction on blur if needed
+    if (shouldRequestPriorityPrediction()) {
+      requestPriorityPrediction();
+    }
+  };
+
+  // Update handleClose to remove direct prediction request
+  const handleClose = async () => {
+    // Prediction request is handled within submitFormBatch
+
+    // Only submit if we have a title and either this is a "create" action or the form is dirty
+    // This prevents accidental changes to the duration when just opening and closing the dialog
+    if (title && title.length > 0 && (mode === 'create' ? taskFormStore.state.isDirty : true)) {
+      // Submit changes before closing
+      submitFormBatch();
+    }
+
+    // Always close the dialog and reset editing state
+    onOpenChange(false);
+    setEditingTaskId(null);
+  };
+
+  // Update handleFullScreen to remove direct prediction request
+  const handleFullScreen = () => {
+    // Prediction request is handled within submitFormBatch
+
+    if (title && title.length > 0) {
+      // Submit the form in batch
+      submitFormBatch();
+
+      let taskId: string | null = null;
+
+      if (mode === 'edit' && editingTaskId) {
+        taskId = editingTaskId;
+      }
+
+      // Navigate based on available task ID
+      if (taskId) {
+        navigate({ to: `/tasks/${taskId}`, params: { taskId } });
+      } else {
+        navigate({ to: '/tasks' });
+      }
+
+      // Close the dialog and clear the editing state
+      onOpenChange(false);
+      setEditingTaskId(null);
+    }
+  };
+
+  // Create a dedicated function for AI estimation that can be passed to the DurationPicker
+  const requestAiEstimate = async () => {
+    if (!title || title.trim().length < 5) return;
+
+    setIsDurationEstimating(true);
+
+    try {
+      const estimatedDuration = await estimateTaskDuration(title);
+      updateField('duration', estimatedDuration);
+    } catch (error) {
+      console.error('Failed to estimate duration:', error);
+    } finally {
+      setIsDurationEstimating(false);
     }
   };
 
@@ -271,53 +403,26 @@ function TaskDialogContent({
     }
   };
 
-  // Simple title change handler without emoji logic
+  // Handle title change
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    updateField('title', e.target.value);
-  };
+    const newTitle = e.target.value;
+    updateField('title', newTitle);
 
-  // Update handleClose to submit changes if title is valid and form is dirty
-  const handleClose = async () => {
-    // Only submit if we have a title and either this is a "create" action or the form is dirty
-    // This prevents accidental changes to the duration when just opening and closing the dialog
-    if (title && title.length > 0 && (mode === 'create' ? taskFormStore.state.isDirty : true)) {
-      // Submit changes before closing
-      submitFormBatch();
-    }
-
-    // Always close the dialog and reset editing state
-    onOpenChange(false);
-    setEditingTaskId(null);
-  };
-
-  // Update handleFullScreen to use batch submission
-  const handleFullScreen = () => {
-    if (title && title.length > 0) {
-      // Submit the form in batch
-      submitFormBatch();
-
-      let taskId: string | null = null;
-
-      if (mode === 'edit' && editingTaskId) {
-        taskId = editingTaskId;
-      }
-
-      // Navigate based on available task ID
-      if (taskId) {
-        navigate({ to: `/tasks/${taskId}`, params: { taskId } });
-      } else {
-        navigate({ to: '/tasks' });
-      }
-
-      // Close the dialog and clear the editing state
-      onOpenChange(false);
-      setEditingTaskId(null);
+    // In edit mode, check if title has changed from original
+    if (
+      mode === 'edit' &&
+      newTitle !== originalTitle &&
+      Math.abs(newTitle.length - originalTitle.length) >= 5
+    ) {
+      setTitleHasChanged(true);
+      // Reset prediction flag when title changes significantly
+      setPredictionRequested(false);
     }
   };
 
-  // Remove automatic estimation on blur
-  const handleTitleBlur = () => {
-    // No automatic estimation anymore
+  // Handle priority change
+  const handlePriorityChange = (newPriority: TaskPriority) => {
+    updateField('priority', newPriority);
   };
 
   return (
@@ -533,7 +638,9 @@ function TaskDialogContent({
 
             <PriorityPicker
               value={priority}
-              onValueChange={(priority) => updateField('priority', priority)}
+              onValueChange={handlePriorityChange}
+              isPredicting={isPriorityPredicting}
+              taskTitle={title}
             />
           </div>
         </div>
@@ -551,6 +658,7 @@ export function TaskDialog({
   onSubmit,
   mode = 'create',
   className,
+  onRequestPriorityPrediction,
 }: TaskDialogProps) {
   return (
     <Dialog open={open}>
@@ -561,6 +669,7 @@ export function TaskDialog({
         onOpenChange={onOpenChange}
         open={open}
         initialValues={initialValues}
+        onRequestPriorityPrediction={onRequestPriorityPrediction}
       />
     </Dialog>
   );

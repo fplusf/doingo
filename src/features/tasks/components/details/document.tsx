@@ -98,6 +98,7 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
 
         <SubtaskList
           className="z-40 mb-6"
+          isDetailsPage={true}
           subtasks={task.subtasks || []}
           onSubtasksChange={(updatedSubtasks) => {
             const nonEmptySubtasks = updatedSubtasks.filter((s) => s.title.trim().length > 0);
