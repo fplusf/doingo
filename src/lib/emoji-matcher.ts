@@ -38,7 +38,7 @@ const STOP_WORDS = new Set([
   'where',
   'who',
   'which',
-  'why',
+  // 'why',
   'how',
 ]);
 
@@ -97,6 +97,12 @@ const findEmojiForWord = (word: string, position: number): EmojiMatch | null => 
     const isContainedMatch =
       !exactMatch && !containsMatch && searchTerms.some((term) => word.includes(term));
 
+    // Skip unwanted emojis
+    const unwantedEmojis = ['😐', '😑'];
+    if (unwantedEmojis.includes(emojiInfo.skins[0].native)) {
+      return;
+    }
+
     if (exactMatch || containsMatch || isContainedMatch) {
       searchResults.push({
         word,
@@ -119,17 +125,29 @@ let lastMatchedWord = '';
 let lastMatchedEmoji = '📝';
 
 export const findEmojiForTitle = (title: string): string => {
-  if (!title?.trim()) return '📝';
+  console.log('Finding emoji for title:', title);
+  console.log('Current lastMatchedEmoji:', lastMatchedEmoji);
+
+  if (!title?.trim()) {
+    console.log('Empty title, returning lastMatchedEmoji:', lastMatchedEmoji || '📝');
+    return lastMatchedEmoji || '📝';
+  }
 
   // Get meaningful words
   const meaningfulWords = getMeaningfulWords(title);
-  if (!meaningfulWords.length) return '📝';
+  console.log('Meaningful words:', meaningfulWords);
+
+  if (!meaningfulWords.length) {
+    console.log('No meaningful words, returning lastMatchedEmoji:', lastMatchedEmoji || '📝');
+    return lastMatchedEmoji || '📝';
+  }
 
   // Find emoji matches for each word
   const matches: EmojiMatch[] = [];
   meaningfulWords.forEach((word, index) => {
     // Skip if this word was the last matched word (avoid unnecessary recomputation)
     if (word === lastMatchedWord) {
+      console.log('Using cached match for word:', word, 'with emoji:', lastMatchedEmoji);
       matches.push({
         word,
         emoji: lastMatchedEmoji,
@@ -141,12 +159,26 @@ export const findEmojiForTitle = (title: string): string => {
 
     const match = findEmojiForWord(word, index);
     if (match) {
+      console.log('Found new match for word:', word, 'with emoji:', match.emoji);
       matches.push(match);
+    } else {
+      console.log('No match found for word:', word);
     }
   });
 
-  // If no matches found, return default
-  if (!matches.length) return '📝';
+  // If no matches found, return the last matched emoji or default
+  if (!matches.length) {
+    console.log('No matches found for any words, using fallback emoji:', lastMatchedEmoji || '📝');
+
+    // If lastMatchedEmoji is an unwanted emoji, reset it to 📝
+    const unwantedEmojis = ['😐', '😑'];
+    if (unwantedEmojis.includes(lastMatchedEmoji)) {
+      console.log('Resetting lastMatchedEmoji from unwanted emoji to default');
+      lastMatchedEmoji = '📝';
+    }
+
+    return lastMatchedEmoji || '📝';
+  }
 
   // Sort matches by position (to get the latest match) and then by relevance
   const sortedMatches = matches.sort((a, b) => {
@@ -158,11 +190,23 @@ export const findEmojiForTitle = (title: string): string => {
     return b.relevance - a.relevance;
   });
 
+  console.log('sortedMatches: ', sortedMatches);
   // Update last matched word and emoji
   const bestMatch = sortedMatches[0];
   lastMatchedWord = bestMatch.word;
-  lastMatchedEmoji = bestMatch.emoji;
+  console.log('lastMatchedWord', lastMatchedWord);
 
-  // Return the emoji from the best match
-  return bestMatch.emoji;
+  // Ensure we never use unwanted emojis
+  const unwantedEmojis = ['😐', '😑'];
+  if (unwantedEmojis.includes(bestMatch.emoji)) {
+    console.log('Avoiding unwanted emoji, using default 📝 instead');
+    lastMatchedEmoji = '📝';
+  } else {
+    lastMatchedEmoji = bestMatch.emoji;
+  }
+
+  console.log('lastMatchedEmoji', lastMatchedEmoji);
+
+  // Return the emoji from the best match (avoiding neutral face)
+  return lastMatchedEmoji;
 };
