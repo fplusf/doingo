@@ -94,7 +94,9 @@ export const useMenuBarCountdown = () => {
 
     // Cleanup function
     return () => {
-      ipcRenderer.send('stop-countdown');
+      // No need to send stop-countdown here, as the main process handles timer expiry
+      // and the effect logic already sends stop when necessary.
+      // ipcRenderer.send('stop-countdown'); // Removed this line
     };
   }, [focusedTaskId, focusedTask]);
 
