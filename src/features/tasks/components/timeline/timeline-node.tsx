@@ -33,14 +33,12 @@ export function TimelineNode({
   onClick,
   startTime,
   duration,
-  prevTaskEndTime,
   nextTaskStartTime,
   hideStartTime = false,
   hideEndTime = false,
   isFocused = false,
   timeSpent = 0,
   isEarliestFocused = false, // Default to false
-  isTimeFixed = false, // Default to false
   onCompletedChange,
 }: TimelineNodeProps) {
   const [progress, setProgress] = useState(0);
@@ -75,9 +73,6 @@ export function TimelineNode({
 
   // Get priority color
   const getPriorityColor = (): string => {
-    if (priority === 'none' || priority === 'not-urgent-not-important') {
-      return '#66BB6A'; // Green for Daily Meditation, Overlapping Task
-    }
     return PRIORITY_COLORS[priority as keyof typeof PRIORITY_COLORS];
   };
 
@@ -166,13 +161,11 @@ export function TimelineNode({
     return '48px';
   };
 
-  const nodeHeight = getNodeHeight();
-
   // Get border color based on priority
   const getBorderStyles = (priority: TaskPriority) => {
-    if (priority === 'none' || priority === 'not-urgent-not-important') {
+    if (priority === 'none') {
       return {
-        border: '0.5px solid #66BB6A',
+        border: '0.5px solid #0a8537',
         boxShadow: '0 0 0 0.5px rgba(102, 187, 106, 0.6)',
       };
     }

@@ -13,13 +13,7 @@ export type RepetitionOption = {
   repeatEndDate?: Date;
 };
 
-export type TaskPriority =
-  | 'none'
-  | 'high'
-  | 'medium'
-  | 'low'
-  | 'not-urgent-not-important'
-  | undefined;
+export type TaskPriority = 'none' | 'high' | 'medium' | 'low' | undefined;
 export type TaskCategory = 'work' | 'passion' | 'play';
 
 export type GapType = 'break' | 'free-slot' | 'get-ready' | 'idle-time';

@@ -1,4 +1,3 @@
-import { TIMELINE_CATEGORIES } from '@/features/tasks/components/timeline/timeline';
 import { PRIORITY_COLORS as PRIORITY_COLOR_HEX } from '@/features/tasks/constants/priority-colors';
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
@@ -40,6 +39,7 @@ export function CategorySection({
   overlaps,
   highlightedTaskId,
 }: CategorySectionProps) {
+  console.log('tasks changed..', tasks);
   const containerRef = useRef<HTMLDivElement>(null);
   const [connectorSegments, setConnectorSegments] = useState<ConnectorSegment[]>([]);
   const nowRef = useRef(new Date()); // Use ref to keep 'now' consistent across renders
@@ -132,12 +132,11 @@ export function CategorySection({
 
           // Add segment before the first node (using category color)
           const centerX = firstRect.left + firstRect.width / 2 - containerRect.left;
-          const categoryColor = TIMELINE_CATEGORIES[category].color;
 
           segments.push({
             top: '24px', // Start 24px from the top
             height: `${firstRect.top - containerRect.top - 24}px`,
-            startColor: categoryColor,
+            startColor: getTaskColor(firstTask),
             endColor: getTaskColor(firstTask),
             left: `${centerX}px`,
           });
@@ -191,6 +190,21 @@ export function CategorySection({
 
         // Special handling for gap items
         if (currentTask.isGap || nextTask.isGap) {
+          // Find the actual task before the gap (if any)
+          const taskBeforeGap = tasks
+            .slice(0, i + 1) // Include current item
+            .reverse()
+            .find((t) => !t.isGap);
+
+          // Find the actual task after the gap (if any)
+          const taskAfterGap = tasks
+            .slice(i + 1) // Start from the next item
+            .find((t) => !t.isGap);
+
+          // Determine the correct start and end colors based on adjacent non-gap tasks
+          const startColor = getTaskColor(taskBeforeGap);
+          const endColor = getTaskColor(taskAfterGap);
+
           // Calculate positions for gap connectors
           let currentBottom: number;
           let nextTop: number;
@@ -259,8 +273,9 @@ export function CategorySection({
           segments.push({
             top: `${currentBottom}px`,
             height: `${nextTop - currentBottom}px`,
-            startColor: getTaskColor(currentTask),
-            endColor: getTaskColor(nextTask),
+            // Use the corrected colors
+            startColor: startColor,
+            endColor: endColor,
             left: `${centerX}px`,
             isDotted: true,
             timeGap: gapDuration,
@@ -268,6 +283,8 @@ export function CategorySection({
             endTime: nextTask.startTime,
             isForGap: true,
           });
+
+          console.log('gap segment added..:', { startColor, endColor }, segments.at(-1));
 
           continue;
         }
@@ -327,7 +344,7 @@ export function CategorySection({
       }
       resizeObserver.disconnect();
     };
-  }, [tasks, category]); // Rerun effect when tasks or category change
+  }, [tasks]); // Rerun effect when tasks or category change
 
   // Function to render gap content based on gap type
   const renderGapContent = (task: OptimalTask) => {
@@ -434,8 +451,6 @@ export function CategorySection({
                   startColor={segment.startColor}
                   endColor={segment.endColor}
                   segmentHeight={parseFloat(segment.height)}
-                  isLongGap={segment.timeGap ? segment.timeGap >= SEVEN_HOURS_IN_MS : false}
-                  timeGap={segment.timeGap}
                 />
               )}
             </div>

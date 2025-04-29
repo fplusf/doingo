@@ -5,23 +5,7 @@ import { tasksStore } from '../../stores/tasks.store';
 import { ONE_HOUR_IN_MS, TaskCategory, TaskPriority } from '../../types';
 import { TimelineNode } from './timeline-node';
 
-export const TIMELINE_CATEGORIES = {
-  work: {
-    label: 'Work',
-    color: '#42A5F5', // Blue
-  },
-  passion: {
-    label: 'Passion',
-    color: '#E57373', // Red
-  },
-  play: {
-    label: 'Play',
-    color: '#66BB6A', // Green
-  },
-} as const;
-
 const DEFAULT_CATEGORY = 'work';
-const DEFAULT_COLOR = '#9ca3af'; // softer slate color
 
 interface TimelineItemProps extends React.HTMLAttributes<HTMLDivElement> {
   startTime: Date;
