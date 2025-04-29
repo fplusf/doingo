@@ -166,21 +166,28 @@ export const TimelineTaskItem = ({
       if (scrollContainer) {
         scrollContainer.style.overflow = '';
       }
-      // Read latest temp state directly from the imported store's state property
-      const tempState = tasksStore.state.resizingState;
-      if (
-        tempState.taskId === currentTask.id &&
-        tempState.temporaryDuration &&
-        tempState.temporaryEndTime
-      ) {
-        // Update ONLY the task being resized
+
+      // Get the final height directly from the element after GSAP drag ends
+      const finalHeight = gsap.getProperty(currentContainer, 'height') as number;
+      const finalDuration = heightToDuration(finalHeight);
+      const finalEndTime = new Date(currentTask.startTime.getTime() + finalDuration);
+
+      // Calculate the height corresponding to the final (rounded) duration
+      const targetHeight = MIN_HEIGHT_PX + finalDuration / (60 * 1000);
+      // Set the element height explicitly to match what React will calculate
+      gsap.set(currentContainer, { height: targetHeight });
+
+      // Use requestAnimationFrame to ensure updates happen after the browser has painted
+      requestAnimationFrame(() => {
+        // Update ONLY the task being resized with the final calculated values
         updateTask(currentTask.id, {
-          duration: tempState.temporaryDuration,
-          nextStartTime: tempState.temporaryEndTime,
+          duration: finalDuration,
+          nextStartTime: finalEndTime,
         });
-      }
-      clearResizingState();
-      setResizing(false); // Update state
+
+        clearResizingState();
+        setResizing(false); // Update state
+      });
     };
 
     const dragger = Draggable.create(proxyEl, {

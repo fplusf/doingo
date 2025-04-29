@@ -90,6 +90,8 @@ export interface TasksState {
     temporaryEndTime: Date | null;
   };
   lastUpdate: number; // Timestamp for forcing recalculation of derived state
+  isResizingTask: boolean; // Flag to indicate if a task resize is in progress
+  justFinishedResizing: boolean; // Flag to skip animation immediately after resize
 }
 
 export interface DragHandleProps {

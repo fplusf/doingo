@@ -39,7 +39,6 @@ export function CategorySection({
   overlaps,
   highlightedTaskId,
 }: CategorySectionProps) {
-  console.log('tasks changed..', tasks);
   const containerRef = useRef<HTMLDivElement>(null);
   const [connectorSegments, setConnectorSegments] = useState<ConnectorSegment[]>([]);
   const nowRef = useRef(new Date()); // Use ref to keep 'now' consistent across renders

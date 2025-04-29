@@ -270,6 +270,16 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
 
     // Use layout effect to run GSAP animations when tasks change
     useLayoutEffect(() => {
+      // If a resize just finished, skip animation for this cycle and reset the flag
+      if (tasksStore.state.justFinishedResizing) {
+        tasksStore.setState((state) => ({ ...state, justFinishedResizing: false }));
+        taskPositionsRef.current = captureTaskPositions(); // Update positions
+        return; // Skip animation
+      }
+
+      // Skip animation if a resize is currently in progress
+      if (tasksStore.state.isResizingTask) return;
+
       // Skip animation on initial render
       if (prevTasksRef.current.length === 0) return;
 

@@ -91,6 +91,8 @@ const initialState: TasksState = {
     temporaryEndTime: null,
   },
   lastUpdate: Date.now(),
+  isResizingTask: false,
+  justFinishedResizing: false,
 };
 
 export const tasksStore = new Store<TasksState>(initialState);
@@ -661,6 +663,8 @@ export const clearTasks = () => {
       temporaryDuration: null,
       temporaryEndTime: null,
     },
+    isResizingTask: false,
+    justFinishedResizing: false,
   }));
 };
 
@@ -1092,6 +1096,7 @@ export const setResizingState = (
       temporaryDuration,
       temporaryEndTime,
     },
+    isResizingTask: true,
   }));
 };
 
@@ -1101,14 +1106,23 @@ export const clearResizingState = () => {
     isResizingActive = false;
   }, 500);
 
-  tasksStore.setState((state) => ({
-    ...state,
-    resizingState: {
-      taskId: null,
-      temporaryDuration: null,
-      temporaryEndTime: null,
-    },
-  }));
+  tasksStore.setState((state) => {
+    // Only clear if there was an active resize
+    if (state.resizingState.taskId) {
+      return {
+        ...state,
+        resizingState: {
+          taskId: null,
+          temporaryDuration: null,
+          temporaryEndTime: null,
+        },
+        isResizingTask: false,
+        justFinishedResizing: true,
+        lastUpdate: Date.now(),
+      };
+    }
+    return state; // No change if no resize was active
+  });
 };
 
 // Add a function to check if resize is in progress
