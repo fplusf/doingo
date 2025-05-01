@@ -11,6 +11,7 @@ import { Draggable } from 'gsap/Draggable';
 import { Blend, ChevronDown, ChevronsDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTaskHistoryContext } from '../../providers/task-history-provider';
+import { updateCompletionStatus } from '../../stores/task-form.store';
 import { ONE_HOUR_IN_MS, OptimalTask } from '../../types';
 import { TimelineItem } from '../timeline/timeline';
 import { TaskItem } from './task-item';
@@ -374,7 +375,11 @@ export const TimelineTaskItem = ({
                   duration={effectiveDuration}
                   category={task.category}
                   onEditTask={() => onEdit(taskRef.current)}
-                  onCompletedChange={() => toggleTaskCompletion(taskRef.current.id)}
+                  onCompletedChange={() => {
+                    toggleTaskCompletion(taskRef.current.id);
+                    // Update task form store for sync
+                    updateCompletionStatus(!taskRef.current.completed);
+                  }}
                   onPriorityChange={(priority) => updateTask(taskRef.current.id, { priority })}
                   isLastItem={isLastItem}
                   fixedHeight={true}

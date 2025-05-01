@@ -2,8 +2,9 @@ import { EmojiPicker } from '@/features/tasks/components/schedule/emoji-picker';
 import { OptimalTask } from '@/features/tasks/types';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
+import { updateCompletionStatus } from '../../stores/task-form.store';
 import { toggleTaskCompletion, updateTask } from '../../stores/tasks.store';
 import CollapsedContainer from '../schedule/collapsed-container';
 import { TaskScheduler } from '../schedule/task-scheduler';
@@ -19,6 +20,12 @@ interface TaskDocumentProps {
 export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
   // Extract task ID for all update operations
   const taskId = task.id;
+
+  // Sync task completion status with the form
+  useEffect(() => {
+    // Update the form state when the task's completion status changes
+    updateCompletionStatus(task.completed);
+  }, [task.completed, taskId]);
 
   // Handler for updating the task title
   const handleTitleChange = useCallback(
@@ -45,6 +52,8 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
   const handleTaskCompletedChange = useCallback(
     (completed: boolean) => {
       toggleTaskCompletion(taskId);
+      // Also update the form store to stay in sync
+      updateCompletionStatus(!task.completed);
       // Call onEdit for backward compatibility if provided
       if (onEdit) onEdit({ ...task, completed: !task.completed });
     },

@@ -607,6 +607,16 @@ export const toggleTaskCompletion = (id: string) => {
     };
   });
 
+  // Sync with task form store
+  // Get the updated task after the state change
+  const updatedTask = tasksStore.state.tasks.find((t) => t.id === id);
+  if (updatedTask) {
+    // Import dynamically to avoid circular dependencies
+    import('./task-form.store').then(({ updateCompletionStatus }) => {
+      updateCompletionStatus(updatedTask.completed);
+    });
+  }
+
   // Return the previous task state for undo/redo
   return taskBeforeToggle;
 };
@@ -637,6 +647,16 @@ export const toggleSubtaskCompletion = (taskId: string, subtaskId: string) => {
       ),
     };
   });
+
+  // Sync with task form store
+  // We need to get the current task state after the update
+  const updatedTask = tasksStore.state.tasks.find((t) => t.id === taskId);
+  if (updatedTask) {
+    // Import dynamically to avoid circular dependencies
+    import('./task-form.store').then(({ updateCompletionStatus }) => {
+      updateCompletionStatus(updatedTask.completed);
+    });
+  }
 };
 
 export const clearTasks = () => {

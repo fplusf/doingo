@@ -51,6 +51,7 @@ export interface TaskFormValues {
   subtasks?: Subtask[];
   progress?: number;
   repetition?: 'once' | 'daily' | 'weekly' | 'custom';
+  completed?: boolean;
 }
 
 interface TaskDialogProps {
@@ -95,6 +96,7 @@ function TaskDialogContent({
   const subtasks = useStore(taskFormStore, (state) => state.subtasks);
   const progress = useStore(taskFormStore, (state) => state.progress);
   const duration = useStore(taskFormStore, (state) => state.duration);
+  const completed = useStore(taskFormStore, (state) => state.completed);
 
   // Track original title for edit mode
   const [originalTitle, setOriginalTitle] = useState<string>('');
@@ -288,6 +290,7 @@ function TaskDialogContent({
         progress,
         category,
         priority,
+        completed,
         // Do NOT include duration in edit mode unless explicitly changed
       };
 
@@ -506,8 +509,11 @@ function TaskDialogContent({
           <div className="space-y-4">
             <div className="relative flex items-baseline gap-2">
               <TaskCheckbox
-                checked={progress === 100}
-                onCheckedChange={(checked) => updateField('progress', checked ? 100 : 0)}
+                checked={completed}
+                onCheckedChange={(checked) => {
+                  updateField('completed', checked);
+                  updateField('progress', checked ? 100 : 0);
+                }}
                 size="lg"
                 className="mt-1"
                 ariaLabel="Mark task as completed"

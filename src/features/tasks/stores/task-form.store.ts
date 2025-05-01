@@ -1,9 +1,11 @@
 import { findEmojiForTitle } from '@/lib/emoji-matcher';
 import { Store } from '@tanstack/react-store';
+import { addMilliseconds, parse, parseISO } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import {
   ONE_HOUR_IN_MS,
   OptimalTask,
+  RepetitionOption,
   RepetitionType,
   Subtask,
   TaskCategory,
@@ -35,6 +37,7 @@ export interface TaskFormState {
   // Subtasks
   subtasks: Subtask[];
   progress: number;
+  completed: boolean;
 
   // Form state
   mode: 'create' | 'edit';
@@ -93,6 +96,7 @@ const initialState: TaskFormState = {
   // Subtasks
   subtasks: [],
   progress: 0,
+  completed: false,
 
   // Form state
   mode: 'create',
@@ -167,6 +171,7 @@ export const loadTaskForEditing = (taskData: OptimalTask) => {
     isTimeFixed: taskData.isTimeFixed || false,
     subtasks: taskData.subtasks || [],
     progress: taskData.progress || 0,
+    completed: taskData.completed || false,
     mode: 'edit',
     taskId: taskData.id,
     isSubmitting: false,
@@ -219,6 +224,7 @@ export const resetForm = () => {
     // Subtasks
     subtasks: [],
     progress: 0,
+    completed: false,
 
     // Form state
     mode: 'create',
@@ -367,4 +373,114 @@ export const deleteSubtask = (subtaskId: string) => {
       isDirty: true,
     };
   });
+};
+
+// Add a new function to update completion status
+export const updateCompletionStatus = (completed: boolean) => {
+  const { mode, taskId } = taskFormStore.state;
+
+  // Update the form store
+  taskFormStore.setState((state) => ({
+    ...state,
+    completed,
+    isDirty: true,
+  }));
+
+  // If in edit mode, update the task store
+  if (mode === 'edit' && taskId) {
+    // Import dynamically to avoid circular dependencies
+    import('./tasks.store').then(({ updateTask }) => {
+      updateTask(taskId, { completed });
+    });
+  }
+};
+
+// Enhanced task editing function
+export const editExistingTask = (
+  task: OptimalTask,
+  values: {
+    title: string;
+    notes?: string;
+    emoji?: string;
+    startTime?: string;
+    dueTime?: string;
+    duration?: number;
+    dueDate?: Date;
+    priority?: TaskPriority;
+    category?: TaskCategory;
+    subtasks?: Subtask[];
+    progress?: number;
+    repetition?: RepetitionOption;
+    completed?: boolean;
+  },
+) => {
+  try {
+    // Extract values from form or use existing task values
+    const updatedValues: Partial<OptimalTask> = {
+      title: values.title || task.title,
+      notes: values.notes || task.notes,
+      emoji: values.emoji || task.emoji,
+      priority: values.priority || task.priority,
+      category: values.category || task.category,
+      subtasks: values.subtasks || task.subtasks || [],
+      completed: values.completed !== undefined ? values.completed : task.completed,
+    };
+
+    // Calculate progress if subtasks are present
+    if (updatedValues.subtasks && updatedValues.subtasks.length > 0) {
+      const completedCount = updatedValues.subtasks.filter((s: Subtask) => s.isCompleted).length;
+      updatedValues.progress = Math.round((completedCount / updatedValues.subtasks.length) * 100);
+    } else {
+      updatedValues.progress = values.progress || task.progress || 0;
+    }
+
+    try {
+      // Handle start time and date
+      let taskDate = task.taskDate;
+      let timeString = task.time || '';
+      let startTime = task.startTime;
+
+      if (values.startTime) {
+        timeString = values.startTime;
+        startTime = parse(values.startTime, 'HH:mm', parseISO(taskDate));
+
+        // If there's a due time, append it
+        if (values.dueTime) {
+          timeString += `—${values.dueTime}`;
+        }
+      }
+
+      // Handle duration
+      const duration =
+        values.duration && values.duration > 0 ? values.duration : task.duration || ONE_HOUR_IN_MS;
+
+      // Calculate next start time
+      const nextStartTime = startTime ? addMilliseconds(startTime, duration) : undefined;
+
+      // Create default repetition option if not provided
+      const defaultRepetition: RepetitionOption = {
+        type: 'once',
+        repeatInterval: 1,
+      };
+
+      const finalUpdatedValues = {
+        ...updatedValues,
+        time: timeString,
+        duration,
+        taskDate,
+        dueDate: values.dueDate,
+        dueTime: values.dueTime,
+        startTime,
+        nextStartTime,
+        repetition: values.repetition || task.repetition || defaultRepetition,
+      };
+
+      updateTask(task.id, finalUpdatedValues);
+    } catch (error) {
+      console.error('Error parsing dates:', error);
+      updateTask(task.id, updatedValues);
+    }
+  } catch (error) {
+    console.error('Failed to edit task:', error);
+  }
 };
