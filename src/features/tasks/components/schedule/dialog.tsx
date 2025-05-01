@@ -108,7 +108,6 @@ function TaskDialogContent({
 
   // Effect to update emoji key when emoji changes
   useEffect(() => {
-    console.log('Emoji changed to:', emoji);
     setEmojiKey((prev) => prev + 1);
   }, [emoji]);
 

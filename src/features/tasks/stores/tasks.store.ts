@@ -479,7 +479,9 @@ export const setFocused = (
         id,
         taskStartTime, // Use the determined startTime
         taskToFocus.duration || ONE_HOUR_IN_MS,
-        newTasks.filter((t) => t.id !== id && t.taskDate === taskDateToUse), // Filter based on the determined task date
+        newTasks.filter(
+          (t) => t.id !== id && t.taskDate === taskDateToUse && !t.completed && !t.isTimeFixed,
+        ), // Filter based on the determined task date, also explicitly excluding completed/fixed here for safety
       );
 
       // Apply updates to affected tasks
@@ -1022,56 +1024,72 @@ const calculateAffectedTaskUpdates = (
   focusedTaskId: string,
   focusedTaskNewStartTime: Date,
   focusedTaskDuration: number,
-  currentTasks: OptimalTask[],
+  currentTasks: OptimalTask[], // Already filtered for the correct date and excludes focused task
 ): { id: string; updates: Partial<OptimalTask> }[] => {
   const updatesToApply: { id: string; updates: Partial<OptimalTask> }[] = [];
-  const taskDate = format(focusedTaskNewStartTime, 'yyyy-MM-dd');
+  const taskDate = format(focusedTaskNewStartTime, 'yyyy-MM-dd'); // Ensure we only compare on the relevant date
 
-  const tasksOnDate = currentTasks.filter(
-    (task) => task.taskDate === taskDate && task.id !== focusedTaskId,
+  // Filter out completed, fixed-time, and the focused task itself BEFORE checking for overlaps
+  const potentialOverlappingTasks = currentTasks.filter(
+    (task) =>
+      // task.id !== focusedTaskId && // This is already guaranteed by the caller filtering
+      task.taskDate === taskDate && // Only consider tasks on the same day
+      !task.completed && // **** Ignore completed tasks ****
+      !task.isTimeFixed, // **** Ignore tasks with fixed time ****
   );
 
-  if (tasksOnDate.length === 0) return [];
+  if (potentialOverlappingTasks.length === 0) return [];
 
   const startTimeInMinutes =
     getHours(focusedTaskNewStartTime) * 60 + getMinutes(focusedTaskNewStartTime);
   const endTimeInMinutes = startTimeInMinutes + focusedTaskDuration / (60 * 1000);
 
-  // Find the first overlapping task
-  const overlappingTask = tasksOnDate.find((task) => {
-    if (!task.time || task.completed || task.isTimeFixed) return false;
+  // Find the *first* task that actually overlaps *and* is not completed/fixed
+  const overlappingTask = potentialOverlappingTasks.find((task) => {
+    // Completed/Fixed checks are done above
+    if (!task.time) return false; // Ignore tasks without a defined time
 
     const [taskStartTimeStr] = task.time.split('—');
     const [taskHours, taskMinutes] = taskStartTimeStr.split(':').map(Number);
-    if (isNaN(taskHours) || isNaN(taskMinutes)) return false;
+    if (isNaN(taskHours) || isNaN(taskMinutes)) return false; // Invalid time format
     const taskStartInMinutes = taskHours * 60 + taskMinutes;
-    const taskDuration = task.duration || ONE_HOUR_IN_MS;
+    // Use a default duration if task.duration is missing or invalid
+    const taskDuration = task.duration && task.duration > 0 ? task.duration : ONE_HOUR_IN_MS;
     const taskEndInMinutes = taskStartInMinutes + taskDuration / (60 * 1000);
 
+    // Check for overlap: !(task ends before focus starts || task starts after focus ends)
     const noOverlap =
       taskEndInMinutes <= startTimeInMinutes || taskStartInMinutes >= endTimeInMinutes;
 
     return !noOverlap;
   });
 
-  if (!overlappingTask) return [];
+  if (!overlappingTask) return []; // No relevant overlapping task found
 
-  // Calculate the next time slot for the overlapping task
+  // Calculate the next available time slot for the overlapping task
   const focusedTaskEndTime = addMilliseconds(focusedTaskNewStartTime, focusedTaskDuration);
+  // Use the next 5-minute interval after the *focused* task ends
   const nextFiveMinBlock = getNextFiveMinuteInterval(focusedTaskEndTime);
   const newStartTime = new Date(nextFiveMinBlock);
+  // Use the duration of the *overlapping* task
   const newEndTime = addMilliseconds(newStartTime, overlappingTask.duration || ONE_HOUR_IN_MS);
 
-  // Only update the first overlapping task
+  // Ensure the shifted task still starts on the same day. If not, don't shift it.
   if (format(newStartTime, 'yyyy-MM-dd') === taskDate) {
     const taskUpdate: Partial<OptimalTask> = {
-      taskDate: taskDate,
+      // taskDate: taskDate, // No need to set taskDate again, it should remain the same
       startTime: newStartTime,
       nextStartTime: newEndTime,
       time: `${format(newStartTime, 'HH:mm')}—${format(newEndTime, 'HH:mm')}`,
     };
     updatesToApply.push({ id: overlappingTask.id, updates: taskUpdate });
+  } else {
+    console.warn(
+      `Task ${overlappingTask.id} would be pushed to the next day by focus shift. Not applying automatic shift.`,
+    );
   }
+
+  // Note: This only shifts the *first* overlapping task.
 
   return updatesToApply;
 };
@@ -1158,10 +1176,11 @@ export const undoLastFocusAction = () => {
 
 // Action for automatic focus based on current time
 export const setAutomaticFocus = (taskId: string | null) => {
-  // Don't override manual focus with automatic focus
   const currentFocusedId = tasksStore.state.focusedTaskId;
+  const now = new Date();
+
+  // --- Respect Manual Focus --- //
   if (currentFocusedId) {
-    // Check if the current focused task has ended
     const currentFocusedTask = tasksStore.state.tasks.find((t) => t.id === currentFocusedId);
     if (currentFocusedTask && currentFocusedTask.nextStartTime) {
       const endTime =
@@ -1169,40 +1188,73 @@ export const setAutomaticFocus = (taskId: string | null) => {
           ? parseISO(currentFocusedTask.nextStartTime)
           : currentFocusedTask.nextStartTime;
 
-      // If the current task has ended, unfocus it
-      if (endTime < new Date()) {
-        setFocused(currentFocusedId, false);
-      } else {
-        return; // Exit if there's already a focused task that hasn't ended
+      // If the manually focused task hasn't ended yet, do nothing.
+      if (now < endTime) {
+        console.log(
+          `[Automatic Focus] Manual focus on ${currentFocusedId} is still active (ends at ${format(
+            endTime,
+            'HH:mm:ss',
+          )}). Automatic focus deferred.`,
+        );
+        return; // Exit early, respecting the manual focus
       }
+
+      // If the manually focused task HAS ended, unfocus it before proceeding.
+      console.log(
+        `[Automatic Focus] Manual focus on ${currentFocusedId} ended. Unfocusing before checking for next task.`,
+      );
+      // Call setFocused to properly handle unfocusing and history (if needed)
+      // Important: We pass `false` here to *unfocus*. This allows the rest of the function to potentially focus a *new* task.
+      setFocused(currentFocusedId, false); // This will update the state
+      // Note: We don't return here. We allow the function to continue below
+      // to check if `taskId` (the one that *should* be focused now) can be focused.
     }
   }
+  // --- End Respect Manual Focus --- //
 
-  console.log(`[Automatic Focus] Setting focus to: ${taskId ?? 'none'}`);
-  updateStateAndStorage((state) => {
-    // Update tasks' focused states
-    const updatedTasks = state.tasks.map((task) => ({
-      ...task,
-      isFocused: task.id === taskId,
-    }));
+  // --- Standard Automatic Focus Logic --- //
+  // Check if the candidate task `taskId` should be focused.
+  // Only proceed if there isn't *still* a focused task (e.g., if setFocused above failed or had side effects)
+  // and the candidate `taskId` is not null.
+  if (!tasksStore.state.focusedTaskId && taskId) {
+    console.log(`[Automatic Focus] Setting focus to candidate: ${taskId}`);
 
-    if (taskId) {
-      saveFocusedTask(taskId);
+    // Find the task details for the candidate taskId
+    const taskToFocus = tasksStore.state.tasks.find((t) => t.id === taskId);
+
+    // Only focus if the task exists and is not completed
+    if (taskToFocus && !taskToFocus.completed) {
+      updateStateAndStorage((state) => {
+        const updatedTasks = state.tasks.map((task) => ({
+          ...task,
+          // Focus the candidate task, ensure others are not focused
+          isFocused: task.id === taskId,
+        }));
+        saveFocusedTask(taskId); // Persist focus
+        return {
+          ...state,
+          tasks: updatedTasks,
+          focusedTaskId: taskId,
+        };
+      });
+
+      // Start timer for the automatically focused task
+      if (taskToFocus.startTime) {
+        toggleTaskTimer(taskId, true);
+      }
+    } else if (!taskToFocus) {
+      console.warn(`[Automatic Focus] Candidate task ${taskId} not found.`);
+    } else if (taskToFocus.completed) {
+      console.log(
+        `[Automatic Focus] Candidate task ${taskId} is already completed. Skipping focus.`,
+      );
     }
-
-    return {
-      ...state,
-      tasks: updatedTasks,
-      focusedTaskId: taskId,
-    };
-  });
-
-  // Start timer for the automatically focused task
-  if (taskId) {
-    const focusedTask = tasksStore.state.tasks.find((t) => t.id === taskId);
-    if (focusedTask && focusedTask.startTime) {
-      toggleTaskTimer(taskId, true);
-    }
+  } else if (taskId) {
+    console.log(
+      `[Automatic Focus] Skipping focus for candidate ${taskId} because another task (${tasksStore.state.focusedTaskId}) is still focused.`, // This might happen if the unfocus logic above is asynchronous or complex
+    );
+  } else {
+    console.log('[Automatic Focus] No candidate task ID provided or needed.');
   }
 };
 

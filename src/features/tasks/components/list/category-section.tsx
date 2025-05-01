@@ -283,8 +283,6 @@ export function CategorySection({
             isForGap: true,
           });
 
-          console.log('gap segment added..:', { startColor, endColor }, segments.at(-1));
-
           continue;
         }
 
