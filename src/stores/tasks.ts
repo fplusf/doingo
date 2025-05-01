@@ -1,4 +1,4 @@
-import { RepetitionOption } from '@/features/tasks/components/schedule/repetition-picker';
+import { RepetitionType } from '@/features/tasks/types';
 import { Store } from '@tanstack/store';
 
 interface ScheduleState {
@@ -7,7 +7,7 @@ interface ScheduleState {
   dueDate?: Date;
   dueTime?: string;
   duration: number;
-  repetition: RepetitionOption;
+  repetition: RepetitionType;
 }
 
 interface TaskState {

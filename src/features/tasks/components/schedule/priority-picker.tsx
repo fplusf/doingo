@@ -18,10 +18,11 @@ import { useState } from 'react';
 
 interface PrioritySelectProps {
   value: TaskPriority;
-  onValueChange: (value: TaskPriority) => void;
+  onValueChange: (value: TaskPriority, isManualSelection?: boolean) => void;
   className?: string;
   taskTitle?: string;
   isPredicting?: boolean;
+  isManuallySet?: boolean;
 }
 
 // Simple RadioButton component
@@ -71,6 +72,7 @@ export function PriorityPicker({
   className,
   taskTitle = '',
   isPredicting = false,
+  isManuallySet = false,
 }: PrioritySelectProps) {
   const [suggestedPriority, setSuggestedPriority] = useState<TaskPriority | null>(null);
 
@@ -97,7 +99,7 @@ export function PriorityPicker({
         <div className="flex items-center gap-1">
           <Select
             value={value}
-            onValueChange={(value: string) => onValueChange(value as TaskPriority)}
+            onValueChange={(value: string) => onValueChange(value as TaskPriority, true)}
           >
             <TooltipTrigger asChild>
               <SelectTrigger className={cn('h-8 w-[6rem] px-0', className)}>
@@ -131,7 +133,8 @@ export function PriorityPicker({
           <TooltipContent side="bottom" align="center">
             <p className={cn('font-medium')}>
               {selectedPriority.label}
-              {suggestedPriority && ' (AI suggested)'}
+              {suggestedPriority && !isManuallySet && ' (AI suggested)'}
+              {isManuallySet && ' (manually selected)'}
               {isPredicting && ' (AI analyzing...)'}
             </p>
           </TooltipContent>

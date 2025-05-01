@@ -30,6 +30,7 @@ interface TaskSchedulerProps {
   isEstimating?: boolean;
   // New props for AI estimation
   onRequestAiEstimate?: () => void;
+  onDurationChange?: (duration: number) => void;
   taskTitle?: string;
 }
 
@@ -38,6 +39,7 @@ export function TaskScheduler({
   taskId,
   isEstimating = false,
   onRequestAiEstimate,
+  onDurationChange,
   taskTitle,
 }: TaskSchedulerProps) {
   // Use the store for all form values
@@ -142,8 +144,9 @@ export function TaskScheduler({
     }
   };
 
-  const handleDurationChange = (durationMs: number) => {
-    updateDuration(durationMs);
+  const handleDurationChange = (newDuration: number) => {
+    updateDuration(newDuration);
+    if (onDurationChange) onDurationChange(newDuration);
   };
 
   // Separate handler for start date change from RepetitionPicker
