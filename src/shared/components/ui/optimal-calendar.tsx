@@ -21,6 +21,8 @@ interface CalendarDatePickerProps {
   onSelect?: (date: Date, time: string) => void;
   selected?: DatePickerValue;
   weekStartsOn?: number;
+  timeInterval?: number;
+  isStartTimePicker?: boolean;
 }
 
 export function OptimalCalendar({
@@ -28,9 +30,14 @@ export function OptimalCalendar({
   size = 'md',
   onSelect,
   selected = { date: new Date(), time: '09:00' },
+  timeInterval = 15,
+  isStartTimePicker = false,
 }: CalendarDatePickerProps) {
-  const [date, setDate] = React.useState<Date>(selected.date);
-  const [selectedTime, setSelectedTime] = React.useState<string>(selected.time);
+  const defaultDate = selected?.date || new Date();
+  const defaultTime = selected?.time || '';
+  const [date, setDate] = React.useState<Date>(defaultDate);
+  const [selectedTime, setSelectedTime] = React.useState<string>(defaultTime);
+  const [initialTimeSet, setInitialTimeSet] = React.useState(!!selected?.time);
   const [isTimePickerOpen, setIsTimePickerOpen] = React.useState(false);
   const [customHour, setCustomHour] = React.useState('');
   const [customMinute, setCustomMinute] = React.useState('');
@@ -41,12 +48,37 @@ export function OptimalCalendar({
   const timeOptions = React.useMemo(() => {
     const options = [];
     for (let hour = 0; hour < 24; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
+      for (let minute = 0; minute < 60; minute += timeInterval) {
         options.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
       }
     }
     return options;
-  }, []);
+  }, [timeInterval]);
+
+  React.useEffect(() => {
+    if (isStartTimePicker && !initialTimeSet) {
+      const now = new Date();
+      let nextMinute = Math.ceil((now.getMinutes() + 1) / 5) * 5;
+      let nextHour = now.getHours();
+
+      if (nextMinute >= 60) {
+        nextMinute = 0;
+        nextHour += 1;
+        if (nextHour >= 24) {
+          nextHour = 0;
+        }
+      }
+
+      const initialTime = `${nextHour.toString().padStart(2, '0')}:${nextMinute.toString().padStart(2, '0')}`;
+
+      if (timeOptions.includes(initialTime)) {
+        setSelectedTime(initialTime);
+      } else {
+        setSelectedTime(timeOptions[0] || '00:00');
+      }
+      setInitialTimeSet(true);
+    }
+  }, [isStartTimePicker, initialTimeSet, timeOptions]);
 
   const daysOfWeek = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -103,6 +135,10 @@ export function OptimalCalendar({
     const newDate = new Date(date);
     newDate.setFullYear(year, month, day);
     setDate(newDate);
+
+    if (isStartTimePicker) {
+      setSelectedTime(timeOptions[0] || '09:00');
+    }
   };
 
   const isSelectedDay = (day: number, month: number, year: number) => {
@@ -128,7 +164,6 @@ export function OptimalCalendar({
     if (isTimePickerOpen) {
       document.addEventListener('mousedown', handleClickOutside);
 
-      // Set scroll position
       if (timePickerRef.current) {
         const selectedIndex = timeOptions.indexOf(selectedTime);
         if (selectedIndex !== -1) {
@@ -146,6 +181,18 @@ export function OptimalCalendar({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isTimePickerOpen, selectedTime, timeOptions, size]);
+
+  React.useEffect(() => {
+    if (selected?.date && selected.date.getTime() !== date.getTime()) {
+      setDate(selected.date);
+    }
+    if (selected?.time && selected.time !== selectedTime) {
+      if (!isStartTimePicker || initialTimeSet) {
+        setSelectedTime(selected.time);
+        if (!initialTimeSet && selected.time) setInitialTimeSet(true);
+      }
+    }
+  }, [selected, isStartTimePicker, initialTimeSet, date, selectedTime]);
 
   const handleCustomHourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^0-9]/g, '');

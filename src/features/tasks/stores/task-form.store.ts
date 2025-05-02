@@ -3,7 +3,6 @@ import { Store } from '@tanstack/react-store';
 import { addMilliseconds, parse, parseISO } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import {
-  ONE_HOUR_IN_MS,
   OptimalTask,
   RepetitionOption,
   RepetitionType,
@@ -163,7 +162,8 @@ export const loadTaskForEditing = (taskData: OptimalTask) => {
     priority: taskData.priority || 'medium',
     startDate: taskData.startTime || new Date(),
     startTime: startTimeString,
-    duration: taskData.duration || ONE_HOUR_IN_MS,
+    // Change fallback duration to 45 minutes (from 1 hour)
+    duration: taskData.duration || 45 * 60 * 1000, // 45 minutes in ms
     dueDate: taskData.dueDate,
     dueTime: taskData.dueTime || '',
     repetition: taskData.repetition?.type || 'once',
@@ -452,7 +452,7 @@ export const editExistingTask = (
 
       // Handle duration
       const duration =
-        values.duration && values.duration > 0 ? values.duration : task.duration || ONE_HOUR_IN_MS;
+        values.duration && values.duration > 0 ? values.duration : task.duration || 45 * 60 * 1000; // 45 mins fallback
 
       // Calculate next start time
       const nextStartTime = startTime ? addMilliseconds(startTime, duration) : undefined;

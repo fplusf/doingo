@@ -184,6 +184,8 @@ export function TaskScheduler({
           time={startTime}
           onChange={handleStartDateTimeChange}
           buttonLabel="Start"
+          timeInterval={5}
+          isStartTimePicker={true}
         />
 
         <DurationPicker

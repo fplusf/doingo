@@ -21,6 +21,8 @@ interface DateTimeSelectorProps {
   buttonLabel?: string;
   isDue?: boolean;
   className?: string;
+  timeInterval?: number;
+  isStartTimePicker?: boolean;
 }
 
 export function DateTimePicker({
@@ -32,6 +34,8 @@ export function DateTimePicker({
   icon = <CalendarIcon className="h-3.5 w-3.5" />,
   buttonLabel,
   isDue = false,
+  timeInterval,
+  isStartTimePicker,
 }: DateTimeSelectorProps) {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
@@ -100,6 +104,8 @@ export function DateTimePicker({
                   }
                 : undefined
             }
+            timeInterval={timeInterval}
+            isStartTimePicker={isStartTimePicker}
           />
         </div>
       </PopoverContent>

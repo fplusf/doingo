@@ -460,7 +460,7 @@ export const setFocused = (
       const taskStartTime = preserve ? taskToFocus.startTime || now : now;
       const taskDateToUse = preserve ? taskToFocus.taskDate || todayStr : todayStr;
       // Calculate end time based on the determined start time and existing duration
-      const taskEndTime = addMilliseconds(taskStartTime, taskToFocus.duration || ONE_HOUR_IN_MS);
+      const taskEndTime = addMilliseconds(taskStartTime, taskToFocus.duration || 45 * 60 * 1000);
 
       const focusUpdates: Partial<OptimalTask> = {
         isFocused: true,
@@ -478,7 +478,7 @@ export const setFocused = (
       affectedTaskUpdates = calculateAffectedTaskUpdates(
         id,
         taskStartTime, // Use the determined startTime
-        taskToFocus.duration || ONE_HOUR_IN_MS,
+        taskToFocus.duration || 45 * 60 * 1000,
         newTasks.filter(
           (t) => t.id !== id && t.taskDate === taskDateToUse && !t.completed && !t.isTimeFixed,
         ), // Filter based on the determined task date, also explicitly excluding completed/fixed here for safety
@@ -715,7 +715,7 @@ export const updateTaskStartDateTime = (taskId: string, date: Date, time: string
     const newStartTime = parse(time, 'HH:mm', date);
 
     // Calculate the new end time Date object using the task's duration
-    const duration = task.duration || ONE_HOUR_IN_MS; // Use default if duration is missing
+    const duration = task.duration || 45 * 60 * 1000; // Use default if duration is missing
     const newEndTime = addMilliseconds(newStartTime, duration);
 
     // Format the new time string using the calculated start and end times
@@ -881,7 +881,7 @@ export const createNewTask = (
     }
 
     // Handle duration
-    const duration = values.duration && values.duration > 0 ? values.duration : ONE_HOUR_IN_MS;
+    const duration = values.duration && values.duration > 0 ? values.duration : 45 * 60 * 1000;
 
     // Calculate next start time
     const nextStartTime = addMilliseconds(startTime, duration);
@@ -978,7 +978,7 @@ export const editExistingTask = (
 
       // Handle duration
       const duration =
-        values.duration && values.duration > 0 ? values.duration : task.duration || ONE_HOUR_IN_MS;
+        values.duration && values.duration > 0 ? values.duration : task.duration || 45 * 60 * 1000;
 
       // Calculate next start time
       const nextStartTime = addMilliseconds(startTime, duration);
@@ -1074,7 +1074,7 @@ const calculateAffectedTaskUpdates = (
     if (isNaN(taskHours) || isNaN(taskMinutes)) return false; // Invalid time format
     const taskStartInMinutes = taskHours * 60 + taskMinutes;
     // Use a default duration if task.duration is missing or invalid
-    const taskDuration = task.duration && task.duration > 0 ? task.duration : ONE_HOUR_IN_MS;
+    const taskDuration = task.duration && task.duration > 0 ? task.duration : 45 * 60 * 1000;
     const taskEndInMinutes = taskStartInMinutes + taskDuration / (60 * 1000);
 
     // Check for overlap: !(task ends before focus starts || task starts after focus ends)
@@ -1092,7 +1092,7 @@ const calculateAffectedTaskUpdates = (
   const nextFiveMinBlock = getNextFiveMinuteInterval(focusedTaskEndTime);
   const newStartTime = new Date(nextFiveMinBlock);
   // Use the duration of the *overlapping* task
-  const newEndTime = addMilliseconds(newStartTime, overlappingTask.duration || ONE_HOUR_IN_MS);
+  const newEndTime = addMilliseconds(newStartTime, overlappingTask.duration || 45 * 60 * 1000);
 
   // Ensure the shifted task still starts on the same day. If not, don't shift it.
   if (format(newStartTime, 'yyyy-MM-dd') === taskDate) {
@@ -1316,4 +1316,11 @@ export const updateTaskTimeSpent = (taskId: string, additionalTime: number) => {
       tasks: updatedTasks,
     };
   });
+};
+
+export const calculateTaskEndTime = (task: OptimalTask): Date | null => {
+  if (!task.startTime) return null;
+
+  const duration = task.duration || 45 * 60 * 1000; // Use default if duration is missing
+  return addMilliseconds(task.startTime, duration);
 };

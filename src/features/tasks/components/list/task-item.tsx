@@ -46,7 +46,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
   const today = new Date();
   const isToday = task.taskDate === format(today, 'yyyy-MM-dd');
 
-  const displayDuration = effectiveDuration ?? task.duration ?? ONE_HOUR_IN_MS;
+  const displayDuration = effectiveDuration ?? task.duration ?? 45 * 60 * 1000;
 
   const { addDeleteTaskAction } = useTaskHistoryContext();
 
@@ -332,12 +332,12 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                             dangerouslySetInnerHTML={{
                               __html: formatCompactTimeRange(
                                 task.startTime,
-                                displayDuration || ONE_HOUR_IN_MS,
+                                displayDuration || 45 * 60 * 1000,
                               ),
                             }}
                           />
                           <span className="ml-1 whitespace-nowrap text-xs opacity-40">
-                            ({formatDurationForDisplay(displayDuration || ONE_HOUR_IN_MS)})
+                            ({formatDurationForDisplay(displayDuration || 45 * 60 * 1000)})
                           </span>
                         </div>
                       </div>
@@ -352,7 +352,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                             dangerouslySetInnerHTML={{
                               __html: formatTimeRange(
                                 task.startTime,
-                                displayDuration || ONE_HOUR_IN_MS,
+                                displayDuration || 45 * 60 * 1000,
                               ),
                             }}
                           />
@@ -364,7 +364,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                       <section className="mr-2 mt-auto flex items-center justify-between">
                         <div className="text-xs opacity-50">
                           <span className="whitespace-nowrap">
-                            {formatDurationForDisplay(displayDuration || ONE_HOUR_IN_MS)}
+                            {formatDurationForDisplay(displayDuration || 45 * 60 * 1000)}
                           </span>
                         </div>
                       </section>

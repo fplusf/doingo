@@ -190,8 +190,9 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
     const [editingTask, setEditingTask] = useState<string | null>(null);
     const [startTime, setStartTime] = useState(getDefaultStartTime());
     const [endTime, setEndTime] = useState(getDefaultEndTime());
-    const [duration, setDuration] = useState<number>(ONE_HOUR_IN_MS);
-    const [dueDate, setDueDate] = useState<Date | undefined>(); // Ensure undefined is allowed
+    const [duration, setDuration] = useState<number>(45 * 60 * 1000);
+    const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+    const [dueTime, setDueTime] = useState<string>('');
     const [newTask, setNewTask] = useState({
       title: '',
       emoji: '',
@@ -383,8 +384,9 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
           setNewTask({ title: '', emoji: '', priority: 'none', category: 'work' });
           setStartTime(getDefaultStartTime());
           setEndTime(getDefaultEndTime());
-          setDuration(ONE_HOUR_IN_MS);
+          setDuration(45 * 60 * 1000);
           setDueDate(undefined);
+          setDueTime('');
           setActiveCategory('work');
         }
       },
@@ -423,10 +425,11 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
       const startTimeToSet = gapStartTime ? format(gapStartTime, 'HH:mm') : getDefaultStartTime();
       setStartTime(startTimeToSet);
       const startDate = gapStartTime || parse(getDefaultStartTime(), 'HH:mm', new Date());
-      const endTimeDate = new Date(startDate.getTime() + ONE_HOUR_IN_MS);
+      const endTimeDate = new Date(startDate.getTime() + 45 * 60 * 1000); // Use 45 mins
       setEndTime(format(endTimeDate, 'HH:mm'));
-      setDuration(ONE_HOUR_IN_MS);
+      setDuration(45 * 60 * 1000); // Set duration state
       setDueDate(undefined);
+      setDueTime('');
       setIsCreating(true);
       setActiveCategory('work');
     };
@@ -622,7 +625,7 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
           mode="create"
           initialValues={{
             startTime: startTime, // Use state for initial time
-            dueTime: '',
+            dueTime: dueTime,
             duration: duration, // Use state for initial duration
             dueDate: dueDate, // Use state for initial due date
             priority: newTask.priority,
@@ -680,7 +683,7 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
                 emoji: task.emoji || '',
                 startTime: task.time?.split('—')[0] || '',
                 dueTime: task.dueTime || '',
-                duration: task.duration || ONE_HOUR_IN_MS,
+                duration: task.duration || 45 * 60 * 1000,
                 dueDate: task.dueDate ? new Date(task.dueDate) : undefined, // Ensure Date object
                 priority: task.priority || 'none',
                 category: task.category || 'work',
