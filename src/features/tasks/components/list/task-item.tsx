@@ -237,7 +237,12 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
   const hasSubtasks = task.subtasks && task.subtasks.length > 0;
   const progress = task.progress ?? 0;
 
-  const handleDeleteTask = () => {
+  const handleDeleteTask = (e?: React.MouseEvent) => {
+    // Prevent event propagation if event is provided
+    if (e) {
+      e.stopPropagation();
+    }
+
     // Store the task before deletion
     const taskToDelete = { ...task };
 
@@ -413,7 +418,10 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
             >
               Focus
             </ContextMenuItem>
-            <ContextMenuItem className="text-red-500 focus:text-red-600" onClick={handleDeleteTask}>
+            <ContextMenuItem
+              className="text-red-500 focus:text-red-600"
+              onClick={(e: React.MouseEvent<HTMLDivElement>) => handleDeleteTask(e)}
+            >
               Delete
               <Trash2 className="ml-auto h-4 w-4" />
             </ContextMenuItem>
