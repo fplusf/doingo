@@ -109,36 +109,42 @@ export const taskFormStore = new Store<TaskFormState>(initialState);
 
 // Update a single field with setting the dirty flag
 export const updateField = <K extends keyof TaskFormState>(field: K, value: TaskFormState[K]) => {
-  taskFormStore.setState((state) => ({
-    ...state,
-    [field]: value,
-    isDirty: true,
-  }));
+  taskFormStore.setState((state) => {
+    // Start with the basic update
+    const newState: Partial<TaskFormState> = {
+      [field]: value,
+      isDirty: true,
+    };
 
-  // If this is a title update and we're in create mode, automatically suggest an emoji
-  if (field === 'title' && typeof value === 'string' && taskFormStore.state.mode === 'create') {
-    const emoji = findEmojiForTitle(value);
-    // Debug log to see what's happening
-    console.log('Title update triggered emoji suggestion:', {
-      title: value,
-      suggestedEmoji: emoji,
-      currentEmoji: taskFormStore.state.emoji,
-    });
+    // If updating title in create mode, check for emoji suggestion
+    if (field === 'title' && typeof value === 'string' && state.mode === 'create') {
+      const emoji = findEmojiForTitle(value);
 
-    // Force update the emoji for testing - this should always work
-    if (emoji) {
-      console.log('Updating emoji to:', emoji);
-      taskFormStore.setState((state) => ({
-        ...state,
-        emoji,
-      }));
+      // Debug log remains helpful
+      console.log('Title update triggered emoji suggestion:', {
+        title: value,
+        suggestedEmoji: emoji,
+        currentEmoji: state.emoji,
+      });
 
-      // Double check that it was updated
-      setTimeout(() => {
-        console.log('Emoji after update:', taskFormStore.state.emoji);
-      }, 0);
+      // Add emoji to the update *if* it's valid and different
+      if (emoji && emoji !== state.emoji) {
+        console.log('Adding suggested emoji to update:', emoji);
+        newState.emoji = emoji;
+      }
     }
-  }
+
+    // Return the combined new state properties
+    return {
+      ...state, // Spread the current state first
+      ...newState, // Apply all collected updates
+    };
+  });
+
+  // Optional: If the double-check log for emoji is still needed after the state update,
+  // you might need a different approach, perhaps subscribing to the store externally
+  // for logging, but it's generally not needed for the update logic itself.
+  // The previous setTimeout log is removed as it complicated the single update.
 };
 
 // Update multiple fields at once
