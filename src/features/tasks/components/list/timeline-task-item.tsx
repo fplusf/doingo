@@ -350,12 +350,6 @@ export const TimelineTaskItem = ({
         style={outerContainerStyle}
         className={outerContainerClasses}
         data-task-id={task.id}
-        onClick={(e) => {
-          // Prevent opening task when clicking resize handle
-          if (!resizingRef.current) {
-            onEdit(taskRef.current);
-          }
-        }}
       >
         <div className="h-full" style={{ position: 'relative' }}>
           <div className="flex h-full items-stretch">
@@ -395,7 +389,7 @@ export const TimelineTaskItem = ({
 
             <div
               ref={taskCardRef}
-              className={`ml-6 min-w-0 flex-grow pr-2 transition-shadow duration-150 ease-in-out`}
+              className={`ml-6 min-w-0 flex-grow transition-shadow duration-150 ease-in-out`}
               style={{
                 position: 'relative',
               }}

@@ -407,6 +407,16 @@ export function CategorySection({
     }
   };
 
+  // Find the index of the last non-gap task
+  const lastNonGapTaskIndex = useMemo(() => {
+    for (let i = tasks.length - 1; i >= 0; i--) {
+      if (!tasks[i].isGap) {
+        return i;
+      }
+    }
+    return -1; // Return -1 if no non-gap tasks are found
+  }, [tasks]);
+
   return (
     <div className="relative mb-16 min-h-8" id={`category-${category}`}>
       {/* Commented out CategoryBadge for single timeline
@@ -463,6 +473,11 @@ export function CategorySection({
 
             // Don't calculate margins for gap items - they will be styled differently
             if (task.isGap) {
+              // Skip rendering gap items that appear after the last actual task
+              if (lastNonGapTaskIndex !== -1 && index > lastNonGapTaskIndex) {
+                return null;
+              }
+
               // Render a special gap item instead of a task card
               return (
                 <div key={task.id} className="relative mb-2 ml-16 mt-2 flex items-center">
