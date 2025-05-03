@@ -1318,6 +1318,89 @@ export const updateTaskTimeSpent = (taskId: string, additionalTime: number) => {
   });
 };
 
+// Function to update break information for a task
+export const updateTaskBreak = (
+  taskId: string,
+  startTime: Date,
+  breakDurationMs: number,
+  breakType: 'during' | 'after',
+) => {
+  updateStateAndStorage((state) => {
+    const updatedTasks = state.tasks.map((task) => {
+      if (task.id === taskId) {
+        // Create a new break object or use existing one
+        const currentBreak = task.break || {};
+
+        // Update the specific break type
+        return {
+          ...task,
+          break: {
+            ...currentBreak,
+            startTime,
+            duration: breakDurationMs,
+            type: breakType,
+          },
+        };
+      }
+      return task;
+    });
+
+    return {
+      ...state,
+      tasks: updatedTasks,
+    };
+  });
+};
+
+// Function to add a break immediately after or during a task
+export const addTaskBreak = (
+  startTime: Date,
+  durationInMs: number,
+  breakType: 'during' | 'after',
+  taskId?: string,
+): void => {
+  // If we have a taskId, update that specific task
+  if (taskId) {
+    updateTaskBreak(taskId, startTime, durationInMs, breakType);
+    return;
+  }
+
+  // Otherwise, find which task comes before this startTime
+  const state = tasksStore.state;
+  const taskDate = format(startTime, 'yyyy-MM-dd');
+
+  // Convert to array of OptimalTask objects
+  const tasksForDateArray: OptimalTask[] = [];
+
+  // Safely iterate through tasks and add to array
+  state.tasks.forEach((task) => {
+    if (task.taskDate === taskDate && !task.isGap) {
+      tasksForDateArray.push(task);
+    }
+  });
+
+  // Find the task that ends closest to but before the startTime
+  let foundTaskId: string | null = null;
+  let smallestTimeDifference = Infinity;
+
+  for (const task of tasksForDateArray) {
+    if (task.nextStartTime && task.nextStartTime <= startTime) {
+      const timeDiff = differenceInMilliseconds(startTime, task.nextStartTime);
+      if (timeDiff < smallestTimeDifference) {
+        smallestTimeDifference = timeDiff;
+        foundTaskId = task.id;
+      }
+    }
+  }
+
+  // If we found a task, update its break information
+  if (foundTaskId) {
+    updateTaskBreak(foundTaskId, startTime, durationInMs, breakType);
+  } else {
+    console.warn('Could not find a task to add break to for time:', startTime);
+  }
+};
+
 export const calculateTaskEndTime = (task: OptimalTask): Date | null => {
   if (!task.startTime) return null;
 

@@ -50,6 +50,12 @@ export interface OptimalTask {
   startTime?: Date;
   nextStartTime?: Date;
   repetition?: RepetitionOption;
+  // Break information
+  break?: {
+    type: 'after' | 'during';
+    duration?: number;
+    startTime?: Date;
+  };
   // Multi-day task properties
   isPartOfMultiDay?: boolean;
   originalTaskId?: string;

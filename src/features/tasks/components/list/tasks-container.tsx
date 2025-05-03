@@ -1,21 +1,31 @@
 import { PRIORITY_COLORS as PRIORITY_COLOR_HEX } from '@/features/tasks/constants/priority-colors';
 import { cn } from '@/lib/utils';
+import { CountdownDisplay } from '@/shared/components/countdown-display';
 import { Button } from '@/shared/components/ui/button';
 import { addMilliseconds, differenceInMilliseconds } from 'date-fns';
 import { Clock, Coffee, Plus } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CategorySectionProps, ONE_HOUR_IN_MS, OptimalTask } from '../../types';
-
+import {
+  ONE_HOUR_IN_MS,
+  OptimalTask,
+  CategorySectionProps as OriginalCategorySectionProps, // Renamed original props
+} from '../../types';
+import { TakeBreak } from '../schedule/take-break'; // Import the new component
 import { DottedConnector } from '../timeline/dotted-connector';
 import { TimelineTaskItem } from './timeline-task-item';
 
-// Define 15 minutes in milliseconds
-const FIFTEEN_MINUTES_IN_MS = 15 * 60 * 1000;
-// Define 20 minutes in milliseconds
-const TWENTY_MINUTES_IN_MS = 20 * 60 * 1000;
-
 // 7 hours in milliseconds - for detecting very long gaps
 const SEVEN_HOURS_IN_MS = 7 * 60 * 60 * 1000;
+
+// Extend props to include onAddBreak
+export interface TasksContainerProps extends OriginalCategorySectionProps {
+  onAddBreak: (
+    taskId: string,
+    startTime: Date,
+    durationInMs: number,
+    breakType: 'during' | 'after',
+  ) => void;
+}
 
 interface ConnectorSegment {
   top: string;
@@ -31,17 +41,28 @@ interface ConnectorSegment {
   isForGap?: boolean;
 }
 
-export function CategorySection({
+export function TasksContainer({
   category,
   tasks,
   onAddTask,
   onEditTask,
+  onAddBreak, // Destructure new prop
   overlaps,
   highlightedTaskId,
-}: CategorySectionProps) {
+}: TasksContainerProps) {
+  // Use extended props type
   const containerRef = useRef<HTMLDivElement>(null);
   const [connectorSegments, setConnectorSegments] = useState<ConnectorSegment[]>([]);
   const nowRef = useRef(new Date()); // Use ref to keep 'now' consistent across renders
+  const [currentTime, setCurrentTime] = useState(new Date().getTime());
+
+  // Update current time every second for accurate countdowns
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().getTime());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Find the earliest focused task that is currently in progress
   const earliestFocusedTask = useMemo(() => {
@@ -343,26 +364,49 @@ export function CategorySection({
     };
   }, [tasks]); // Rerun effect when tasks or category change
 
+  // Calculate time remaining until the next task
+  const getTimeRemaining = (task: OptimalTask): number => {
+    if (!task.gapStartTime || !task.startTime) return 0;
+
+    // For past gaps, return 0
+    if (task.startTime.getTime() < currentTime) return 0;
+
+    // For future gaps, calculate time remaining
+    return task.startTime.getTime() - currentTime;
+  };
+
   // Function to render gap content based on gap type
   const renderGapContent = (task: OptimalTask) => {
     if (!task.isGap || !task.gapType) return null;
 
     const gapType = task.gapType;
     const duration = task.duration || 0;
-    const now = new Date();
-    const isInPast = task.startTime ? task.startTime < now : false;
+    const now = new Date().getTime(); // Use timestamp for comparison
+    const isInPast = task.startTime ? task.startTime.getTime() < now : false;
+    const isInFuture = task.startTime ? task.startTime.getTime() > now : false;
 
-    switch (gapType) {
+    // Check if the gap has ended (next task has started)
+    const hasGapEnded = task.gapEndTime ? task.gapEndTime.getTime() < now : false;
+
+    // Calculate time until next task starts
+    const timeUntilNextMs = getTimeRemaining(task);
+    const hasNextTask = timeUntilNextMs > 0;
+
+    // Override original gapType if needed - for better UI
+    // If it's marked as 'idle-time' but hasn't ended yet, treat it as 'free-slot' for UI
+    const displayGapType = gapType === 'idle-time' && !hasGapEnded ? 'free-slot' : gapType;
+
+    switch (displayGapType) {
       case 'break':
         return (
           <div className="flex items-center gap-1.5">
             <Coffee className="h-3.5 w-3.5" />
             <span>
-              {isInPast ? (
-                `Idle time - ${formatDuration(duration)}`
+              {isInPast && hasGapEnded ? (
+                `Idle time - ${formatDuration(task)}`
               ) : (
                 <>
-                  Need a break of <em className="font-medium">{formatDuration(duration)}</em>?
+                  Need a break of <em className="font-medium">{formatDuration(task)}</em>?
                 </>
               )}
             </span>
@@ -373,18 +417,37 @@ export function CategorySection({
           <div className="flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5" />
             <span>
-              {isInPast ? 'Idle time' : 'Free slot'} - {formatDuration(duration)}
+              {hasGapEnded ? 'Idle time' : 'Free slot'} -
+              {!hasGapEnded && task.gapEndTime && task.gapEndTime.getTime() > now ? (
+                <CountdownDisplay
+                  endTimeMs={task.gapEndTime.getTime()}
+                  showSeconds={false} // Only show minutes to minimize re-renders
+                  prefix=" "
+                  className="text-xs font-medium"
+                />
+              ) : (
+                ` ${formatDuration(task)}`
+              )}
             </span>
-            {!isInPast && task.gapStartTime && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-2 h-5 w-5 p-0 text-gray-400 hover:bg-transparent hover:text-gray-600"
-                onClick={() => onAddTask(task.gapStartTime)}
-                aria-label="Add task in free slot"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
+            {!hasGapEnded && task.gapStartTime && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-2 h-5 w-5 p-0 text-gray-400 hover:bg-transparent hover:text-gray-600"
+                  onClick={() => onAddTask(task.gapStartTime)}
+                  aria-label="Add task in free slot"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+                <TakeBreak
+                  classNames="ml-4 absolute right-10"
+                  taskId={task.id}
+                  startTime={task.gapStartTime}
+                  onAddBreak={onAddBreak}
+                  breakType="after"
+                />
+              </>
             )}
           </div>
         );
@@ -392,14 +455,31 @@ export function CategorySection({
         return (
           <div className="flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5" />
-            <span>Get ready for the next task!</span>
+            <span>
+              Get ready for the next task!
+              {hasNextTask && (
+                <CountdownDisplay
+                  endTimeMs={task.startTime?.getTime()}
+                  showSeconds={false} // Only show minutes to minimize re-renders
+                  prefix=" "
+                  className="text-xs font-medium"
+                />
+              )}
+            </span>
           </div>
         );
       case 'idle-time':
         return (
           <div className="flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5" />
-            <span>Idle time - {formatDuration(duration)}</span>
+            <span>Idle time - {formatDuration(task)}</span>
+            <TakeBreak
+              classNames="ml-4 absolute right-10"
+              taskId={task.id}
+              startTime={task.gapStartTime}
+              onAddBreak={onAddBreak}
+              breakType="after"
+            />
           </div>
         );
       default:
@@ -419,24 +499,13 @@ export function CategorySection({
 
   return (
     <div className="relative mb-16 min-h-8" id={`category-${category}`}>
-      {/* Commented out CategoryBadge for single timeline
-      <CategoryBadge
-        className="mt-4"
-        category={category}
-        label={TIMELINE_CATEGORIES[category].label}
-        color={TIMELINE_CATEGORIES[category].color}
-        isSticky
-      />
-      */}
       <div className="relative" ref={containerRef}>
         {/* Multiple connector segments with gradient transitions */}
         {connectorSegments.map((segment, index) => (
           <div key={index} className="relative">
             {/* Connector line */}
             <div
-              className={cn(
-                'absolute w-[3px] -translate-x-1/2 transition-all duration-300 ease-in-out',
-              )}
+              className={cn('absolute w-[3px] -translate-x-1/2')}
               style={{
                 top: segment.top,
                 height: segment.height,
@@ -522,7 +591,7 @@ export function CategorySection({
           })}
 
           <Button
-            onClick={() => onAddTask()}
+            onClick={() => onAddTask(undefined)}
             variant="ghost"
             className="z-30 my-10 ml-16 w-[calc(100%-4rem)] justify-start gap-2 bg-transparent text-muted-foreground hover:bg-transparent"
           >
@@ -536,10 +605,12 @@ export function CategorySection({
 }
 
 // Format duration in milliseconds to a readable format (e.g., "2h 30m")
-function formatDuration(ms: number): string {
-  if (ms <= 0) return '0m'; // Handle zero or negative duration
+function formatDuration(task: OptimalTask): string {
+  if (!task.duration || task.duration <= 0) return '0m'; // Handle zero or negative duration
 
-  const totalMinutes = Math.floor(ms / 60000);
+  // extract the break duration from the task free slot if it exists
+  const breakDuration = task.break?.duration;
+  const totalMinutes = Math.floor((task.duration - (breakDuration || 0)) / 60000);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
 

@@ -63,6 +63,7 @@ export const processTasksWithGaps = (tasks: OptimalTask[]): OptimalTask[] => {
       let gapType: GapType = 'free-slot';
       // Refined gap logic based on common scenarios
       if (isPastGap) {
+        // Both the gap start and end are in the past
         gapType = 'idle-time'; // Gap is entirely in the past
         if (isBreakGap) {
           // If it's a past gap AND long enough, might still classify as break if needed
@@ -74,10 +75,18 @@ export const processTasksWithGaps = (tasks: OptimalTask[]): OptimalTask[] => {
       } else if (isFutureGap && gapDuration >= FIFTEEN_MINUTES_IN_MS) {
         gapType = 'free-slot'; // Larger gap between future tasks
       } else if (!isPastGap && !isFutureGap) {
-        // Gap spans across 'now'
-        // Could be 'break' if current task is ending and next is starting soon,
-        // or 'free-slot' if it's a larger gap starting now/recently
-        gapType = gapDuration > TWENTY_MINUTES_IN_MS ? 'break' : 'free-slot'; // Example refinement
+        // Gap spans across 'now' OR start is in past but end is in future
+        // Only consider it 'idle-time' if BOTH the gap's start AND end are in the past
+        const isGapCurrentlyActive = isCurrentTaskEndInPast && !isNextTaskStartInPast;
+
+        if (isGapCurrentlyActive) {
+          // Gap started in past but hasn't ended yet
+          gapType = 'free-slot';
+        } else {
+          // Could be 'break' if current task is ending and next is starting soon,
+          // or 'free-slot' if it's a larger gap starting now/recently
+          gapType = gapDuration > TWENTY_MINUTES_IN_MS ? 'break' : 'free-slot';
+        }
       }
 
       // Create a deterministic gap ID based on surrounding tasks and gap type

@@ -10,6 +10,7 @@ import {
   setSelectedDate,
   tasksStore,
   updateTask,
+  updateTaskBreak,
 } from '@/features/tasks/stores/tasks.store';
 import {
   OptimalTask,
@@ -37,8 +38,8 @@ import { createPortal } from 'react-dom';
 import { TasksRoute } from '../../../../routes/routes';
 import { processTasksWithGaps } from '../../utils/task-list-utils';
 import { TaskDialog } from '../schedule/dialog';
-import { CategorySection } from './category-section';
 import { TaskMoveToast } from './task-move-toast';
+import { TasksContainer } from './tasks-container';
 import { TimelineTaskItemOverlay } from './timeline-task-item-overlay';
 
 interface DayContainerProps {
@@ -203,6 +204,10 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
     //     });
     //   }
     // }, [tasksWithGaps]);
+
+    const handleAddBreak = (taskId: string, startTime: Date, durationInMs: number) => {
+      updateTaskBreak(taskId, startTime, durationInMs, 'after');
+    };
 
     // Effect for detecting date changes on edit...
     React.useEffect(() => {
@@ -466,11 +471,12 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
                 items={tasksByCategory.tasks.map((task) => task.id)} // Use IDs from tasksWithGaps
                 strategy={verticalListSortingStrategy}
               >
-                <CategorySection
-                  category="work"
-                  tasks={tasksByCategory.tasks} // Pass the list with gaps for rendering
+                <TasksContainer
+                  category={activeCategory}
+                  tasks={tasksByCategory.tasks}
                   onEditTask={handleStartEdit}
                   onAddTask={handleAddTask}
+                  onAddBreak={handleAddBreak}
                   overlaps={tasksByCategory.overlaps}
                   highlightedTaskId={highlightedTaskId}
                 />
