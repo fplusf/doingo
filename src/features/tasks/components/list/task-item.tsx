@@ -200,10 +200,8 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
     const endDate = addMilliseconds(startDate, duration);
     const isNextDay = !isSameDay(startDate, endDate);
     const endTimeFormatted = `${format(endDate, 'HH:mm')}${isNextDay ? '<span class="text-[8px] align-super ml-0.5">+1</span>' : ''}`;
-
-    return `${format(startDate, 'HH:mm')} - ${endTimeFormatted} (${formatDurationForDisplay(
-      duration,
-    )})`;
+    // ${format(startDate, 'HH:mm')} - ${endTimeFormatted}
+    return `${formatDurationForDisplay(duration)}`;
   }
 
   function formatCompactTimeRange(startDate: Date, duration: number): string {
@@ -332,7 +330,8 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                     {displayDuration <= ONE_HOUR_IN_MS * 2 && task.startTime && (
                       <div className="mr-2 flex items-center justify-between">
                         <div className="flex items-baseline">
-                          <span
+                          {/* TODO: For now only showing the start & end time on Node */}
+                          {/* <span
                             className="whitespace-nowrap text-xs opacity-50"
                             dangerouslySetInnerHTML={{
                               __html: formatCompactTimeRange(
@@ -340,9 +339,9 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                                 displayDuration || 45 * 60 * 1000,
                               ),
                             }}
-                          />
-                          <span className="ml-1 whitespace-nowrap text-xs opacity-40">
-                            ({formatDurationForDisplay(displayDuration || 45 * 60 * 1000)})
+                          /> */}
+                          <span className="whitespace-nowrap text-xs opacity-40">
+                            {formatDurationForDisplay(displayDuration || 45 * 60 * 1000)}
                           </span>
                         </div>
                       </div>
