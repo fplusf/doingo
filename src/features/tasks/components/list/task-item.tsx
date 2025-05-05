@@ -50,7 +50,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
 
   const { addDeleteTaskAction } = useTaskHistoryContext();
 
-  const applyTaskFocus = React.useCallback(() => {
+  const pinTaskToNow = React.useCallback(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
     const isTaskFromToday = task.taskDate === today;
 
@@ -81,16 +81,12 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
     }
 
     setFocused(task.id, true);
-    // Delay navigation slightly to ensure state update completes
-    setTimeout(() => {
-      navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
-    }, 0);
   }, [task.id, task.taskDate, navigate]);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isHovered) {
-        if (e.key.toLowerCase() === 'f') {
+        if (e.key.toLowerCase() === 'n') {
           e.preventDefault();
           const now = Date.now();
 
@@ -106,7 +102,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
               return;
             }
 
-            applyTaskFocus();
+            pinTaskToNow();
             lastFKeyPressTime.current = null;
           } else {
             lastFKeyPressTime.current = now;
@@ -135,7 +131,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
         currentElement.removeEventListener('mouseleave', handleMouseLeave);
       }
     };
-  }, [isHovered, task.id, task.completed, task.isFocused, applyTaskFocus, navigate]);
+  }, [isHovered, task.id, task.completed, task.isFocused, pinTaskToNow, navigate]);
 
   React.useEffect(() => {
     if (!titleContainerRef.current) return;
@@ -218,7 +214,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
     return `${format(startDate, 'HH:mm')}-${endTimeFormatted}`;
   }
 
-  const handleFocusClick = (e: React.MouseEvent<HTMLButtonElement | HTMLDivElement>) => {
+  const handlePinClick = (e: React.MouseEvent<HTMLButtonElement | HTMLDivElement>) => {
     e.stopPropagation();
 
     if (task.completed) {
@@ -230,7 +226,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
       return;
     }
 
-    applyTaskFocus();
+    pinTaskToNow();
   };
 
   const handleDetailsClick = (e: React.MouseEvent<HTMLButtonElement | HTMLDivElement>) => {
@@ -411,8 +407,8 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                   isHovered={isHovered}
                   isCompleted={task.completed ?? false}
                   isFocused={task.isFocused ?? false}
-                  onFocusClick={handleFocusClick}
-                  onDetailsClick={handleDetailsClick}
+                  onPinClick={handlePinClick}
+                  onFocusClick={handleDetailsClick}
                 />
               </div>
             </div>
@@ -424,7 +420,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
               Details
             </ContextMenuItem>
             <ContextMenuItem
-              onClick={(e: React.MouseEvent<HTMLDivElement>) => handleFocusClick(e)}
+              onClick={(e: React.MouseEvent<HTMLDivElement>) => handlePinClick(e)}
               disabled={task.completed}
             >
               Focus
@@ -469,7 +465,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
             <Button
               onClick={() => {
                 setShowRefocusDialog(false);
-                applyTaskFocus();
+                pinTaskToNow();
               }}
             >
               Refocus

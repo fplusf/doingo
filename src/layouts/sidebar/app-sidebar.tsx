@@ -13,7 +13,7 @@ import {
 import { Link } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
-import { BarChart, Bell, Calendar1Icon, LucideFocus } from 'lucide-react';
+import { BarChart, Bell, Calendar1Icon, Pin } from 'lucide-react';
 import * as React from 'react';
 
 const data = {
@@ -97,11 +97,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 inactiveProps={{ className: 'inactive' }}
               >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
-                  <LucideFocus className="size-4" />
+                  <Pin className="size-4" />
                 </div>
               </Link>
             </SidebarMenuButton>
-            <span className="mt-2 truncate text-xs">Focus</span>
+            <span className="mt-1 truncate text-xs">Now</span>
           </SidebarMenuItem>
         </SidebarMenu>
 

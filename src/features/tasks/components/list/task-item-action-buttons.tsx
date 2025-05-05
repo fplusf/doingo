@@ -6,29 +6,30 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/components/ui/tooltip';
-import { ArrowRight, LucideFocus } from 'lucide-react';
+import { ArrowRight, Pin } from 'lucide-react';
 import React from 'react';
 
 interface TaskItemActionButtonsProps {
   isHovered: boolean;
   isCompleted: boolean;
   isFocused: boolean;
+  onPinClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
   onFocusClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
-  onDetailsClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
 export const TaskItemActionButtons = ({
   isHovered,
   isCompleted,
   isFocused,
+  onPinClick,
   onFocusClick,
-  onDetailsClick,
 }: TaskItemActionButtonsProps) => {
   return (
     <div
       className={cn(
         'absolute right-2 top-1/2 z-10 flex -translate-y-1/2 items-center opacity-0 transition-opacity duration-150',
         isHovered && 'opacity-100',
+        isFocused && 'opacity-100',
         isCompleted && 'hidden', // Hide buttons if task is completed
       )}
       // Prevent click events from bubbling up to the parent card
@@ -42,27 +43,26 @@ export const TaskItemActionButtons = ({
             <Button
               variant="ghost"
               size="icon"
-              onClick={onFocusClick}
+              onClick={onPinClick}
               className={cn(
                 'flex h-7 w-7 bg-transparent p-0 hover:bg-transparent',
                 // Don't need hover opacity here, parent handles it
                 // Keep hidden class for completed though, as a fallback/clarity
                 isCompleted && 'hidden',
               )}
-              aria-label="Focus Task"
+              aria-label="Bring to Now"
               tabIndex={isHovered ? 0 : -1} // Make tabbable only when visible
             >
-              <LucideFocus
+              <Pin
                 className={cn(
-                  'ml-2 h-4 w-4 transition-all duration-200',
-                  isFocused ? 'fill-blue-500 text-blue-500' : 'text-muted-foreground',
-                  'hover:scale-125 hover:fill-blue-500 hover:text-blue-500 hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]',
+                  'h-4 w-4 text-muted-foreground transition-all duration-200 hover:scale-110 hover:text-blue-500 hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]',
+                  isFocused && 'fill-blue-500 text-blue-500',
                 )}
               />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="p-0.5 text-[10px] uppercase">
-            <p>Focus (F)</p>
+            <p>Work now(NN)</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -73,12 +73,18 @@ export const TaskItemActionButtons = ({
             <Button
               variant="ghost"
               size="icon"
-              onClick={onDetailsClick}
+              onClick={onFocusClick}
               className="flex h-7 w-7 bg-transparent p-0 hover:bg-transparent"
               aria-label="Task Details"
               tabIndex={isHovered ? 0 : -1} // Make tabbable only when visible
             >
-              <ArrowRight className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+              <ArrowRight
+                className={cn(
+                  'ml-0.5 h-4 w-4 transition-all duration-200',
+                  isFocused ? 'text-blue-500' : 'text-muted-foreground',
+                  'hover:scale-125 hover:text-blue-500',
+                )}
+              />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="p-0.5 text-[10px] uppercase">
