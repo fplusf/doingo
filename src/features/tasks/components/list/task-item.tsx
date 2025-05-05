@@ -185,6 +185,12 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
     };
   }, [displayDuration]);
 
+  // TODO: Calculate it by exluding the all break times from the planned duration.
+  // it sholud be shown only for the completed tasks? Or maybe for all tasks?
+  const getActualTimeWorked = (taskId: string) => {
+    return 1000 * 60 * 60 * 2; // 2 hours in milliseconds
+  };
+
   function formatDurationForDisplay(duration: number): string {
     const minutes = duration / 60_000;
     const hours = Math.floor(minutes / 60);
@@ -343,6 +349,9 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                           <span className="whitespace-nowrap text-xs opacity-40">
                             {formatDurationForDisplay(displayDuration || 45 * 60 * 1000)}
                           </span>
+                          <span className="ml-4 whitespace-nowrap text-xs opacity-40">
+                            Actual: {formatDurationForDisplay(getActualTimeWorked(task.id))}
+                          </span>
                         </div>
                       </div>
                     )}
@@ -369,6 +378,9 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                         <div className="text-xs opacity-50">
                           <span className="whitespace-nowrap">
                             {formatDurationForDisplay(displayDuration || 45 * 60 * 1000)}
+                          </span>
+                          <span className="ml-4 whitespace-nowrap text-xs opacity-40">
+                            Actual: {formatDurationForDisplay(getActualTimeWorked(task.id))}
                           </span>
                         </div>
                       </section>

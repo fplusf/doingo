@@ -16,7 +16,7 @@ export type RepetitionOption = {
 export type TaskPriority = 'none' | 'high' | 'medium' | 'low' | undefined;
 export type TaskCategory = 'work' | 'passion' | 'play';
 
-export type GapType = 'break' | 'free-slot' | 'get-ready' | 'idle-time';
+export type GapType = 'past' | 'active' | 'future';
 
 export interface Subtask {
   id: string;

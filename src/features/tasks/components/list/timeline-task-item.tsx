@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTaskHistoryContext } from '../../providers/task-history-provider';
 import { updateCompletionStatus } from '../../stores/task-form.store';
 import { ONE_HOUR_IN_MS, OptimalTask } from '../../types';
+import { BreakWidget } from '../schedule/break-widget';
 import { TimelineItem } from '../timeline/timeline';
 import { TaskItem } from './task-item';
 
@@ -343,6 +344,37 @@ export const TimelineTaskItem = ({
     }
   };
 
+  const handleAddBreak = (
+    taskId: string,
+    startTime: Date,
+    duration: number,
+    breakType: 'after' | 'during',
+  ) => {
+    updateTask(taskId, {
+      break: {
+        type: breakType,
+        duration: duration,
+        startTime: startTime,
+      },
+    });
+  };
+
+  // Format break duration to readable format
+  const formatBreakDuration = (durationMs: number): string => {
+    const minutes = Math.floor(durationMs / 60000);
+    return `${minutes}m`;
+  };
+
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+  };
+
   return (
     <>
       <div
@@ -350,6 +382,8 @@ export const TimelineTaskItem = ({
         style={outerContainerStyle}
         className={outerContainerClasses}
         data-task-id={task.id}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         <div className="h-full" style={{ position: 'relative' }}>
           <div className="flex h-full items-stretch">
@@ -399,6 +433,21 @@ export const TimelineTaskItem = ({
                 onEdit={() => onEdit(taskRef.current)}
                 effectiveDuration={effectiveDuration}
               />
+
+              {/* Add BreakWidget for "during" type breaks */}
+              {/* Ensure BreakWidget is always visible if active/finished, regardless of parent hover */}
+              <div className="absolute right-10 top-1/2 -translate-y-1/2">
+                {taskRef.current.startTime && (
+                  <BreakWidget
+                    taskId={taskRef.current.id}
+                    startTime={taskRef.current.startTime}
+                    onAddBreak={handleAddBreak}
+                    breakType="during"
+                    isActive={true}
+                    isParentHovered={isHovered}
+                  />
+                )}
+              </div>
 
               {shouldShowOverlap && (
                 <div

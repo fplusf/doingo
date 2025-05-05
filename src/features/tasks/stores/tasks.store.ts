@@ -1399,6 +1399,8 @@ export const addTaskBreak = (
   } else {
     console.warn('Could not find a task to add break to for time:', startTime);
   }
+
+  console.log('Store::: ', tasksStore);
 };
 
 export const calculateTaskEndTime = (task: OptimalTask): Date | null => {
