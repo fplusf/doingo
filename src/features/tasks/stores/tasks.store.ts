@@ -1064,8 +1064,8 @@ const calculateAffectedTaskUpdates = (
     getHours(focusedTaskNewStartTime) * 60 + getMinutes(focusedTaskNewStartTime);
   const endTimeInMinutes = startTimeInMinutes + focusedTaskDuration / (60 * 1000);
 
-  // Find the *first* task that actually overlaps *and* is not completed/fixed
-  const overlappingTask = potentialOverlappingTasks.find((task) => {
+  // Find ALL tasks that overlap with the focused task
+  const overlappingTasks = potentialOverlappingTasks.filter((task) => {
     // Completed/Fixed checks are done above
     if (!task.time) return false; // Ignore tasks without a defined time
 
@@ -1084,32 +1084,44 @@ const calculateAffectedTaskUpdates = (
     return !noOverlap;
   });
 
-  if (!overlappingTask) return []; // No relevant overlapping task found
+  if (overlappingTasks.length === 0) return []; // No relevant overlapping tasks found
 
-  // Calculate the next available time slot for the overlapping task
-  const focusedTaskEndTime = addMilliseconds(focusedTaskNewStartTime, focusedTaskDuration);
-  // Use the next 5-minute interval after the *focused* task ends
-  const nextFiveMinBlock = getNextFiveMinuteInterval(focusedTaskEndTime);
-  const newStartTime = new Date(nextFiveMinBlock);
-  // Use the duration of the *overlapping* task
-  const newEndTime = addMilliseconds(newStartTime, overlappingTask.duration || 45 * 60 * 1000);
+  // Sort overlapping tasks by start time to handle them in sequence
+  overlappingTasks.sort((a, b) => {
+    const aStartTime = a.startTime ? a.startTime.getTime() : 0;
+    const bStartTime = b.startTime ? b.startTime.getTime() : 0;
+    return aStartTime - bStartTime;
+  });
 
-  // Ensure the shifted task still starts on the same day. If not, don't shift it.
-  if (format(newStartTime, 'yyyy-MM-dd') === taskDate) {
-    const taskUpdate: Partial<OptimalTask> = {
-      // taskDate: taskDate, // No need to set taskDate again, it should remain the same
-      startTime: newStartTime,
-      nextStartTime: newEndTime,
-      time: `${format(newStartTime, 'HH:mm')}—${format(newEndTime, 'HH:mm')}`,
-    };
-    updatesToApply.push({ id: overlappingTask.id, updates: taskUpdate });
-  } else {
-    console.warn(
-      `Task ${overlappingTask.id} would be pushed to the next day by focus shift. Not applying automatic shift.`,
-    );
+  // Calculate the next available time slot starting from the focused task's end time
+  let nextAvailableTime = addMilliseconds(focusedTaskNewStartTime, focusedTaskDuration);
+
+  // Process each overlapping task
+  for (const task of overlappingTasks) {
+    // Use the next 5-minute interval after the current end time
+    const nextFiveMinBlock = getNextFiveMinuteInterval(nextAvailableTime);
+    const newStartTime = new Date(nextFiveMinBlock);
+    // Use the duration of the current overlapping task
+    const taskDuration = task.duration && task.duration > 0 ? task.duration : 45 * 60 * 1000;
+    const newEndTime = addMilliseconds(newStartTime, taskDuration);
+
+    // Ensure the shifted task still starts on the same day. If not, don't shift it.
+    if (format(newStartTime, 'yyyy-MM-dd') === taskDate) {
+      const taskUpdate: Partial<OptimalTask> = {
+        startTime: newStartTime,
+        nextStartTime: newEndTime,
+        time: `${format(newStartTime, 'HH:mm')}—${format(newEndTime, 'HH:mm')}`,
+      };
+      updatesToApply.push({ id: task.id, updates: taskUpdate });
+
+      // Update the next available time for the next task
+      nextAvailableTime = newEndTime;
+    } else {
+      console.warn(
+        `Task ${task.id} would be pushed to the next day by focus shift. Not applying automatic shift.`,
+      );
+    }
   }
-
-  // Note: This only shifts the *first* overlapping task.
 
   return updatesToApply;
 };

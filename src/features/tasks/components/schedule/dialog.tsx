@@ -16,7 +16,7 @@ import {
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import { useNavigate } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
-import { ChevronDown, ChevronRight, ListPlus, Maximize2, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, ListPlus, Maximize2, Pin, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { estimateTaskDuration } from '../../../../lib/groq-service';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
@@ -30,7 +30,7 @@ import {
   updateField,
   updateFields,
 } from '../../stores/task-form.store';
-import { setEditingTaskId, tasksStore, updateTask } from '../../stores/tasks.store';
+import { setEditingTaskId, setFocused, tasksStore, updateTask } from '../../stores/tasks.store';
 import { SubtaskList } from '../details/subtasks';
 import { EmojiPicker } from './emoji-picker';
 import { PriorityPicker } from './priority-picker';
@@ -130,6 +130,7 @@ function TaskDialogContent({
   const navigate = useNavigate();
   const showActionButtons = title && title.length > 0;
   const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
+  const isFocused = useStore(tasksStore, (state) => state.focusedTaskId === editingTaskId);
 
   // Collapsible state - closed by default
   const { isSubtasksOpen, setIsSubtasksOpen } = useSubtasksCollapse();
@@ -462,6 +463,54 @@ function TaskDialogContent({
         <div className="flex items-center">
           {showActionButtons && (
             <>
+              {!isFocused && (
+                <Button
+                  title="Work now"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    // First submit any changes
+                    submitFormBatch();
+
+                    // Get the task ID - for new tasks, it will be created during submitFormBatch
+                    const taskId =
+                      editingTaskId ||
+                      tasksStore.state.tasks[tasksStore.state.tasks.length - 1]?.id;
+
+                    // Then focus the task - this will handle all the time updates
+                    if (taskId) {
+                      setFocused(taskId, true, { preserveTimeAndDate: false });
+                    }
+
+                    // Finally close the dialog and reset editing state
+                    onOpenChange(false);
+                    setEditingTaskId(null);
+                  }}
+                  className="mr-2 h-8 w-8 p-0 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  aria-label="Focus now"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      submitFormBatch();
+
+                      // Get the task ID - for new tasks, it will be created during submitFormBatch
+                      const taskId =
+                        editingTaskId ||
+                        tasksStore.state.tasks[tasksStore.state.tasks.length - 1]?.id;
+
+                      // Then focus the task - this will handle all the time updates
+                      if (taskId) {
+                        setFocused(taskId, true, { preserveTimeAndDate: false });
+                      }
+
+                      onOpenChange(false);
+                      setEditingTaskId(null);
+                    }
+                  }}
+                >
+                  <Pin className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"

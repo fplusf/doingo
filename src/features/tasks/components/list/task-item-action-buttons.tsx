@@ -55,14 +55,14 @@ export const TaskItemActionButtons = ({
             >
               <Pin
                 className={cn(
-                  'h-4 w-4 text-muted-foreground transition-all duration-200 hover:scale-110 hover:text-blue-500 hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]',
-                  isFocused && 'fill-blue-500 text-blue-500',
+                  'h-4 w-4 rotate-45 text-muted-foreground transition-all duration-200 hover:rotate-0 hover:scale-110 hover:text-blue-500 hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]',
+                  isFocused && 'rotate-0 fill-blue-500 text-blue-500',
                 )}
               />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="p-0.5 text-[10px] uppercase">
-            <p>Work now(NN)</p>
+            <p>Work now (NN)</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
