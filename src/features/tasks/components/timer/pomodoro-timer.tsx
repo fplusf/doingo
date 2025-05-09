@@ -26,9 +26,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/components/ui/tooltip';
-import { BatteryCharging, BatteryPlus, Pause, Play, RotateCcw } from 'lucide-react';
+import { BatteryCharging, BatteryPlus, Pause, Play, RotateCcw, TimerIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { ElectronApi } from '../../../../shared/types/electron';
+import { SessionIndicator } from './session-indicator';
 
 declare global {
   interface Window {
@@ -46,6 +47,7 @@ interface PomodoroTimerProps {
     duration: number,
     breakType: 'during' | 'after',
   ) => void;
+  totalDuration?: number;
 }
 
 const POMODORO_DURATIONS = [
@@ -73,35 +75,16 @@ const formatDisplayTime = (ms: number): string => {
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 };
 
-const TomatoIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="h-4 w-4"
-  >
-    <circle cx="12" cy="14" r="8" />
-    <path d="M12 6a2 2 0 0 0 2-2c0-1.1-.9-2-2-2a2 2 0 0 0-2 2c0 1.1.9 2 2 2z" />
-    <path d="M12 6v2" />
-    <path d="M10 10l-1-1" />
-    <path d="M14 10l1-1" />
-  </svg>
-);
-
 export const PomodoroTimer = ({
   className,
   onStateChange,
   taskId,
   onAddBreak,
+  totalDuration = 2 * 60 * 60 * 1000, // Default 2 hours
 }: PomodoroTimerProps) => {
   const [displayState, setDisplayState] = useState<GlobalTimerState>(getCurrentPomodoroState());
   const [showBreakWidget, setShowBreakWidget] = useState(false);
+  const [currentSession, setCurrentSession] = useState(0);
 
   useEffect(() => {
     const unsubscribe = subscribeToGlobalTimer((newGlobalState: GlobalTimerState) => {
@@ -110,6 +93,8 @@ export const PomodoroTimer = ({
         onStateChange(newGlobalState.isRunning);
       }
       const previousState = displayState;
+
+      // Track session progress
       if (
         previousState.activeMode === 'pomodoro' &&
         !previousState.isRunning &&
@@ -119,6 +104,7 @@ export const PomodoroTimer = ({
         !newGlobalState.isRunning
       ) {
         setShowBreakWidget(true);
+        setCurrentSession((prev) => prev + 1);
       }
     });
 
@@ -219,7 +205,7 @@ export const PomodoroTimer = ({
 
   return (
     <TooltipProvider>
-      <div className={cn('flex flex-col items-center gap-2', className)}>
+      <div className={cn('flex max-w-[200px] flex-col items-center gap-2', className)}>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -309,7 +295,7 @@ export const PomodoroTimer = ({
                       'bg-blue-500/20 text-blue-500 hover:bg-blue-500/30 hover:text-blue-600',
                   )}
                 >
-                  <TomatoIcon />
+                  <TimerIcon />
                 </ToggleGroupItem>
               </TooltipTrigger>
               <TooltipContent>
@@ -391,6 +377,13 @@ export const PomodoroTimer = ({
             </TooltipContent>
           </Tooltip>
         </div>
+        <SessionIndicator
+          totalDuration={totalDuration}
+          currentSession={currentSession}
+          className="ml-0 self-start"
+          pomodoroDuration={pomodoroDuration}
+          breakDuration={breakDuration}
+        />
       </div>
     </TooltipProvider>
   );

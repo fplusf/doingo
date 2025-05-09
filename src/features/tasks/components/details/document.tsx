@@ -123,7 +123,12 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
               onChange={handleTitleChange}
               className="w-full resize-none overflow-hidden whitespace-pre-wrap break-words bg-transparent px-4 text-2xl font-semibold tracking-tight focus:outline-none"
             />
-            <PomodoroTimer className="flex-shrink-0" taskId={taskId} onAddBreak={handleAddBreak} />
+            <PomodoroTimer
+              className="flex-shrink-0"
+              taskId={taskId}
+              onAddBreak={handleAddBreak}
+              totalDuration={task.duration || 45 * 60 * 1000} // Default 45 minutes if no duration set
+            />
           </div>
         </section>
 

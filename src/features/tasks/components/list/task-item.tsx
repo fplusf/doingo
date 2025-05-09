@@ -238,18 +238,11 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
   const progress = task.progress ?? 0;
 
   const handleDeleteTask = (e?: React.MouseEvent) => {
-    // Prevent event propagation if event is provided
     if (e) {
       e.stopPropagation();
     }
-
-    // Store the task before deletion
     const taskToDelete = { ...task };
-
-    // Delete the task
     deleteTask(task.id);
-
-    // Add to history for undo/redo
     addDeleteTaskAction(task.id, taskToDelete);
   };
 
