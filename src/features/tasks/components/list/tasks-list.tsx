@@ -143,6 +143,7 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
     // Capture positions after initial render
     useEffect(() => {
       taskPositionsRef.current = captureTaskPositions();
+      console.log('STORE::: ', tasksStore.state);
     }, []);
 
     // TODO: The animation messes up with the timeline connector

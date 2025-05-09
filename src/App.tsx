@@ -1,9 +1,10 @@
 import { RouterProvider } from '@tanstack/react-router';
+import { useTheme } from 'next-themes';
 import React, { useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useTranslation } from 'react-i18next';
-import { useMenuBarCountdown } from './features/tasks/hooks/use-menu-bar-countdown';
 import { TaskHistoryProvider } from './features/tasks/providers/task-history-provider';
+import { initializeGlobalTimer } from './features/tasks/services/global-pomodoro-timer.service';
 import './localization/i18n';
 import { router } from './routes/router';
 import { updateAppLanguage } from './shared/helpers/language_helpers';
@@ -11,9 +12,9 @@ import { syncThemeWithLocal } from './shared/helpers/theme_helpers';
 
 export default function App() {
   const { i18n } = useTranslation();
+  const { theme } = useTheme();
 
-  // run the countdown while the app is running
-  useMenuBarCountdown();
+  initializeGlobalTimer();
 
   useEffect(() => {
     syncThemeWithLocal();

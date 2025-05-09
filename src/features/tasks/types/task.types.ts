@@ -56,6 +56,15 @@ export interface OptimalTask {
     duration?: number;
     startTime?: Date;
   };
+  // Pomodoro tracking
+  pomodoroSessions?: {
+    amount: number; // Number of completed pomodoro sessions
+    totalDuration: number; // Total time spent in pomodoro sessions (ms)
+  };
+  pomodoroBreaks?: {
+    amount: number; // Number of breaks taken
+    totalDuration: number; // Total time spent in breaks (ms)
+  };
   // Multi-day task properties
   isPartOfMultiDay?: boolean;
   originalTaskId?: string;

@@ -1364,6 +1364,62 @@ export const updateTaskBreak = (
   });
 };
 
+// Helper function to increment pomodoro sessions counter
+export const incrementPomodoroSession = (taskId: string, sessionDuration: number) => {
+  updateStateAndStorage((state) => {
+    const taskIndex = state.tasks.findIndex((t) => t.id === taskId);
+    if (taskIndex === -1) return state;
+
+    const task = state.tasks[taskIndex];
+    const updatedTasks = [...state.tasks];
+
+    // Get existing sessions data or initialize new one
+    const currentSessions = task.pomodoroSessions || { amount: 0, totalDuration: 0 };
+
+    // Increment sessions count and add duration
+    updatedTasks[taskIndex] = {
+      ...task,
+      pomodoroSessions: {
+        amount: currentSessions.amount + 1,
+        totalDuration: currentSessions.totalDuration + sessionDuration,
+      },
+    };
+
+    return {
+      ...state,
+      tasks: updatedTasks,
+    };
+  });
+};
+
+// Helper function to increment break counter
+export const incrementPomodoroBreak = (taskId: string, breakDuration: number) => {
+  updateStateAndStorage((state) => {
+    const taskIndex = state.tasks.findIndex((t) => t.id === taskId);
+    if (taskIndex === -1) return state;
+
+    const task = state.tasks[taskIndex];
+    const updatedTasks = [...state.tasks];
+
+    // Get existing breaks data or initialize new one
+    const currentBreaks = task.pomodoroBreaks || { amount: 0, totalDuration: 0 };
+
+    // Increment breaks count and add duration
+    updatedTasks[taskIndex] = {
+      ...task,
+      pomodoroBreaks: {
+        amount: currentBreaks.amount + 1,
+        totalDuration: currentBreaks.totalDuration + breakDuration,
+      },
+    };
+
+    return {
+      ...state,
+      tasks: updatedTasks,
+    };
+  });
+};
+
 // Function to add a break immediately after or during a task
 export const addTaskBreak = (
   startTime: Date,
@@ -1411,8 +1467,6 @@ export const addTaskBreak = (
   } else {
     console.warn('Could not find a task to add break to for time:', startTime);
   }
-
-  console.log('Store::: ', tasksStore);
 };
 
 export const calculateTaskEndTime = (task: OptimalTask): Date | null => {

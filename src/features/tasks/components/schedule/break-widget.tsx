@@ -24,6 +24,7 @@ interface BreakWidgetProps {
   breakType?: 'during' | 'after'; // Default to 'after' if not specified
   isActive: boolean; // Indicates if the parent task/gap is active
   isParentHovered: boolean; // Indicates if the parent component is hovered
+  hideTimer?: boolean; // Whether to hide the timer display
 }
 
 export const BreakWidget: React.FC<BreakWidgetProps> = ({
@@ -33,7 +34,8 @@ export const BreakWidget: React.FC<BreakWidgetProps> = ({
   onAddBreak,
   breakType = 'after',
   isActive,
-  isParentHovered, // Destructure the new prop
+  isParentHovered,
+  hideTimer = false,
 }) => {
   const [breakMinutes, setBreakMinutes] = useState<number>(15);
   const [isPopoverOpen, setIsPopoverOpen] = useState<boolean>(false);
@@ -191,14 +193,12 @@ export const BreakWidget: React.FC<BreakWidgetProps> = ({
       <TooltipProvider delayDuration={300}>
         <Tooltip>
           <TooltipTrigger asChild>
-            {/* Disable opening the popover unless the task/gap is active */}
             <PopoverTrigger asChild disabled={!isActive}>
               <Button
                 variant="ghost"
                 size="sm"
                 className={`h-5 w-5 p-0 text-gray-400 hover:bg-transparent hover:text-gray-600 ${classNames}`}
                 aria-label={tooltipText}
-                // Prevent click events from bubbling up if the popover is disabled
                 onClick={(e) => {
                   if (!isActive) {
                     e.preventDefault();
@@ -208,8 +208,8 @@ export const BreakWidget: React.FC<BreakWidgetProps> = ({
               >
                 <div className="relative flex items-center gap-1">
                   {iconElement}
-                  {/* Show duration/countdown only when break is active and NOT finished */}
-                  {isBreakActive && !timeStatus.isFinished && breakEndTimeMs && (
+                  {/* Show duration/countdown only when break is active and NOT finished and hideTimer is false */}
+                  {!hideTimer && isBreakActive && !timeStatus.isFinished && breakEndTimeMs && (
                     <span className="absolute left-6 top-0 text-xs font-medium">
                       <CountdownDisplay
                         endTimeMs={breakEndTimeMs}

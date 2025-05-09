@@ -5,9 +5,10 @@ import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import React, { useCallback, useEffect } from 'react';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { updateCompletionStatus } from '../../stores/task-form.store';
-import { toggleTaskCompletion, updateTask } from '../../stores/tasks.store';
+import { toggleTaskCompletion, updateTask, updateTaskBreak } from '../../stores/tasks.store';
 import CollapsedContainer from '../schedule/collapsed-container';
 import { TaskScheduler } from '../schedule/task-scheduler';
+import { PomodoroTimer } from '../timer/pomodoro-timer';
 import TaskNotes from './notes';
 import { SubtaskList } from './subtasks';
 
@@ -70,6 +71,24 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
     [taskId, task, onEdit],
   );
 
+  // Handler for adding breaks
+  const handleAddBreak = useCallback(
+    (taskId: string, startTime: Date, duration: number, breakType: 'during' | 'after') => {
+      updateTaskBreak(taskId, startTime, duration, breakType);
+      if (onEdit) {
+        onEdit({
+          ...task,
+          break: {
+            startTime,
+            duration,
+            type: breakType,
+          },
+        });
+      }
+    },
+    [task, onEdit],
+  );
+
   return (
     <div className={cn(className, 'flex h-full flex-col')}>
       {/* Schedule Information - Sticky Header */}
@@ -97,12 +116,15 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
             size="lg"
             ariaLabel={`Toggle task: ${task.title}`}
           />
-          <textarea
-            placeholder="Task Title"
-            value={task.title}
-            onChange={handleTitleChange}
-            className="w-full resize-none overflow-hidden whitespace-pre-wrap break-words bg-transparent px-4 text-2xl font-semibold tracking-tight focus:outline-none"
-          />
+          <div className="flex flex-1 justify-between gap-4">
+            <textarea
+              placeholder="Task Title"
+              value={task.title}
+              onChange={handleTitleChange}
+              className="w-full resize-none overflow-hidden whitespace-pre-wrap break-words bg-transparent px-4 text-2xl font-semibold tracking-tight focus:outline-none"
+            />
+            <PomodoroTimer className="flex-shrink-0" taskId={taskId} onAddBreak={handleAddBreak} />
+          </div>
         </section>
 
         <SubtaskList
