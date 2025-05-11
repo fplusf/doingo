@@ -1,14 +1,15 @@
-import { EmojiPicker } from '@/features/tasks/components/schedule/emoji-picker';
 import { OptimalTask } from '@/features/tasks/types';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { updateCompletionStatus } from '../../stores/task-form.store';
 import { toggleTaskCompletion, updateTask, updateTaskBreak } from '../../stores/tasks.store';
 import CollapsedContainer from '../schedule/collapsed-container';
+import { EmojiPicker } from '../schedule/emoji-picker';
 import { TaskScheduler } from '../schedule/task-scheduler';
+import { TimelineNode } from '../timeline/timeline-node';
 import { PomodoroTimer } from '../timer/pomodoro-timer';
 import TaskNotes from './notes';
 import { SubtaskList } from './subtasks';
@@ -22,6 +23,7 @@ interface TaskDocumentProps {
 export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
   // Extract task ID for all update operations
   const taskId = task.id;
+  const [isEmojiPickerVisibleAndOpen, setIsEmojiPickerVisibleAndOpen] = useState(false);
 
   // Sync task completion status with the form
   useEffect(() => {
@@ -42,10 +44,11 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
 
   // Handler for updating the task emoji
   const handleEmojiSelect = useCallback(
-    (emoji: string) => {
-      updateTask(taskId, { emoji });
+    (selectedEmoji: string) => {
+      updateTask(taskId, { emoji: selectedEmoji });
       // Call onEdit for backward compatibility if provided
-      if (onEdit) onEdit({ ...task, emoji });
+      if (onEdit) onEdit({ ...task, emoji: selectedEmoji });
+      setIsEmojiPickerVisibleAndOpen(false); // Close picker after selection
     },
     [taskId, task, onEdit],
   );
@@ -90,14 +93,55 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
     [task, onEdit],
   );
 
+  const handleTimelineNodeClick = () => {
+    setIsEmojiPickerVisibleAndOpen(true);
+  };
+
   return (
     <div className={cn(className, 'flex h-full flex-col')}>
       {/* Schedule Information - Sticky Header */}
       <div className="z-8 sticky top-0 flex bg-background pb-6 pl-3 pt-5">
         <div className="flex-1">
-          <EmojiPicker emoji={task.emoji} onEmojiSelect={handleEmojiSelect} className="text-3xl" />
+          <div
+            className="relative flex h-12 w-12 cursor-pointer items-center justify-center"
+            onClick={handleTimelineNodeClick}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleTimelineNodeClick();
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label="Change task emoji"
+          >
+            <TimelineNode
+              emoji={task.emoji || '📝'}
+              priority={task.priority}
+              completed={task.completed}
+              startTime={task.startTime}
+              duration={task.duration}
+              timeSpent={task.timeSpent}
+              isDetailsView={true}
+              className="pointer-events-none h-12 w-12" // Make node visual only for this interaction
+            />
+            {isEmojiPickerVisibleAndOpen && (
+              // This div ensures the EmojiPicker's trigger is layered correctly if needed,
+              // though EmojiPicker itself is a Popover with its own trigger.
+              // The key is isOpenControlled tells EmojiPicker to show its popover.
+              <div className="absolute inset-0">
+                <EmojiPicker
+                  emoji={task.emoji || ''}
+                  onEmojiSelect={handleEmojiSelect}
+                  className="h-full w-full rounded-3xl bg-transparent" // Trigger styled to be transparent
+                  isOpenControlled={isEmojiPickerVisibleAndOpen}
+                  onOpenChangeControlled={setIsEmojiPickerVisibleAndOpen}
+                />
+              </div>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 rounded-xl bg-black/10 p-1 px-2">
           <CollapsedContainer>
             <TaskScheduler className="flex-1 text-muted-foreground" taskId={taskId} />
           </CollapsedContainer>

@@ -1,5 +1,4 @@
 import { cn } from '@/lib/utils';
-import React from 'react';
 
 interface SessionIndicatorProps {
   totalDuration: number;
@@ -16,46 +15,24 @@ export const SessionIndicator = ({
   pomodoroDuration,
   breakDuration,
 }: SessionIndicatorProps) => {
-  // Calculate total number of sessions based on actual pomodoro and break durations
   const totalSessions = Math.ceil(totalDuration / (pomodoroDuration + breakDuration));
 
   return (
-    <div className={cn('flex items-center justify-start gap-1', className)}>
-      <div className={'mr-2 flex flex-wrap items-center gap-1'}>
+    <div className={cn('flex items-center justify-start gap-2', className)}>
+      <div className="flex flex-wrap items-center gap-1.5">
         {Array.from({ length: totalSessions }).map((_, index) => (
-          <React.Fragment key={index}>
-            {/* Pomodoro Session */}
-            <div
-              className={cn(
-                'h-1 w-4 rounded-full transition-all duration-200',
-                index === currentSession
-                  ? 'bg-blue-500'
-                  : index < currentSession
-                    ? 'bg-blue-500/30'
-                    : 'bg-gray-200 dark:bg-gray-700',
-              )}
-              aria-label={`Pomodoro session ${index + 1} of ${totalSessions}`}
-            />
-
-            {/* Break (show between sessions, not after the last one) */}
-            {index < totalSessions - 1 && (
-              <div
-                className={cn(
-                  'h-1.5 w-1.5 rounded-full transition-all duration-200',
-                  index === currentSession
-                    ? 'bg-green-500'
-                    : index < currentSession
-                      ? 'bg-green-500/30'
-                      : 'bg-gray-200 dark:bg-gray-700',
-                )}
-                aria-label={`Break after session ${index + 1}`}
-              />
+          <div
+            key={index}
+            className={cn(
+              'h-2 w-2 rounded-full transition-all duration-200',
+              index <= currentSession ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-700',
             )}
-          </React.Fragment>
+            aria-label={`Pomodoro session ${index + 1} of ${totalSessions}`}
+          />
         ))}
       </div>
-      <div className="text-[10px] text-muted-foreground">
-        {currentSession}/{totalSessions}
+      <div title="Current session progress" className="text-[10px] text-muted-foreground">
+        {currentSession + 1}/{totalSessions}
       </div>
     </div>
   );

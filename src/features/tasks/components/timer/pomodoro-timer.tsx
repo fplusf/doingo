@@ -26,7 +26,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/components/ui/tooltip';
-import { BatteryCharging, BatteryPlus, Pause, Play, RotateCcw, TimerIcon } from 'lucide-react';
+import { BatteryPlus, Pause, Play, RotateCcw, TimerIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { ElectronApi } from '../../../../shared/types/electron';
 import { SessionIndicator } from './session-indicator';
@@ -274,7 +274,7 @@ export const PomodoroTimer = ({
                       'bg-blue-500/20 text-blue-500 hover:bg-blue-500/30 hover:text-blue-600',
                   )}
                 >
-                  <TimerIcon />
+                  <TimerIcon className="h-5 w-5" aria-hidden="true" />
                 </ToggleGroupItem>
               </TooltipTrigger>
               <TooltipContent>
@@ -282,33 +282,31 @@ export const PomodoroTimer = ({
               </TooltipContent>
             </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <ToggleGroupItem
-                  value="break"
-                  disabled={
-                    isGlobalTimerLockedByOtherTask ||
-                    (isRunning && isTimerEffectivelyForThisTask && activeMode !== 'break')
-                  }
-                  aria-label="Break mode"
-                  className={cn(
-                    'h-6 w-6 p-0',
-                    isTimerEffectivelyForThisTask &&
-                      activeMode === 'break' &&
-                      'bg-green-500/20 text-green-500 hover:bg-green-500/30 hover:text-green-600',
-                  )}
-                >
-                  {isRunning && isTimerEffectivelyForThisTask ? (
-                    <BatteryCharging className="h-5 w-5" aria-hidden="true" />
-                  ) : (
+            {showBreakWidget && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem
+                    value="break"
+                    disabled={
+                      isGlobalTimerLockedByOtherTask ||
+                      (isRunning && isTimerEffectivelyForThisTask && activeMode !== 'break')
+                    }
+                    aria-label="Break mode"
+                    className={cn(
+                      'h-6 w-6 p-0',
+                      isTimerEffectivelyForThisTask &&
+                        activeMode === 'break' &&
+                        'bg-green-500/20 text-green-500 hover:bg-green-500/30 hover:text-green-600',
+                    )}
+                  >
                     <BatteryPlus className="h-5 w-5" aria-hidden="true" />
-                  )}
-                </ToggleGroupItem>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Break</p>
-              </TooltipContent>
-            </Tooltip>
+                  </ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Break (Available after session)</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </ToggleGroup>
 
           <Tooltip>

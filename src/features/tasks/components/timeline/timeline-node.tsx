@@ -22,6 +22,7 @@ interface TimelineNodeProps {
   isEarliestFocused?: boolean; // New prop to determine if this is the earliest focused task
   isTimeFixed?: boolean; // Add this prop for time-fixed tasks
   onCompletedChange?: (completed: boolean) => void; // Add this prop for task completion
+  isDetailsView?: boolean; // Flag for details page view
 }
 
 export function TimelineNode({
@@ -40,6 +41,7 @@ export function TimelineNode({
   timeSpent = 0,
   isEarliestFocused = false, // Default to false
   onCompletedChange,
+  isDetailsView = false,
 }: TimelineNodeProps) {
   const [progress, setProgress] = useState(0);
   const [timeStatus, setTimeStatus] = useState<'past' | 'present' | 'future'>('future');
@@ -84,8 +86,45 @@ export function TimelineNode({
     const updateTimeStatus = () => {
       const currentTime = new Date();
 
+      // Special handling for details view
+      if (isDetailsView) {
+        if (completed) {
+          setTimeStatus('past');
+          setProgress(100);
+          return;
+        }
+
+        // If no valid time info, show 50% progress
+        if (!startTime || !duration) {
+          setTimeStatus('present');
+          setProgress(50);
+          return;
+        }
+
+        const endTimeValue = addMilliseconds(startTime, duration);
+
+        if (endTimeValue < currentTime) {
+          // Past task
+          setTimeStatus('past');
+          setProgress(100);
+        } else if (startTime <= currentTime && endTimeValue > currentTime) {
+          // Current task
+          setTimeStatus('present');
+          const elapsedTime = currentTime.getTime() - startTime.getTime();
+          const progressPercentage = (elapsedTime / duration) * 100;
+          setProgress(Math.min(Math.max(progressPercentage, 0), 100));
+        } else {
+          // Future task - in details view, still show some progress (25%)
+          setTimeStatus('present');
+          setProgress(25);
+        }
+        return;
+      }
+
+      // Standard timeline behavior
       if (!startTime || !duration) {
         setTimeStatus('future');
+        setProgress(0);
         return;
       }
 
@@ -96,10 +135,9 @@ export function TimelineNode({
         setProgress(100);
       } else if (startTime <= currentTime && endTimeValue > currentTime) {
         setTimeStatus('present');
-        const totalDuration = duration;
         const elapsedTime = currentTime.getTime() - startTime.getTime();
-        const calculatedProgress = Math.min(Math.max((elapsedTime / totalDuration) * 100, 0), 100);
-        setProgress(calculatedProgress);
+        const progressPercentage = (elapsedTime / duration) * 100;
+        setProgress(Math.min(Math.max(progressPercentage, 0), 100));
       } else {
         setTimeStatus('future');
         setProgress(0);
@@ -107,10 +145,10 @@ export function TimelineNode({
     };
 
     updateTimeStatus();
-
-    const intervalId = setInterval(updateTimeStatus, 1000);
+    // Update more frequently for smoother progress
+    const intervalId = setInterval(updateTimeStatus, 100);
     return () => clearInterval(intervalId);
-  }, [startTime, duration, timeSpent]);
+  }, [startTime, duration, isDetailsView, completed]);
 
   // Update current time every minute
   useEffect(() => {
@@ -209,12 +247,14 @@ export function TimelineNode({
       left: 0,
       right: 0,
       height: `${progress}%`,
-      background:
-        progress === 100
+      background: isDetailsView
+        ? priorityColor
+        : progress === 100
           ? priorityColor
           : `linear-gradient(to bottom, ${priorityColor} 0%, ${priorityColor} 40%, ${priorityColor}80 100%)`,
       transition: 'height 0.2s ease-in-out',
-      borderRadius: '24px 24px 0 0',
+      borderRadius: isDetailsView ? '24px 24px 0 0' : '24px 24px 0 0',
+      opacity: isDetailsView ? 0.5 : 1,
     };
   };
 
@@ -253,22 +293,28 @@ export function TimelineNode({
     <div className="relative h-full">
       {/* Render start time conditionally */}
       {startTime && !hideStartTime && (
-        <div className="absolute -left-12 top-0 text-xs text-muted-foreground">
-          {format(startTime, 'HH:mm')}
+        <div className="absolute -left-12 top-0 flex items-center text-[10px] font-medium">
+          <span className="rounded bg-background/50 px-1 py-0.5 text-foreground/70">
+            {format(startTime, 'HH:mm')}
+          </span>
         </div>
       )}
 
       {/* Render current time only for focused tasks */}
       {isFocused && (
-        <div className="absolute -left-12 top-1/2 -translate-y-1/2 text-xs font-medium text-blue-500/70">
-          {format(currentTime, 'HH:mm')}
+        <div className="absolute -left-12 top-1/2 flex -translate-y-1/2 items-center text-[10px] font-medium">
+          <span className="rounded bg-blue-500/10 px-1 py-0.5 text-blue-400 ring-1 ring-blue-500/20">
+            {format(currentTime, 'HH:mm')}
+          </span>
         </div>
       )}
 
       {/* Render end time */}
       {displayEndTime && !hideEndTime && (
-        <div className="absolute -left-12 bottom-0 text-xs text-muted-foreground/60">
-          {format(displayEndTime, 'HH:mm')}
+        <div className="absolute -left-12 bottom-0 flex items-center text-[10px] font-medium">
+          <span className="rounded bg-background/50 px-1 py-0.5 text-foreground/50">
+            {format(displayEndTime, 'HH:mm')}
+          </span>
         </div>
       )}
 
@@ -307,15 +353,16 @@ export function TimelineNode({
         }}
       >
         {/* Progress fill */}
-        {timeStatus === 'present' && !completed && isEarliestFocused && (
+        {(isDetailsView || (timeStatus === 'present' && !completed && isEarliestFocused)) && (
           <>
             <div style={getProgressFillStyle()} />
-            {Array.from({ length: 35 }).map((_, index) => (
-              <React.Fragment key={index}>
-                <div key={`particle1-${index}`} style={getParticleStyles(index)} />
-                <div key={`particle2-${index}`} style={getParticleStyles(index)} />
-              </React.Fragment>
-            ))}
+            {!isDetailsView &&
+              Array.from({ length: 35 }).map((_, index) => (
+                <React.Fragment key={index}>
+                  <div key={`particle1-${index}`} style={getParticleStyles(index)} />
+                  <div key={`particle2-${index}`} style={getParticleStyles(index)} />
+                </React.Fragment>
+              ))}
           </>
         )}
 

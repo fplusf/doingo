@@ -11,14 +11,11 @@ import {
   taskFormStore,
   updateDueDateTime,
   updateDuration,
-  updateRepeatInterval,
-  updateRepetition,
   updateStartDateTime,
   updateTimeFixed,
 } from '../../stores/task-form.store';
 // import { pushForwardAffectedTasks } from '../../store/tasks.store'; // Removed - Logic now handled by setFocused
 import { useRouter } from '@tanstack/react-router';
-import { RepetitionType } from '../../types';
 import { DateTimePicker } from './date-time-picker';
 import { DurationPicker } from './duration-picker';
 
@@ -100,17 +97,6 @@ export function TaskScheduler({
     }
   }, [duration, startDate, taskId]);
 
-  // Add a helper function to apply free time slot
-  const applyFreeTimeSlot = (time: string) => {
-    // Create a date object for the selected time
-    const [hours, minutes] = time.split(':').map(Number);
-    const newDate = new Date(startDate);
-    newDate.setHours(hours, minutes, 0, 0);
-
-    // Apply the new time directly
-    updateStartDateTime(newDate, time);
-  };
-
   // Handlers for the component inputs
   const handleStartDateTimeChange = (date: Date, time: string) => {
     // For existing tasks
@@ -149,30 +135,8 @@ export function TaskScheduler({
     if (onDurationChange) onDurationChange(newDuration);
   };
 
-  // Separate handler for start date change from RepetitionPicker
-  const handleStartDateChange = (date: Date | undefined) => {
-    // We only get the date part from RepetitionPicker's adapter
-    // Keep existing time or default if needed
-    updateStartDateTime(date || new Date(), startTime); // Keep existing time
-  };
-
-  // Separate handler for end date change from RepetitionPicker
-  const handleEndDateChange = (date: Date | undefined) => {
-    // We only get the date part from RepetitionPicker's adapter
-    // Keep existing time or default if needed
-    updateDueDateTime(date, dueTime || ''); // Keep existing time or empty string
-  };
-
   const handleDueDateTimeChange = (date: Date | undefined, time: string) => {
     updateDueDateTime(date, time);
-  };
-
-  const handleRepetitionChange = (repetitionValue: RepetitionType) => {
-    updateRepetition(repetitionValue);
-  };
-
-  const handleRepeatIntervalChange = (interval: number) => {
-    updateRepeatInterval(interval); // Call the store action
   };
 
   return (
