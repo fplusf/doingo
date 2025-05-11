@@ -169,27 +169,6 @@ export const PomodoroTimer = ({
     setGlobalBreakDuration(newDuration);
   }, []);
 
-  const handleManualBreakStart = useCallback(() => {
-    if (displayState.currentTaskId === taskId && displayState.activeMode === 'break') {
-      startPomodoroTimer(taskId, 'break', displayState.breakDuration, false);
-      setShowBreakWidget(false);
-    } else if (
-      displayState.currentTaskId === taskId &&
-      displayState.activeMode === 'pomodoro' &&
-      !displayState.isRunning
-    ) {
-      switchPomodoroMode('break', taskId);
-      startPomodoroTimer(taskId, 'break', displayState.breakDuration, false);
-      setShowBreakWidget(false);
-    }
-  }, [
-    taskId,
-    displayState.currentTaskId,
-    displayState.activeMode,
-    displayState.isRunning,
-    displayState.breakDuration,
-  ]);
-
   const {
     isRunning,
     activeMode,
@@ -205,7 +184,7 @@ export const PomodoroTimer = ({
 
   return (
     <TooltipProvider>
-      <div className={cn('flex max-w-[200px] flex-col items-center gap-2', className)}>
+      <div className={cn('flex max-w-[200px] flex-col gap-2', className)}>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -380,7 +359,7 @@ export const PomodoroTimer = ({
         <SessionIndicator
           totalDuration={totalDuration}
           currentSession={currentSession}
-          className="ml-0 self-start"
+          className="ml-0 self-start opacity-50"
           pomodoroDuration={pomodoroDuration}
           breakDuration={breakDuration}
         />

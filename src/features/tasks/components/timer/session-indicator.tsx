@@ -20,8 +20,8 @@ export const SessionIndicator = ({
   const totalSessions = Math.ceil(totalDuration / (pomodoroDuration + breakDuration));
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className={cn('flex flex-wrap items-center gap-1', className)}>
+    <div className={cn('flex items-center justify-start gap-1', className)}>
+      <div className={'mr-2 flex flex-wrap items-center gap-1'}>
         {Array.from({ length: totalSessions }).map((_, index) => (
           <React.Fragment key={index}>
             {/* Pomodoro Session */}
@@ -54,8 +54,8 @@ export const SessionIndicator = ({
           </React.Fragment>
         ))}
       </div>
-      <div className="text-xs text-muted-foreground">
-        {currentSession}/{totalSessions} sessions
+      <div className="text-[10px] text-muted-foreground">
+        {currentSession}/{totalSessions}
       </div>
     </div>
   );

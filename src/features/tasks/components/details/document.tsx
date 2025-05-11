@@ -3,6 +3,7 @@ import { OptimalTask } from '@/features/tasks/types';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import React, { useCallback, useEffect } from 'react';
+import TextareaAutosize from 'react-textarea-autosize';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { updateCompletionStatus } from '../../stores/task-form.store';
 import { toggleTaskCompletion, updateTask, updateTaskBreak } from '../../stores/tasks.store';
@@ -117,11 +118,12 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
             ariaLabel={`Toggle task: ${task.title}`}
           />
           <div className="flex flex-1 justify-between gap-4">
-            <textarea
+            <TextareaAutosize
               placeholder="Task Title"
               value={task.title}
               onChange={handleTitleChange}
               className="w-full resize-none overflow-hidden whitespace-pre-wrap break-words bg-transparent px-4 text-2xl font-semibold tracking-tight focus:outline-none"
+              minRows={1}
             />
             <PomodoroTimer
               className="flex-shrink-0"
