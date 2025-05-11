@@ -1,4 +1,9 @@
 import { cn } from '@/lib/utils';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/shared/components/ui/resizable';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import React from 'react';
 import { OptimalTask } from '../../types';
@@ -46,27 +51,39 @@ export function TaskDetails({ task, onEdit }: TaskDetailsProps) {
         (currentTab === 'canvas' || currentTab === 'both') && 'bg-sidebar',
       )}
     >
-      <div
-        className={cn(
-          'overflow-y-auto rounded-l-xl bg-background',
-          currentTab === 'document' && 'w-[1000px]',
-          currentTab === 'both' && 'w-1/2',
-          currentTab === 'canvas' && 'w-0 opacity-0',
-        )}
-      >
-        <TaskDocument task={task} onEdit={onEdit} className="px-8" />
-      </div>
-      {isCanvasVisible && (
-        <div
-          className={cn(
-            'h-full bg-background',
-            currentTab === 'document' && 'w-0 translate-x-full opacity-0',
-            currentTab === 'both' && 'w-1/2 rounded-r-xl',
-            currentTab === 'canvas' && 'w-full rounded-xl',
+      {currentTab === 'both' ? (
+        <ResizablePanelGroup direction="horizontal" className="w-full rounded-lg">
+          <ResizablePanel minSize={30} defaultSize={40} className="bg-background">
+            <TaskDocument task={task} onEdit={onEdit} className="px-8" />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel minSize={45} defaultSize={60} className="bg-background">
+            <TaskCanvas task={task} />
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      ) : (
+        <>
+          <div
+            className={cn(
+              'overflow-y-auto rounded-l-xl bg-background',
+              currentTab === 'document' && 'w-[1000px]',
+              currentTab === 'canvas' && 'w-0 opacity-0',
+            )}
+          >
+            <TaskDocument task={task} onEdit={onEdit} className="px-8" />
+          </div>
+          {isCanvasVisible && (
+            <div
+              className={cn(
+                'h-full bg-background',
+                currentTab === 'document' && 'w-0 translate-x-full opacity-0',
+                currentTab === 'canvas' && 'w-full rounded-xl',
+              )}
+            >
+              <TaskCanvas task={task} />
+            </div>
           )}
-        >
-          <TaskCanvas task={task} />
-        </div>
+        </>
       )}
     </section>
   );
