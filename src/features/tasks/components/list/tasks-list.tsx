@@ -58,6 +58,7 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
     const selectedDate = useStore(tasksStore, (state) => state.selectedDate);
     const editingTaskId = useStore(tasksStore, (state) => state.editingTaskId);
     const highlightedTaskId = useStore(tasksStore, (state) => state.highlightedTaskId);
+    const focusedTaskId = useStore(tasksStore, (state) => state.focusedTaskId);
     const search = useSearch({ from: TasksRoute.fullPath });
 
     // State hooks...
@@ -256,6 +257,42 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }, [navigate]);
+
+    // Effect to scroll focused task into view
+    React.useEffect(() => {
+      // Skip if no focused task or missing refs
+      if (!focusedTaskId || !viewportRef.current || !tasksRef.current) return;
+
+      // Wait a bit for the DOM to be ready
+      const timeoutId = setTimeout(() => {
+        // Find the focused task element
+        const taskElement = tasksRef.current?.querySelector(`[data-task-id="${focusedTaskId}"]`);
+        const viewport = viewportRef.current;
+
+        if (!taskElement || !viewport) {
+          console.log('Focused task element or viewport not found:', focusedTaskId);
+          return;
+        }
+
+        // Get viewport dimensions
+        const viewportRect = viewport.getBoundingClientRect();
+        const taskRect = taskElement.getBoundingClientRect();
+
+        // Calculate the scroll position to center the task
+        const scrollTop =
+          viewport.scrollTop +
+          (taskRect.top - viewportRect.top) -
+          (viewportRect.height - taskRect.height) / 2;
+
+        // Smooth scroll to the calculated position
+        viewport.scrollTo({
+          top: scrollTop,
+          behavior: 'smooth',
+        });
+      }, 100); // Small delay to ensure DOM is ready
+
+      return () => clearTimeout(timeoutId);
+    }, [focusedTaskId, selectedDate]);
 
     // Expose imperative handle...
     React.useImperativeHandle(ref, () => ({

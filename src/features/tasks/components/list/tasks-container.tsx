@@ -440,6 +440,7 @@ export function TasksContainer({
                 className={cn(
                   'h-full rounded-3xl transition-colors duration-300',
                   highlightedTaskId === task.id && 'bg-muted ring-2 ring-border/50',
+                  task.isFocused && 'focused-task',
                   marginTopClass,
                 )}
                 style={{

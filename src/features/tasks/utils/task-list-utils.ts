@@ -81,7 +81,15 @@ export const processTasksWithGaps = (tasks: OptimalTask[]): OptimalTask[] => {
         progress: 0,
         timeSpent: 0,
         // Check if there's a break in this gap (break after task)
-        break: currentTask.break?.type === 'after' ? currentTask.break : undefined,
+        break:
+          currentTask.break?.type === 'after'
+            ? {
+                ...currentTask.break,
+                startTime: currentTask.break.startTime
+                  ? new Date(currentTask.break.startTime)
+                  : undefined,
+              }
+            : undefined,
       };
 
       result.push(gapItem);
@@ -133,7 +141,15 @@ export const processTasksWithGaps = (tasks: OptimalTask[]): OptimalTask[] => {
         progress: 0,
         timeSpent: 0,
         // Check if there's a break after the last task
-        break: lastTask.break?.type === 'after' ? lastTask.break : undefined,
+        break:
+          lastTask.break?.type === 'after'
+            ? {
+                ...lastTask.break,
+                startTime: lastTask.break.startTime
+                  ? new Date(lastTask.break.startTime)
+                  : undefined,
+              }
+            : undefined,
       };
 
       result.push(endGap);

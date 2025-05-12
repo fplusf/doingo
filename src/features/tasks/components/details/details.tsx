@@ -53,11 +53,11 @@ export function TaskDetails({ task, onEdit }: TaskDetailsProps) {
     >
       {currentTab === 'both' ? (
         <ResizablePanelGroup direction="horizontal" className="w-full rounded-lg">
-          <ResizablePanel minSize={30} defaultSize={40} className="bg-background">
+          <ResizablePanel minSize={30} defaultSize={38} className="bg-background">
             <TaskDocument task={task} onEdit={onEdit} className="px-8" />
           </ResizablePanel>
           <ResizableHandle withHandle />
-          <ResizablePanel minSize={45} defaultSize={60} className="bg-background">
+          <ResizablePanel minSize={45} defaultSize={62} className="bg-background">
             <TaskCanvas task={task} />
           </ResizablePanel>
         </ResizablePanelGroup>
