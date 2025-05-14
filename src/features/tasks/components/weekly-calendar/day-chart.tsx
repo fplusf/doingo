@@ -99,41 +99,24 @@ export function DayChart({ date, progress, isSelected, isToday }: DayChartProps)
         {/* Celebration animation elements */}
         {showAnimation && (
           <div className="pointer-events-none absolute inset-0">
-            {/* Center burst effect */}
+            {/* Confetti burst effect */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="absolute h-16 w-16 animate-ping rounded-full bg-green-500 opacity-20"></div>
-              <div className="animation-delay-100 absolute h-12 w-12 animate-ping rounded-full bg-green-400 opacity-10"></div>
-
-              {/* Particle effects */}
-              {[...Array(12)].map((_, i) => (
+              {/* Particle effects for confetti */}
+              {[...Array(20)].map((_, i) => (
                 <div
-                  key={i}
+                  key={`confetti-${i}`}
                   className="absolute h-1.5 w-1.5 rounded-full bg-green-500"
                   style={{
-                    animation: `particle-burst 1.8s ease-in-out forwards`,
-                    transform: `rotate(${i * 30}deg)`,
+                    animationName: 'particle-burst', // Re-use existing animation
+                    animationDuration: `${0.8 + Math.random() * 0.4}s`, // Faster & varied
+                    animationTimingFunction: 'ease-out',
+                    animationDelay: `${Math.random() * 0.3}s`, // Staggered start
+                    animationFillMode: 'forwards',
+                    transform: `rotate(${Math.random() * 360}deg)`, // Random burst direction
                     transformOrigin: 'center',
-                    opacity: 0,
-                    animationDelay: `${i * 20}ms`,
+                    opacity: 0, // Animation should handle opacity
                   }}
                 />
-              ))}
-
-              {/* Hearts or stars (optional) */}
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={`heart-${i}`}
-                  className="absolute text-xs text-green-500"
-                  style={{
-                    animation: `float-up 2s ease-in-out forwards`,
-                    left: `${40 + Math.random() * 20}%`,
-                    top: `${40 + Math.random() * 20}%`,
-                    opacity: 0,
-                    animationDelay: `${i * 150}ms`,
-                  }}
-                >
-                  ★
-                </div>
               ))}
             </div>
           </div>

@@ -1,4 +1,3 @@
-import {} from '@/features/tasks/stores/tasks.store';
 import { Excalidraw } from '@excalidraw/excalidraw';
 import { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types/types';
 import { useSearch } from '@tanstack/react-router';
@@ -109,6 +108,13 @@ export function TaskCanvas({ task }: TaskCanvasProps) {
                 loadScene: false,
                 saveToActiveFile: false,
                 saveAsImage: false,
+              },
+            }}
+            initialData={{
+              appState: {
+                currentItemStrokeStyle: 'solid',
+                currentItemEndArrowhead: 'triangle',
+                currentItemRoughness: 2,
               },
             }}
             excalidrawAPI={(api: ExcalidrawImperativeAPI) => setExcalidrawAPI(api)}

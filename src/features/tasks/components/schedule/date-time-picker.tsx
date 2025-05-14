@@ -39,26 +39,22 @@ export function DateTimePicker({
 }: DateTimeSelectorProps) {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
-  // Get the task ID from the store for central store updates
   const taskId = useStore(taskFormStore, (state) => state.taskId);
 
   const handleDateTimeSelection = (selectedDate: Date, selectedTime: string) => {
-    // Call the parent component's onChange handler
     onChange(selectedDate, selectedTime);
-
-    // If we have a task ID, also update the central task store immediately
     if (taskId) {
       if (isDue) {
-        // Update due date/time in the central store
         updateTaskDueDateTime(taskId, selectedDate, selectedTime);
       } else {
-        // Update start date/time in the central store
         updateTaskStartDateTime(taskId, selectedDate, selectedTime);
       }
     }
-
     setIsPopoverOpen(false);
   };
+
+  const displayDate = date || new Date();
+  const displayTime = time || format(displayDate, 'HH:mm');
 
   return (
     <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
@@ -81,7 +77,7 @@ export function DateTimePicker({
           ) : (
             <>
               {icon}
-              {format(new Date(), 'MMM d')} {format(new Date(), 'HH:mm')}
+              {format(displayDate, 'MMM d')} {format(displayDate, 'HH:mm')}
             </>
           )}
         </Button>
@@ -102,7 +98,10 @@ export function DateTimePicker({
                     date,
                     time: time || '',
                   }
-                : undefined
+                : {
+                    date: new Date(),
+                    time: format(new Date(), 'HH:mm'),
+                  }
             }
             timeInterval={timeInterval}
             isStartTimePicker={isStartTimePicker}

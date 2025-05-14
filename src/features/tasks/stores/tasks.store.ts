@@ -563,47 +563,63 @@ export const toggleTaskCompletion = (id: string) => {
   const taskBeforeToggle = tasksStore.state.tasks.find((t) => t.id === id);
 
   updateStateAndStorage((state) => {
-    const task = state.tasks.find((t) => t.id === id);
-    if (!task) return state;
+    const taskIndex = state.tasks.findIndex((t_find) => t_find.id === id);
+    if (taskIndex === -1) {
+      return state;
+    }
 
-    const newCompleted = !task.completed;
+    const originalTask = state.tasks[taskIndex];
+    const newCompleted = !originalTask.completed;
 
-    // If completing the task, mark all subtasks as completed
-    const updatedSubtasks = task.subtasks.map((subtask) => ({
+    // Create a mutable copy for properties that might change
+    let newDuration = originalTask.duration;
+    let newNextStartTime = originalTask.nextStartTime;
+
+    // If completing the task, mark all subtasks as completed.
+    // If un-completing, subtasks retain their original completion status.
+    const updatedSubtasks = originalTask.subtasks.map((subtask) => ({
       ...subtask,
       isCompleted: newCompleted ? true : subtask.isCompleted,
     }));
 
-    // If completing the task and it has a start time, update the duration
-    let updatedTask = { ...task };
-    if (newCompleted && task.startTime && task.isFocused) {
+    // If completing the task and it has a start time and was focused, update the duration
+    if (newCompleted && originalTask.startTime && originalTask.isFocused) {
       const currentTime = new Date();
-      const actualDuration = currentTime.getTime() - task.startTime.getTime();
+      const actualDuration = currentTime.getTime() - originalTask.startTime.getTime();
 
-      // Only update duration if task was completed before its end time
-      if (actualDuration < (task.duration || 0)) {
-        updatedTask = {
-          ...task,
-          duration: actualDuration,
-          nextStartTime: currentTime,
-        };
+      // Only update duration if task was completed before its planned end time
+      if (actualDuration < (originalTask.duration || 0)) {
+        newDuration = actualDuration;
+        newNextStartTime = currentTime;
       }
     }
 
+    // Calculate progress using the new completed status
+    // This fixes a bug where un-completing a task with no subtasks would leave progress at 100%
+    const progressContext = {
+      ...originalTask, // Base properties from original task
+      subtasks: updatedSubtasks, // With potentially updated subtasks
+      completed: newCompleted, // CRITICAL: Use the new completed status for calculation
+    };
+    const newProgress = newCompleted ? 100 : calculateTaskProgress(progressContext);
+
+    const updatedTasksArray = state.tasks.map((taskInMap) => {
+      if (taskInMap.id === id) {
+        return {
+          ...originalTask, // Spread originalTask to retain all its properties
+          duration: newDuration, // Apply new duration
+          nextStartTime: newNextStartTime, // Apply new next start time
+          completed: newCompleted, // Apply new completion status
+          subtasks: updatedSubtasks, // Apply new subtasks array
+          progress: newProgress, // Apply new progress
+        };
+      }
+      return taskInMap; // Return other tasks untouched
+    });
+
     return {
       ...state,
-      tasks: state.tasks.map((t) =>
-        t.id === id
-          ? {
-              ...updatedTask,
-              completed: newCompleted,
-              subtasks: updatedSubtasks,
-              progress: newCompleted
-                ? 100
-                : calculateTaskProgress({ ...t, subtasks: updatedSubtasks }),
-            }
-          : t,
-      ),
+      tasks: updatedTasksArray,
     };
   });
 
@@ -811,8 +827,8 @@ export const getDefaultStartTime = () => {
   const tasksOnDate = getTasksByDate(selectedDate);
 
   if (tasksOnDate.length === 0) {
-    // For the first task of the day, use the next 15-minute interval
-    return format(getNextFifteenMinuteInterval(), 'HH:mm');
+    // For the first task of the day, use the next 5-minute interval
+    return format(getNextFiveMinuteInterval(), 'HH:mm');
   } else {
     // For subsequent tasks, use the time after the end of the last task
     return findNextAvailableTimeSlot(selectedDate);
@@ -1474,4 +1490,80 @@ export const calculateTaskEndTime = (task: OptimalTask): Date | null => {
 
   const duration = task.duration || 45 * 60 * 1000; // Use default if duration is missing
   return addMilliseconds(task.startTime, duration);
+};
+
+// Function to find free slots in the schedule
+export const findFreeSlots = (date: string): { startTime: Date; duration: number }[] => {
+  const tasksForDate = getTasksByDate(date);
+  const freeSlots: { startTime: Date; duration: number }[] = [];
+
+  // Sort tasks by start time
+  const sortedTasks = [...tasksForDate].sort((a, b) => {
+    const aTime = a.startTime?.getTime() || 0;
+    const bTime = b.startTime?.getTime() || 0;
+    return aTime - bTime;
+  });
+
+  // Start of day
+  let currentTime = startOfDay(parseISO(date));
+  const endOfDay = addDays(currentTime, 1);
+
+  // Find gaps between tasks
+  for (const task of sortedTasks) {
+    if (!task.startTime) continue;
+
+    const gapDuration = differenceInMilliseconds(task.startTime, currentTime);
+    if (gapDuration >= ONE_HOUR_IN_MS) {
+      freeSlots.push({
+        startTime: new Date(currentTime),
+        duration: gapDuration,
+      });
+    }
+    currentTime =
+      task.nextStartTime || addMilliseconds(task.startTime, task.duration || 45 * 60 * 1000);
+  }
+
+  // Check gap after last task
+  const lastGapDuration = differenceInMilliseconds(endOfDay, currentTime);
+  if (lastGapDuration >= ONE_HOUR_IN_MS) {
+    freeSlots.push({
+      startTime: new Date(currentTime),
+      duration: lastGapDuration,
+    });
+  }
+
+  return freeSlots;
+};
+
+// Function to create task in first available free slot with hotkey
+export const createTaskInFreeSlotWithHotkey = (values: {
+  title: string;
+  notes?: string;
+  emoji?: string;
+  priority?: TaskPriority;
+  category?: TaskCategory;
+  subtasks?: any[];
+}) => {
+  const freeSlots = findFreeSlots(tasksStore.state.selectedDate);
+
+  if (freeSlots.length === 0) {
+    return null;
+  }
+
+  // Find the first slot that's at least 1 hour long
+  const suitableSlot = freeSlots.find((slot) => slot.duration >= ONE_HOUR_IN_MS);
+
+  if (!suitableSlot) {
+    return null;
+  }
+
+  const startTime = format(suitableSlot.startTime, 'HH:mm');
+  const endTime = format(addMilliseconds(suitableSlot.startTime, ONE_HOUR_IN_MS), 'HH:mm');
+
+  return createNewTask({
+    ...values,
+    startTime,
+    dueTime: endTime,
+    duration: ONE_HOUR_IN_MS,
+  });
 };

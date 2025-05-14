@@ -151,7 +151,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg [.active_&]:bg-sidebar-primary [.inactive_&]:bg-muted">
                   <Calendar className="size-4" />
                 </div>
-              </Link>
+                to="/reminders"
             </SidebarMenuButton>
             <span className="mt-0.5 truncate text-xs">Calendar</span>
           </SidebarMenuItem>

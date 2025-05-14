@@ -181,7 +181,19 @@ function TaskDialogContent({
         }
       }
     }
-  }, [open, mode, editingTaskId]);
+  }, [open, mode, editingTaskId, initialValues]);
+
+  // Effect to reset form when dialog closes
+  useEffect(() => {
+    if (!open) {
+      // Adding a log to confirm this runs, and what the state of taskFormStore.taskId is before reset
+      const currentFormTaskId = taskFormStore.state.taskId;
+      console.log(
+        `[TaskDialogContent] Dialog closing. Current taskFormStore.taskId: ${currentFormTaskId}. Calling resetForm().`,
+      );
+      resetForm();
+    }
+  }, [open]);
 
   // Auto-adjust height when title changes
   const adjustTextareaHeight = () => {

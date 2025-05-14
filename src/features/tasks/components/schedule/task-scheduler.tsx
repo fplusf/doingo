@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/
 import { findFreeTimeSlots } from '@/shared/helpers/date/next-feefteen-minutes';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
-import { Flag, Info } from 'lucide-react';
+import { Clock, Flag, Info } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   taskFormStore,
@@ -15,7 +15,9 @@ import {
   updateTimeFixed,
 } from '../../stores/task-form.store';
 // import { pushForwardAffectedTasks } from '../../store/tasks.store'; // Removed - Logic now handled by setFocused
-import { useRouter } from '@tanstack/react-router';
+import { useRouter, useSearch } from '@tanstack/react-router';
+import { useHotkeys } from 'react-hotkeys-hook';
+import { ONE_HOUR_IN_MS } from '../../types';
 import { DateTimePicker } from './date-time-picker';
 import { DurationPicker } from './duration-picker';
 
@@ -40,32 +42,50 @@ export function TaskScheduler({
   taskTitle,
 }: TaskSchedulerProps) {
   // Use the store for all form values
-  const startDate = useStore(taskFormStore, (state) => state.startDate);
+  const formStoreStartDate = useStore(taskFormStore, (state) => state.startDate);
   const startTime = useStore(taskFormStore, (state) => state.startTime);
   const duration = useStore(taskFormStore, (state) => state.duration);
   const dueDate = useStore(taskFormStore, (state) => state.dueDate);
   const dueTime = useStore(taskFormStore, (state) => state.dueTime);
-  const repetition = useStore(taskFormStore, (state) => state.repetition);
-  const repeatInterval = useStore(taskFormStore, (state) => state.repeatInterval);
-  const currentTaskId = useStore(taskFormStore, (state) => state.taskId);
+  const currentFormTaskId = useStore(taskFormStore, (state) => state.taskId);
+  const formMode = useStore(taskFormStore, (state) => state.mode);
+  const isFormDirty = useStore(taskFormStore, (state) => state.isDirty);
   const isTimeFixed = useStore(taskFormStore, (state) => state.isTimeFixed);
+
+  // Get date from URL search parameters
+  const searchParams = useSearch({ from: '/tasks' }); // Changed from '/' to '/tasks'
+  const dateStringFromUrl = searchParams.date;
 
   // check if the component is used in a task document or in a task list
   const isTaskDocument = useRouter().state.location.pathname.includes('document');
 
-  // Sync with task store when taskId changes or when task is updated
+  // Effect to initialize startDate in form store from URL for new tasks
   useEffect(() => {
-    if (taskId) {
+    if (formMode === 'create' && !currentFormTaskId && !isFormDirty && dateStringFromUrl) {
+      // Only run if in create mode, no task is loaded in form, form is not dirty,
+      // and there is a date string from the URL.
+      import('../../stores/task-form.store').then(({ initializeStartDateForCreateForm }) => {
+        initializeStartDateForCreateForm(dateStringFromUrl);
+      });
+    }
+    // Dependencies: formMode, currentFormTaskId, isFormDirty, and dateStringFromUrl.
+    // These ensure the effect runs if any of these relevant conditions change.
+  }, [formMode, currentFormTaskId, isFormDirty, dateStringFromUrl]);
+
+  // Sync with task store when prop taskId changes or when task is updated
+  useEffect(() => {
+    if (taskId && taskId !== currentFormTaskId) {
+      // if a task ID is passed via props
       import('../../stores/tasks.store').then(({ tasksStore }) => {
         const task = tasksStore.state.tasks.find((t) => t.id === taskId);
-        if (task && taskId !== currentTaskId) {
+        if (task) {
           import('../../stores/task-form.store').then(({ loadTaskForEditing }) => {
             loadTaskForEditing(task);
           });
         }
       });
     }
-  }, [taskId, currentTaskId]);
+  }, [taskId, currentFormTaskId]);
 
   const [hasOverlap, setHasOverlap] = useState(false);
   const [showPushForwardPrompt, setShowPushForwardPrompt] = useState(false);
@@ -73,7 +93,7 @@ export function TaskScheduler({
 
   // Check for time overlap when start time or duration changes
   useEffect(() => {
-    const taskDate = format(startDate, 'yyyy-MM-dd');
+    const taskDate = format(formStoreStartDate, 'yyyy-MM-dd');
     const { hasOverlap: hasTimeOverlap } = hasTimeOverlapWithExistingTasks(
       startTime,
       duration,
@@ -82,11 +102,11 @@ export function TaskScheduler({
     );
 
     setHasOverlap(hasTimeOverlap);
-  }, [startTime, duration, startDate, taskId]);
+  }, [startTime, duration, formStoreStartDate, taskId]);
 
   // Check for available free time slots when duration changes
   useEffect(() => {
-    const taskDate = format(startDate, 'yyyy-MM-dd');
+    const taskDate = format(formStoreStartDate, 'yyyy-MM-dd');
 
     // Only look for free slots when we don't have a taskId (creating new task)
     if (!taskId) {
@@ -95,7 +115,26 @@ export function TaskScheduler({
     } else {
       setFreeTimeSlots([]);
     }
-  }, [duration, startDate, taskId]);
+  }, [duration, formStoreStartDate, taskId]);
+
+  // Add hotkey handler for 'A' key
+  useHotkeys(
+    'a',
+    (e) => {
+      e.preventDefault();
+      if (!taskId && freeTimeSlots.length > 0) {
+        const taskValues = {
+          title: taskTitle || 'New Task',
+          duration: ONE_HOUR_IN_MS,
+        };
+
+        import('../../stores/tasks.store').then(({ createTaskInFreeSlotWithHotkey }) => {
+          createTaskInFreeSlotWithHotkey(taskValues);
+        });
+      }
+    },
+    [taskId, freeTimeSlots, taskTitle],
+  );
 
   // Handlers for the component inputs
   const handleStartDateTimeChange = (date: Date, time: string) => {
@@ -103,7 +142,7 @@ export function TaskScheduler({
     if (taskId) {
       // Check if the date is changing
       const newTaskDate = format(date, 'yyyy-MM-dd');
-      const currentTaskDate = format(startDate, 'yyyy-MM-dd');
+      const currentTaskDate = format(formStoreStartDate, 'yyyy-MM-dd');
       const isDateChanged = newTaskDate !== currentTaskDate;
       const isTimeChanged = time !== startTime;
 
@@ -144,7 +183,7 @@ export function TaskScheduler({
       <div className={cn('flex items-center gap-1.5', className)}>
         <DateTimePicker
           className="w-[8rem]"
-          date={startDate}
+          date={formStoreStartDate}
           time={startTime}
           onChange={handleStartDateTimeChange}
           buttonLabel="Start"
@@ -211,32 +250,14 @@ export function TaskScheduler({
         /> */}
       </div>
 
-      {/* Show free time slot suggestions */}
-      {/* {freeTimeSlots.length > 0 && (
+      {freeTimeSlots.length > 0 && (
         <div className="mt-1 flex items-center gap-1.5 text-xs text-blue-500">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                <span>Available free slot found</span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="max-w-[300px]">
-              <p>
-                There's an available free time slot between existing tasks where this task would
-                fit.
-              </p>
-            </TooltipContent>
-          </Tooltip>
-          <button
-            onClick={() => applyFreeTimeSlot(freeTimeSlots[0])}
-            className="ml-auto flex items-center gap-1 text-xs text-blue-500 hover:underline"
-          >
-            <ArrowLeftRight className="h-3 w-3" />
-            Add to free slot at {freeTimeSlots[0]}
-          </button>
+          <div className="flex items-center gap-1">
+            <Clock className="h-4 w-4" />
+            <span>Press 'A' to add task in free slot</span>
+          </div>
         </div>
-      )} */}
+      )}
 
       {/* {hasOverlap && !isTaskDocument && (
         <div className="mt-1 flex items-center gap-1.5 text-xs text-amber-500">

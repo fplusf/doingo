@@ -1,6 +1,6 @@
 import { findEmojiForTitle } from '@/lib/emoji-matcher';
 import { Store } from '@tanstack/react-store';
-import { addMilliseconds, parse, parseISO } from 'date-fns';
+import { addMilliseconds, format, parse, parseISO } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import {
   OptimalTask,
@@ -48,11 +48,11 @@ export interface TaskFormState {
 // Get the current time for default values
 const now = new Date();
 
-// Default to current hour, rounded to the nearest 15 minutes
+// Default to current hour, rounded to the nearest 5 minutes
 // Get the current date
 const defaultStartTime = now;
-// Round minutes to the nearest 15
-const minutes = Math.round(now.getMinutes() / 15) * 15;
+// Round minutes to the nearest 5
+const minutes = Math.round(now.getMinutes() / 5) * 5;
 // Set the rounded minutes
 defaultStartTime.setMinutes(minutes % 60);
 // If we rounded up to 60, increment the hour
@@ -106,6 +106,55 @@ const initialState: TaskFormState = {
 
 // Create the store
 export const taskFormStore = new Store<TaskFormState>(initialState);
+
+// Action to initialize startDate and startTime from URL for new/pristine forms
+export const initializeStartDateForCreateForm = (dateStringFromUrl?: string) => {
+  taskFormStore.setState((state) => {
+    // Only apply if in 'create' mode, no taskId yet, and form is not dirty (isDirty might not be needed if we check mode and taskId)
+    if (state.mode === 'create' && !state.taskId) {
+      let newStartDate: Date;
+      if (dateStringFromUrl) {
+        const parsed = parseISO(dateStringFromUrl); // Expects YYYY-MM-DD
+        if (!isNaN(parsed.getTime())) {
+          newStartDate = parsed;
+        } else {
+          console.warn('Invalid date string from URL, using current date:', dateStringFromUrl);
+          newStartDate = new Date(); // Fallback for invalid string
+        }
+      } else {
+        newStartDate = new Date(); // Fallback if no string provided
+      }
+
+      // Create a new Date object for manipulation to avoid mutating the original newStartDate
+      const dateToRound = new Date(newStartDate);
+
+      // Round minutes to the nearest 5 for startTime consistency
+      const minutes = Math.round(dateToRound.getMinutes() / 5) * 5;
+      dateToRound.setMinutes(minutes % 60);
+      if (minutes === 60) {
+        // Handle rounding up to the next hour
+        dateToRound.setHours(dateToRound.getHours() + 1);
+        dateToRound.setMinutes(0);
+      }
+      dateToRound.setSeconds(0);
+      dateToRound.setMilliseconds(0);
+
+      // Check if the determined startDate is actually different from the current one
+      // To avoid unnecessary updates and potential loops if called repeatedly
+      if (state.startDate.getTime() === dateToRound.getTime()) {
+        return state; // No change needed
+      }
+
+      return {
+        ...state,
+        startDate: dateToRound,
+        startTime: format(dateToRound, 'HH:mm'),
+        isDirty: false, // Setting from URL date should not mark form as dirty initially
+      };
+    }
+    return state; // No conditions met, return current state
+  });
+};
 
 // Update a single field with setting the dirty flag
 export const updateField = <K extends keyof TaskFormState>(field: K, value: TaskFormState[K]) => {
@@ -187,56 +236,27 @@ export const loadTaskForEditing = (taskData: OptimalTask) => {
 
 // Reset the form to the default state
 export const resetForm = () => {
-  // Get the previous duration to preserve it
-  const previousDuration = taskFormStore.state.duration;
-
-  // Get fresh defaults for time
+  // Get fresh defaults for time as initialState might be stale if app runs long
   const now = new Date();
-  const defaultStartTime = new Date();
-  const minutes = Math.round(now.getMinutes() / 15) * 15;
-  defaultStartTime.setMinutes(minutes % 60);
+  const newDefaultStartTime = new Date(now);
+  const minutes = Math.round(newDefaultStartTime.getMinutes() / 5) * 5;
+  newDefaultStartTime.setMinutes(minutes % 60);
   if (minutes === 60) {
-    defaultStartTime.setHours(defaultStartTime.getHours() + 1);
-    defaultStartTime.setMinutes(0);
+    newDefaultStartTime.setHours(newDefaultStartTime.getHours() + 1);
+    newDefaultStartTime.setMinutes(0);
   }
-  defaultStartTime.setSeconds(0);
-  defaultStartTime.setMilliseconds(0);
-  const defaultTimeString = `${defaultStartTime.getHours().toString().padStart(2, '0')}:${defaultStartTime
-    .getMinutes()
-    .toString()
-    .padStart(2, '0')}`;
+  newDefaultStartTime.setSeconds(0);
+  newDefaultStartTime.setMilliseconds(0);
+  const newDefaultTimeString = format(newDefaultStartTime, 'HH:mm');
 
   taskFormStore.setState(() => ({
-    // Basic task info
-    title: '',
-    notes: '',
-    emoji: '',
-
-    // Task categorization
-    category: 'work',
-    priority: 'medium',
-
-    // Scheduling
-    startDate: defaultStartTime,
-    startTime: defaultTimeString,
-    // Preserve the previous duration instead of resetting to default
-    duration: previousDuration,
-    dueDate: undefined,
-    dueTime: '',
-    repetition: 'once',
-    repeatInterval: 1,
-    isTimeFixed: false,
-
-    // Subtasks
-    subtasks: [],
-    progress: 0,
-    completed: false,
-
-    // Form state
-    mode: 'create',
-    taskId: null,
-    isSubmitting: false,
-    isDirty: false,
+    ...initialState, // Spread the original initial state
+    // Override date/time with fresh defaults
+    startDate: newDefaultStartTime,
+    startTime: newDefaultTimeString,
+    // Preserve previous duration if needed, or reset to initial's default
+    // For now, let's stick to full initialState reset for simplicity:
+    // duration: previousDuration, // If you wanted to keep last used duration
   }));
 };
 
@@ -383,22 +403,34 @@ export const deleteSubtask = (subtaskId: string) => {
 
 // Add a new function to update completion status
 export const updateCompletionStatus = (completed: boolean) => {
-  const { mode, taskId } = taskFormStore.state;
+  // const { mode, taskId } = taskFormStore.state; // Not needed if we don't call updateTask
 
-  // Update the form store
-  taskFormStore.setState((state) => ({
-    ...state,
-    completed,
-    isDirty: true,
-  }));
+  // Update the form store's internal state only
+  taskFormStore.setState((state) => {
+    // Only update if the new completion status is different and if we are in edit mode
+    // to prevent making the form dirty unnecessarily if it's a create form reflecting an external change.
+    if (state.mode === 'edit' && state.completed !== completed) {
+      return {
+        ...state,
+        completed,
+        isDirty: true,
+      };
+    }
+    // If not in edit mode, or if 'completed' is already the same, just ensure 'completed' is set if different,
+    // but don't mark as dirty if it's not an actual user change to the form being edited.
+    // This handles the case where tasks.store informs a create-mode form of a change.
+    if (state.completed !== completed) {
+      return {
+        ...state,
+        completed,
+        // isDirty remains unchanged unless it was an edit mode change
+      };
+    }
+    return state; // No change needed or not applicable
+  });
 
-  // If in edit mode, update the task store
-  if (mode === 'edit' && taskId) {
-    // Import dynamically to avoid circular dependencies
-    import('./tasks.store').then(({ updateTask }) => {
-      updateTask(taskId, { completed });
-    });
-  }
+  // Removed the problematic block that called updateTask:
+  // if (mode === 'edit' && taskId) { ... }
 };
 
 // Enhanced task editing function

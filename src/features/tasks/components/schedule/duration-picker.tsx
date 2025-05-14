@@ -137,28 +137,12 @@ export function DurationPicker({
     }
   };
 
-  const handleCustomDurationSubmit = () => {
-    const hours = parseInt(customHours, 10) || 0;
-    const minutes = parseInt(customMinutes, 10) || 0;
-    const totalMinutes = hours * 60 + minutes;
-
-    if (totalMinutes > 0) {
-      const durationMs = totalMinutes * 60 * 1000;
-      updateDuration(durationMs);
-      setSelectedDuration(`custom:${totalMinutes}`);
-      setCustomDurationSet(true);
-      setIsSelectOpen(false);
-      prevValueRef.current = durationMs;
-
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-    }
-  };
-
   const handleCustomHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value === '' || (/^\d+$/.test(value) && parseInt(value, 10) >= 0)) {
+    if (
+      value === '' ||
+      (/^\d+$/.test(value) && parseInt(value, 10) >= 0 && parseInt(value, 10) <= 12)
+    ) {
       setCustomHours(value);
     }
   };
@@ -170,6 +154,26 @@ export function DurationPicker({
       (/^\d+$/.test(value) && parseInt(value, 10) >= 0 && parseInt(value, 10) < 60)
     ) {
       setCustomMinutes(value);
+    }
+  };
+
+  const handleCustomDurationSubmit = () => {
+    const hours = parseInt(customHours, 10) || 0;
+    const minutes = parseInt(customMinutes, 10) || 0;
+    const totalMinutes = hours * 60 + minutes;
+
+    if (totalMinutes > 0 && totalMinutes <= 720) {
+      // 720 minutes = 12 hours
+      const durationMs = totalMinutes * 60 * 1000;
+      updateDuration(durationMs);
+      setSelectedDuration(`custom:${totalMinutes}`);
+      setCustomDurationSet(true);
+      setIsSelectOpen(false);
+      prevValueRef.current = durationMs;
+
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
     }
   };
 
