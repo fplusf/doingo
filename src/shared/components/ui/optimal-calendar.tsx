@@ -132,12 +132,15 @@ export function OptimalCalendar({
   };
 
   const handleDayClick = (day: number, month: number, year: number) => {
-    const newDate = new Date(date);
-    newDate.setFullYear(year, month, day);
+    const newDate = new Date(year, month, day);
     setDate(newDate);
 
     if (isStartTimePicker) {
       setSelectedTime(timeOptions[0] || '09:00');
+    }
+
+    if (onSelect) {
+      onSelect(newDate, selectedTime);
     }
   };
 
@@ -146,7 +149,7 @@ export function OptimalCalendar({
   };
 
   const handleApply = () => {
-    onSelect?.(new Date(date.getFullYear(), date.getMonth(), date.getDate()), selectedTime);
+    onSelect?.(date, selectedTime);
   };
 
   React.useEffect(() => {
@@ -183,16 +186,15 @@ export function OptimalCalendar({
   }, [isTimePickerOpen, selectedTime, timeOptions, size]);
 
   React.useEffect(() => {
-    if (selected?.date && selected.date.getTime() !== date.getTime()) {
+    if (selected?.date && !document.activeElement?.closest('.calendar')) {
       setDate(selected.date);
     }
-    if (selected?.time && selected.time !== selectedTime) {
-      if (!isStartTimePicker || initialTimeSet) {
-        setSelectedTime(selected.time);
-        if (!initialTimeSet && selected.time) setInitialTimeSet(true);
-      }
+
+    if (selected?.time && (!isStartTimePicker || initialTimeSet)) {
+      setSelectedTime(selected.time);
+      if (!initialTimeSet && selected.time) setInitialTimeSet(true);
     }
-  }, [selected, isStartTimePicker, initialTimeSet, date, selectedTime]);
+  }, [selected?.date, selected?.time, isStartTimePicker, initialTimeSet]);
 
   const handleCustomHourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^0-9]/g, '');
