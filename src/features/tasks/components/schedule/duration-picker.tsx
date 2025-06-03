@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/shared/components/ui/select';
 import { useStore } from '@tanstack/react-store';
-import { Clock, LoaderCircle, Sparkles } from 'lucide-react';
+import { Clock, LoaderCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 interface DurationPickerProps {
@@ -21,7 +21,6 @@ interface DurationPickerProps {
   onChange: (duration: number) => void;
   className?: string;
   isEstimating?: boolean;
-  onRequestAiEstimate?: () => void;
   taskTitle?: string;
 }
 
@@ -50,7 +49,6 @@ export function DurationPicker({
   onChange,
   className,
   isEstimating = false,
-  onRequestAiEstimate,
   taskTitle,
 }: DurationPickerProps) {
   // Get task ID from store to update central store
@@ -179,13 +177,6 @@ export function DurationPicker({
 
   const durationMinutes = Math.round(value / (60 * 1000));
 
-  const handleAiEstimateClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onRequestAiEstimate) {
-      onRequestAiEstimate();
-    }
-  };
-
   return (
     <div className="relative">
       {isEstimating && (
@@ -211,21 +202,6 @@ export function DurationPicker({
           </div>
         </SelectTrigger>
         <SelectContent className="max-h-[320px] w-48">
-          {onRequestAiEstimate && (
-            <div className="border-b border-border p-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex w-full items-center justify-center gap-1.5 text-xs"
-                onClick={handleAiEstimateClick}
-                disabled={isEstimating || !taskTitle || taskTitle.length < 5}
-              >
-                <Sparkles className="h-3 w-3 text-amber-500" />
-                AI estimate
-              </Button>
-            </div>
-          )}
-
           <div className="border-b border-border p-2">
             <div className="mb-1 text-xs text-muted-foreground">Custom duration:</div>
             <div className="flex items-center gap-1">

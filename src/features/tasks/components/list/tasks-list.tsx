@@ -19,7 +19,7 @@ import {
   TaskCategory,
   TaskPriority,
 } from '@/features/tasks/types/task.types';
-import { predictTaskPriority } from '@/lib/groq-service';
+import { batchPredictTaskProperties } from '@/lib/groq-service';
 import { hasTimeOverlap } from '@/lib/task-utils';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import {
@@ -444,7 +444,7 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
     // Handle priority prediction requests from dialog
     const handlePriorityPrediction = async (
       taskData: { taskId?: string; title: string },
-      callback: (priority: TaskPriority) => void,
+      callback: (priority: TaskPriority, emoji?: string) => void,
     ) => {
       const { taskId, title } = taskData;
 
@@ -462,36 +462,57 @@ export const TasksList = React.forwardRef<TasksListHandle, DayContainerProps>(
       );
 
       try {
-        // Make the API call to predict priority
-        const predictedPriority = await predictTaskPriority(title);
-        console.log('Received priority prediction in parent:', predictedPriority);
+        // Make the API call to predict properties
+        const { priority: predictedPriority, emoji: predictedEmoji } =
+          await batchPredictTaskProperties(title);
+        console.log('Received predictions in parent:', { predictedPriority, predictedEmoji });
 
         // If we have a task ID, update the existing task
         if (currentEditingTaskId) {
           console.log(`Updating task ${currentEditingTaskId} with priority ${predictedPriority}`);
 
-          // Update the task in the store - this will affect the UI even if dialog is closed
-          updateTask(currentEditingTaskId, { priority: predictedPriority });
+          // GUARD: Validate that we have meaningful data before updating
+          // Don't update the task store with potentially corrupted AI predictions
+          const hasValidPriority =
+            predictedPriority && ['high', 'medium', 'low', 'none'].includes(predictedPriority);
+          const hasValidEmoji = predictedEmoji && predictedEmoji.trim().length > 0;
 
-          // Find the task in the basic tasks (without gaps) to confirm update
-          const updatedTask = basicTasks.find((t) => t.id === currentEditingTaskId);
-          if (updatedTask) {
-            console.log('Task found and updated in store:', updatedTask.id);
+          if (hasValidPriority || hasValidEmoji) {
+            const updateData: Partial<OptimalTask> = {};
+            if (hasValidPriority) updateData.priority = predictedPriority;
+            if (hasValidEmoji) updateData.emoji = predictedEmoji;
+
+            // Update the task in the store - this will affect the UI even if dialog is closed
+            updateTask(currentEditingTaskId, updateData);
+
+            // Find the task in the basic tasks (without gaps) to confirm update
+            const updatedTask = basicTasks.find((t) => t.id === currentEditingTaskId);
+            if (updatedTask) {
+              console.log('Task found and updated in store:', updatedTask.id);
+            } else {
+              console.warn('Task not found in basic tasks after update. This might be a new task.');
+            }
           } else {
-            console.warn('Task not found in basic tasks after update. This might be a new task.');
+            console.warn('Skipping task update - invalid AI prediction data:', {
+              predictedPriority,
+              predictedEmoji,
+            });
           }
         } else {
           // For new tasks, update the newTask state for future dialog opens
-          console.log('Setting priority for new task:', predictedPriority);
-          setNewTask((prev) => ({ ...prev, priority: predictedPriority }));
+          console.log('Setting properties for new task:', { predictedPriority, predictedEmoji });
+          setNewTask((prev) => ({
+            ...prev,
+            priority: predictedPriority,
+            emoji: predictedEmoji,
+          }));
         }
 
-        // Call the callback to notify the dialog component that prediction is complete
-        callback(predictedPriority);
+        // Always call the callback with the predictions
+        callback(predictedPriority, predictedEmoji);
       } catch (error) {
-        console.error('Error handling priority prediction in parent:', error);
-        // Call callback with a safe default in case of error
-        callback('none');
+        console.error('Error in property prediction:', error);
+        callback('none', '📝'); // Use defaults on error
       }
     };
 

@@ -18,6 +18,7 @@ export interface TaskFormState {
   title: string;
   notes: string;
   emoji: string;
+  isEmojiSetByAi: boolean;
 
   // Task categorization
   category: TaskCategory;
@@ -43,6 +44,8 @@ export interface TaskFormState {
   taskId: string | null;
   isSubmitting: boolean;
   isDirty: boolean;
+  isDurationManuallySet: boolean;
+  isPriorityManuallySet: boolean;
 }
 
 // Get the current time for default values
@@ -76,6 +79,7 @@ const initialState: TaskFormState = {
   title: '',
   notes: '',
   emoji: '',
+  isEmojiSetByAi: false,
 
   // Task categorization
   category: 'work',
@@ -102,6 +106,8 @@ const initialState: TaskFormState = {
   taskId: null,
   isSubmitting: false,
   isDirty: false,
+  isDurationManuallySet: false,
+  isPriorityManuallySet: false,
 };
 
 // Create the store
@@ -165,8 +171,18 @@ export const updateField = <K extends keyof TaskFormState>(field: K, value: Task
       isDirty: true,
     };
 
-    // If updating title in create mode, check for emoji suggestion
-    if (field === 'title' && typeof value === 'string' && state.mode === 'create') {
+    // If updating emoji directly, mark it as not AI-set
+    if (field === 'emoji') {
+      newState.isEmojiSetByAi = false;
+    }
+
+    // If updating title in create mode, check for emoji suggestion ONLY if no emoji is set by AI
+    if (
+      field === 'title' &&
+      typeof value === 'string' &&
+      state.mode === 'create' &&
+      !state.isEmojiSetByAi
+    ) {
       const emoji = findEmojiForTitle(value);
 
       // Debug log remains helpful
@@ -174,9 +190,10 @@ export const updateField = <K extends keyof TaskFormState>(field: K, value: Task
         title: value,
         suggestedEmoji: emoji,
         currentEmoji: state.emoji,
+        isEmojiSetByAi: state.isEmojiSetByAi,
       });
 
-      // Add emoji to the update *if* it's valid and different
+      // Add emoji to the update *if* it's valid and different and not set by AI
       if (emoji && emoji !== state.emoji) {
         console.log('Adding suggested emoji to update:', emoji);
         newState.emoji = emoji;
@@ -185,15 +202,10 @@ export const updateField = <K extends keyof TaskFormState>(field: K, value: Task
 
     // Return the combined new state properties
     return {
-      ...state, // Spread the current state first
-      ...newState, // Apply all collected updates
+      ...state,
+      ...newState,
     };
   });
-
-  // Optional: If the double-check log for emoji is still needed after the state update,
-  // you might need a different approach, perhaps subscribing to the store externally
-  // for logging, but it's generally not needed for the update logic itself.
-  // The previous setTimeout log is removed as it complicated the single update.
 };
 
 // Update multiple fields at once
@@ -213,6 +225,7 @@ export const loadTaskForEditing = (taskData: OptimalTask) => {
     title: taskData.title || '',
     notes: taskData.notes || '',
     emoji: taskData.emoji || '',
+    isEmojiSetByAi: false, // Reset AI flag when loading existing task
     category: taskData.category || 'work',
     priority: taskData.priority || 'medium',
     startDate: taskData.startTime || new Date(),
@@ -231,6 +244,8 @@ export const loadTaskForEditing = (taskData: OptimalTask) => {
     taskId: taskData.id,
     isSubmitting: false,
     isDirty: false,
+    isDurationManuallySet: false, // Reset on load
+    isPriorityManuallySet: false, // Reset on load
   }));
 };
 
@@ -254,8 +269,8 @@ export const resetForm = () => {
     // Override date/time with fresh defaults
     startDate: newDefaultStartTime,
     startTime: newDefaultTimeString,
-    // Preserve previous duration if needed, or reset to initial's default
-    // For now, let's stick to full initialState reset for simplicity:
+    isDurationManuallySet: false, // Ensure reset
+    isPriorityManuallySet: false, // Ensure reset
     // duration: previousDuration, // If you wanted to keep last used duration
   }));
 };
@@ -317,26 +332,40 @@ export const updateRepeatInterval = (repeatInterval: number) => {
 };
 
 export const updateDuration = (durationMs: number) => {
-  console.log(`updateDuration called with ${durationMs}ms (${durationMs / (60 * 1000)} minutes)`);
+  const { mode, taskId } = taskFormStore.state;
 
-  // Get current state for reference
-  const currentState = taskFormStore.state;
-  const { mode, taskId } = currentState;
-
-  // Update the form store first
+  // Update form store
   taskFormStore.setState((state) => ({
     ...state,
     duration: durationMs,
     isDirty: true,
   }));
 
-  // If we're in edit mode and have a valid taskId, optimistically update the task store too
+  // If in edit mode, update the task store
   if (mode === 'edit' && taskId) {
-    // Apply the same duration update to the actual task
     updateTaskDuration(taskId, durationMs);
+  }
+};
 
-    // No need to wait for confirmation since this is optimistic
-    console.log(`Optimistically updated duration for task ${taskId} to ${durationMs}ms`);
+export const updatePriority = (priority: TaskPriority, isUserAction = false) => {
+  const { mode, taskId } = taskFormStore.state;
+
+  // Only allow priority updates in edit mode if it's a user action
+  if (mode === 'edit' && !isUserAction) {
+    return;
+  }
+
+  // Update form store
+  taskFormStore.setState((state) => ({
+    ...state,
+    priority,
+    isDirty: true,
+    isPriorityManuallySet: isUserAction, // Set the manual flag only for user actions
+  }));
+
+  // If in edit mode and it's a user action, update the task store
+  if (mode === 'edit' && taskId && isUserAction) {
+    updateTask(taskId, { priority });
   }
 };
 
@@ -521,4 +550,14 @@ export const editExistingTask = (
   } catch (error) {
     console.error('Failed to edit task:', error);
   }
+};
+
+// Add a new function to update emoji from AI
+export const updateEmojiFromAi = (emoji: string) => {
+  taskFormStore.setState((state) => ({
+    ...state,
+    emoji,
+    isEmojiSetByAi: true,
+    isDirty: true,
+  }));
 };

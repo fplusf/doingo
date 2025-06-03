@@ -27,6 +27,7 @@ import {
   submitForm,
   TaskFormState,
   taskFormStore,
+  updateEmojiFromAi,
   updateField,
   updateFields,
 } from '../../stores/task-form.store';
@@ -63,7 +64,7 @@ interface TaskDialogProps {
   className?: string;
   onRequestPriorityPrediction?: (
     taskData: { taskId?: string; title: string },
-    callback: (priority: TaskPriority) => void,
+    callback: (priority: TaskPriority, emoji?: string) => void,
   ) => void;
 }
 
@@ -84,7 +85,7 @@ function TaskDialogContent({
   initialValues?: Partial<TaskFormValues>;
   onRequestPriorityPrediction?: (
     taskData: { taskId?: string; title: string },
-    callback: (priority: TaskPriority) => void,
+    callback: (priority: TaskPriority, emoji?: string) => void,
   ) => void;
 }) {
   // Use the store for all form values
@@ -148,9 +149,15 @@ function TaskDialogContent({
   // AI priority prediction state
   const [isPriorityPredicting, setIsPriorityPredicting] = useState(false);
 
+  // Add ref to track if component is still mounted and dialog is open
+  const isDialogActiveRef = useRef(false);
+
   // Initialize form when dialog opens
   useEffect(() => {
     if (open) {
+      // Set dialog as active
+      isDialogActiveRef.current = true;
+
       // Initialize form for create or edit mode
       if (mode === 'create') {
         // Reset form to default values
@@ -186,6 +193,9 @@ function TaskDialogContent({
   // Effect to reset form when dialog closes
   useEffect(() => {
     if (!open) {
+      // Mark dialog as inactive to prevent late AI callbacks
+      isDialogActiveRef.current = false;
+
       // Adding a log to confirm this runs, and what the state of taskFormStore.taskId is before reset
       const currentFormTaskId = taskFormStore.state.taskId;
       console.log(
@@ -249,7 +259,7 @@ function TaskDialogContent({
       title.trim().length > 3 &&
       onRequestPriorityPrediction &&
       !predictionRequested && // Only request if we haven't already
-      (mode === 'create' || (mode === 'edit' && titleHasChanged))
+      mode === 'create' // Only allow in create mode
     );
   };
 
@@ -266,12 +276,24 @@ function TaskDialogContent({
     // Call parent with a callback to handle prediction completion
     onRequestPriorityPrediction(
       {
-        taskId: mode === 'edit' && editingTaskId ? editingTaskId : undefined,
+        taskId: undefined, // Never pass taskId in create mode
         title,
       },
-      (predictedPriority) => {
+      (predictedPriority, predictedEmoji) => {
+        // GUARD: Only update if dialog is still active
+        if (!isDialogActiveRef.current) {
+          console.log('Skipping AI callback - dialog is no longer active');
+          setIsPriorityPredicting(false);
+          return;
+        }
+
         // Update local state with the predicted priority
         updateField('priority', predictedPriority);
+
+        // Use the new updateEmojiFromAi function if we got an emoji
+        if (predictedEmoji) {
+          updateEmojiFromAi(predictedEmoji);
+        }
 
         // Reset the predicting state when complete
         setIsPriorityPredicting(false);
@@ -282,6 +304,12 @@ function TaskDialogContent({
   // Create a unified batch submission function for clean submission
   const submitFormBatch = () => {
     if (!title) return;
+
+    // For edit mode, ensure the taskId is set in the form store
+    // This helps prevent race conditions with loading
+    if (mode === 'edit' && editingTaskId) {
+      updateField('taskId', editingTaskId);
+    }
 
     // Trigger priority prediction if needed
     if (shouldRequestPriorityPrediction()) {
@@ -385,7 +413,13 @@ function TaskDialogContent({
 
     try {
       const estimatedDuration = await estimateTaskDuration(title);
-      updateField('duration', estimatedDuration);
+
+      // GUARD: Only update if dialog is still active
+      if (isDialogActiveRef.current) {
+        updateField('duration', estimatedDuration);
+      } else {
+        console.log('Skipping AI duration estimate - dialog is no longer active');
+      }
     } catch (error) {
       console.error('Failed to estimate duration:', error);
     } finally {
@@ -663,6 +697,7 @@ function TaskDialogContent({
             isEstimating={isDurationEstimating}
             onRequestAiEstimate={requestAiEstimate}
             taskTitle={title}
+            isDialogActive={open && isDialogActiveRef.current}
           />
           <div className="flex items-center gap-1">
             {/* <Select

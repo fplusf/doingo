@@ -404,12 +404,23 @@ export const setFocusedTaskId = (taskId: string | null) => {
     saveFocusedTask(taskId);
 
     // If a task is being focused, sync it with the task-form store
+    // BUT only if we're not already editing this task (to prevent form overwrites)
     if (taskId) {
       const focusedTask = state.tasks.find((task) => task.id === taskId);
       if (focusedTask) {
         // Import dynamically to avoid circular dependencies
-        import('./task-form.store').then(({ loadTaskForEditing }) => {
-          loadTaskForEditing(focusedTask);
+        import('./task-form.store').then(({ loadTaskForEditing, taskFormStore }) => {
+          // GUARD: Only load if we're not already editing this task
+          // This prevents overwriting the form when focusing a task that's already in the dialog
+          const currentFormTaskId = taskFormStore.state.taskId;
+          const isCurrentlyEditing = currentFormTaskId === taskId;
+
+          if (!isCurrentlyEditing) {
+            console.log(`Loading task ${taskId} into form (not currently editing)`);
+            loadTaskForEditing(focusedTask);
+          } else {
+            console.log(`Skipping form load for task ${taskId} - already being edited`);
+          }
         });
       }
     }

@@ -1,5 +1,5 @@
 import { TaskPriority } from '@/features/tasks/types';
-import { predictTaskPriority } from '@/lib/groq-service';
+import { batchPredictTaskProperties } from '@/lib/groq-service';
 import { cn } from '@/lib/utils';
 import {
   NotUrgentImportantIcon,
@@ -85,9 +85,9 @@ export function PriorityPicker({
 
     try {
       // Use the Groq AI service to predict priority
-      const predicted = await predictTaskPriority(taskTitle);
-      setSuggestedPriority(predicted);
-      onValueChange(predicted);
+      const { priority } = await batchPredictTaskProperties(taskTitle);
+      setSuggestedPriority(priority);
+      onValueChange(priority);
     } catch (error) {
       console.error('Failed to predict priority:', error);
     }
