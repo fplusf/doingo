@@ -13,7 +13,7 @@ import {
 import { Link } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
-import { BarChart, Bell, Calendar1Icon, Pin } from 'lucide-react';
+import { BarChart, Calendar1Icon, Pin } from 'lucide-react';
 import * as React from 'react';
 
 const data = {
@@ -122,7 +122,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu> */}
 
-        <SidebarMenu>
+        {/* <SidebarMenu>
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>
               <Link
@@ -138,7 +138,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuButton>
             <span className="mt-0.5 truncate text-[11px]">Reminders</span>
           </SidebarMenuItem>
-        </SidebarMenu>
+        </SidebarMenu> */}
 
         {/* <SidebarMenu>
           <SidebarMenuItem className="flex flex-col items-center">

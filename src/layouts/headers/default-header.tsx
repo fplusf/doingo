@@ -1,3 +1,4 @@
+import { ReminderBellMenu } from '@/features/reminders/components/reminder-bell-menu';
 import { useWeekNavigation } from '@/features/tasks/hooks/use-week-navigation';
 import { DatePicker } from '@/layouts/headers/header-calendar';
 import { DragWindowRegion } from '@/shared/components/drag-window-region';
@@ -44,7 +45,8 @@ export function DefaultHeader() {
         ),
         center: () => <div />,
         right: () => (
-          <div className="mr-2 py-2">
+          <div className="mr-2 flex items-center gap-4 py-2">
+            <ReminderBellMenu />
             <DatePicker />
           </div>
         ),

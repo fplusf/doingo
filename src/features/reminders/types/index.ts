@@ -12,6 +12,7 @@ export interface Reminder {
   list: string; // The list that this reminder belongs to
   createdAt: number; // timestamp in milliseconds
   updatedAt: number; // timestamp in milliseconds
+  taskId?: string; // Optional: the task this reminder is linked to
 }
 
 export interface ReminderFormValues {

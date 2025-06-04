@@ -1,3 +1,4 @@
+import { toggleTaskCompletion } from '@/features/tasks/stores/tasks.store';
 import { LocalStorageAdapter } from '@/shared/store/adapters/local-storage-adapter';
 import { StorageAdapter } from '@/shared/store/adapters/storage-adapter';
 import { Store } from '@tanstack/react-store';
@@ -147,6 +148,12 @@ export const toggleReminderCompletion = (id: string) => {
         : reminder,
     ),
   }));
+
+  // Also toggle the linked task if this reminder is linked to a task
+  const reminder = remindersStore.state.reminders.find((r) => r.id === id);
+  if (reminder && reminder.taskId) {
+    toggleTaskCompletion(reminder.taskId);
+  }
 };
 
 export const addList = (list: Omit<ReminderList, 'id' | 'createdAt' | 'updatedAt'>) => {

@@ -5,6 +5,7 @@ import {
 import { Reminder } from '@/features/reminders/types';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/shared/components/ui/checkbox';
+import { useNavigate } from '@tanstack/react-router';
 import { format } from 'date-fns';
 import { Trash2 } from 'lucide-react';
 import * as React from 'react';
@@ -15,6 +16,8 @@ interface ReminderItemProps {
 }
 
 export const ReminderItem = ({ reminder, onClick }: ReminderItemProps) => {
+  const navigate = useNavigate();
+
   const handleCheckboxChange = (checked: boolean) => {
     toggleReminderCompletion(reminder.id);
   };
@@ -25,7 +28,11 @@ export const ReminderItem = ({ reminder, onClick }: ReminderItemProps) => {
   };
 
   const handleClick = () => {
-    if (onClick) onClick(reminder);
+    if (reminder.taskId) {
+      navigate({ to: '/tasks/$taskId', params: { taskId: reminder.taskId } });
+    } else if (onClick) {
+      onClick(reminder);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

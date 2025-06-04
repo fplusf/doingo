@@ -1,3 +1,4 @@
+import { remindersStore } from '@/features/reminders/store/reminders.store';
 import { findEmojiForTitle } from '@/lib/emoji-matcher';
 import {
   findNextAvailableTimeSlot,
@@ -31,6 +32,7 @@ import {
   TasksState,
   TimerState,
 } from '../types/task.types';
+import { syncTaskReminder } from './sync-task-reminder';
 
 // Initialize the storage adapter (can be easily swapped with a different implementation)
 const storageAdapter: StorageAdapter = new LocalStorageAdapter();
@@ -135,20 +137,21 @@ export const addTask = (task: Omit<OptimalTask, 'id'>) => {
   // Set the taskDate to the selectedDate if not provided
   const taskDate = task.taskDate || tasksStore.state.selectedDate;
 
-  updateStateAndStorage((state) => ({
-    ...state,
-    tasks: [
-      ...state.tasks,
-      {
-        ...task,
-        id: uuidv4(),
-        priority: task.priority || 'none',
-        taskDate,
-        subtasks: task.subtasks || [],
-        progress: task.progress || 0,
-      },
-    ],
-  }));
+  updateStateAndStorage((state) => {
+    const newTask = {
+      ...task,
+      id: uuidv4(),
+      priority: task.priority || 'none',
+      taskDate,
+      subtasks: task.subtasks || [],
+      progress: task.progress || 0,
+    };
+    setTimeout(() => syncTaskReminder(newTask), 0);
+    return {
+      ...state,
+      tasks: [...state.tasks, newTask],
+    };
+  });
 };
 
 // Helper function to handle tasks that span multiple days
@@ -356,6 +359,7 @@ export const updateTask = (id: string, updates: Partial<OptimalTask>) => {
               ? `${format(newStartTime, 'HH:mm')}—${format(newEndTime, 'HH:mm')}`
               : task.time,
         };
+        setTimeout(() => syncTaskReminder(updatedTasks[taskIndex]), 0);
         return {
           ...state,
           tasks: updatedTasks,
@@ -384,9 +388,18 @@ export const deleteTask = (id: string) => {
     localStorage.removeItem(`canvas_${id}`);
   }
 
+  // Remove any reminder linked to this task
+  const reminders = remindersStore.state.reminders;
+  const linkedReminder = reminders.find((r) => r.taskId === id);
+  if (linkedReminder) {
+    import('@/features/reminders/store/reminders.store').then(({ deleteReminder }) => {
+      deleteReminder(linkedReminder.id);
+    });
+  }
+
   updateStateAndStorage((state) => ({
     ...state,
-    tasks: state.tasks.filter((task: OptimalTask) => task.id !== id),
+    tasks: state.tasks.filter((task) => task.id !== id),
   }));
 
   // Return the deleted task for history tracking
@@ -782,18 +795,21 @@ export const updateTaskDueDateTime = (taskId: string, date: Date, time: string) 
       timeString = `—${time}`;
     }
 
+    const updatedTasks = state.tasks.map((t) =>
+      t.id === taskId
+        ? {
+            ...t,
+            dueDate: date,
+            dueTime: time,
+            time: timeString,
+          }
+        : t,
+    );
+    const updatedTask = updatedTasks.find((t) => t.id === taskId);
+    if (updatedTask) setTimeout(() => syncTaskReminder(updatedTask), 0);
     return {
       ...state,
-      tasks: state.tasks.map((t) =>
-        t.id === taskId
-          ? {
-              ...t,
-              dueDate: date,
-              dueTime: time,
-              time: timeString,
-            }
-          : t,
-      ),
+      tasks: updatedTasks,
     };
   });
 };
