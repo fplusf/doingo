@@ -20,18 +20,17 @@ const TaskDetailsPage: React.FC<TaskDetailsPageProps> = () => {
   const sidebar = useSidebar();
   const navigate = useNavigate();
 
-  // Hide sidebar when entering task details page
+  // Hide sidebar when entering task details page, but allow user to open it manually
   useEffect(() => {
-    toggleSidebarState(true); // true = closed
-    return () => {
-      // Optionally restore sidebar when leaving the page
-      toggleSidebarState(false);
-      // Reset task form store when leaving
-      resetForm();
-
-      // Don't manipulate scroll position when navigating back
-      // Let the router handle scroll restoration
-    };
+    // Only close the sidebar if it's open on mount
+    if (sidebar.open) {
+      sidebar.setOpen(false);
+    }
+    // Do not force-close on unmount, so user can keep it open if they opened it
+    resetForm();
+    // Don't manipulate scroll position when navigating back
+    // Let the router handle scroll restoration
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Sync with task-form store when task changes
