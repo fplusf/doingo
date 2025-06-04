@@ -1,5 +1,5 @@
 import { Button } from '@/shared/components/ui/button';
-import { Calendar } from '@/shared/components/ui/calendar';
+import { OptimalCalendar } from '@/shared/components/ui/optimal-calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import { CalendarDays } from 'lucide-react';
 import * as React from 'react';
@@ -29,13 +29,11 @@ export function DatePicker() {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="end" side="bottom" sideOffset={4}>
-        <Calendar
-          mode="single"
+        <OptimalCalendar
+          size="sm"
           weekStartsOn={1}
-          selected={date}
-          defaultMonth={selectedDate}
-          onSelect={onselect}
-          initialFocus
+          selected={date ? { date, time: '09:00' } : undefined}
+          onSelect={(date, _time) => onselect(date)}
           className="w-[240px]"
         />
       </PopoverContent>

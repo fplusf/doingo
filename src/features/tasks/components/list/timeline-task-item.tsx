@@ -13,7 +13,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useTaskHistoryContext } from '../../providers/task-history-provider';
 import { updateCompletionStatus } from '../../stores/task-form.store';
 import { ONE_HOUR_IN_MS, OptimalTask } from '../../types';
-import { BreakWidget } from '../schedule/break-widget';
 import { TimelineItem } from '../timeline/timeline';
 import { TaskItem } from './task-item';
 
@@ -437,7 +436,7 @@ export const TimelineTaskItem = ({
               {/* Add BreakWidget for "during" type breaks */}
               {/* Ensure BreakWidget is always visible if active/finished, regardless of parent hover */}
               <div className="absolute right-10 top-1/2 -translate-y-1/2">
-                {taskRef.current.startTime && (
+                {/* {taskRef.current.startTime && (
                   <BreakWidget
                     taskId={taskRef.current.id}
                     startTime={taskRef.current.startTime}
@@ -446,7 +445,7 @@ export const TimelineTaskItem = ({
                     isActive={true}
                     isParentHovered={isHovered}
                   />
-                )}
+                )} */}
               </div>
 
               {shouldShowOverlap && (

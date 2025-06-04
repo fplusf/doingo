@@ -23,6 +23,8 @@ interface CalendarDatePickerProps {
   weekStartsOn?: number;
   timeInterval?: number;
   isStartTimePicker?: boolean;
+  showTimePicker?: boolean; // new prop
+  showActionButtons?: boolean; // new prop
 }
 
 export function OptimalCalendar({
@@ -32,6 +34,8 @@ export function OptimalCalendar({
   selected = { date: new Date(), time: '09:00' },
   timeInterval = 15,
   isStartTimePicker = false,
+  showTimePicker = false, // default hidden
+  showActionButtons = false, // default hidden
 }: CalendarDatePickerProps) {
   const defaultDate = selected?.date || new Date();
   const defaultTime = selected?.time || '';
@@ -141,6 +145,14 @@ export function OptimalCalendar({
 
     if (onSelect) {
       onSelect(newDate, selectedTime);
+    }
+
+    // Auto-close menu if action buttons are hidden
+    if (!showActionButtons) {
+      // Try to find and close a popover or menu if present
+      // Dispatch an event for parent popover to close
+      const event = new CustomEvent('optimal-calendar-select', { bubbles: true });
+      document.activeElement?.dispatchEvent(event);
     }
   };
 
@@ -252,6 +264,19 @@ export function OptimalCalendar({
     },
   };
 
+  React.useEffect(() => {
+    if (!showActionButtons) {
+      const handler = (e: Event) => {
+        // Try to blur the active element (e.g., PopoverTrigger)
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      };
+      document.addEventListener('optimal-calendar-select', handler);
+      return () => document.removeEventListener('optimal-calendar-select', handler);
+    }
+  }, [showActionButtons]);
+
   return (
     <div
       className={cn(
@@ -336,105 +361,110 @@ export function OptimalCalendar({
         ))}
       </div>
 
-      <div className="mt-2 flex items-center justify-between">
-        <span className={cn('mr-2 font-semibold', sizeClasses[size].timeButton)}>Time</span>
-        <Select value={selectedTime} onValueChange={setSelectedTime}>
-          <SelectTrigger
+      {showTimePicker && (
+        <div className="mt-2 flex items-center justify-between">
+          <span className={cn('mr-2 font-semibold', sizeClasses[size].timeButton)}>Time</span>
+          <Select value={selectedTime} onValueChange={setSelectedTime}>
+            <SelectTrigger
+              className={cn(
+                'border border-border bg-card text-foreground hover:bg-muted',
+                sizeClasses[size].actionButton,
+                'w-auto min-w-20',
+              )}
+            >
+              <SelectValue placeholder={selectedTime}>{selectedTime}</SelectValue>
+            </SelectTrigger>
+            <SelectContent className="max-h-[250px] w-40" ref={timePickerContainerRef}>
+              <div className="border-b border-border p-2">
+                <div className="mb-1 text-xs text-muted-foreground">Custom time:</div>
+                <div className="flex items-center gap-1">
+                  <Input
+                    className="h-7 w-11 text-center text-[10px] placeholder:text-[10px]"
+                    placeholder="HH"
+                    value={customHour}
+                    onChange={handleCustomHourChange}
+                    maxLength={2}
+                    type="text"
+                    inputMode="numeric"
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                      if (e.key === 'Enter') {
+                        const minuteInput =
+                          e.currentTarget.parentElement?.querySelector<HTMLInputElement>(
+                            'input[placeholder="mm"]',
+                          );
+                        if (customMinute) {
+                          handleCustomTimeSubmit();
+                        } else {
+                          minuteInput?.focus();
+                        }
+                      }
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <span className="text-sm text-muted-foreground">:</span>
+                  <Input
+                    className="h-7 w-11 text-center text-[10px] placeholder:text-[10px]"
+                    placeholder="mm"
+                    value={customMinute}
+                    onChange={handleCustomMinuteChange}
+                    maxLength={2}
+                    type="text"
+                    inputMode="numeric"
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                      if (e.key === 'Enter') handleCustomTimeSubmit();
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <Button
+                    size="sm"
+                    className="ml-auto h-7 px-2 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCustomTimeSubmit();
+                    }}
+                  >
+                    Set
+                  </Button>
+                </div>
+              </div>
+
+              <ScrollArea className="h-[180px]" ref={timePickerRef}>
+                {timeOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </ScrollArea>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {showActionButtons && (
+        <div className="mt-2 flex justify-between gap-2">
+          <Button
+            variant="outline"
             className={cn(
-              'border border-border bg-card text-foreground hover:bg-muted',
+              'flex-1 border-0 bg-card text-foreground hover:bg-muted',
               sizeClasses[size].actionButton,
-              'w-auto min-w-20',
             )}
           >
-            <SelectValue placeholder={selectedTime}>{selectedTime}</SelectValue>
-          </SelectTrigger>
-          <SelectContent className="max-h-[250px] w-40" ref={timePickerContainerRef}>
-            <div className="border-b border-border p-2">
-              <div className="mb-1 text-xs text-muted-foreground">Custom time:</div>
-              <div className="flex items-center gap-1">
-                <Input
-                  className="h-7 w-11 text-center text-[10px] placeholder:text-[10px]"
-                  placeholder="HH"
-                  value={customHour}
-                  onChange={handleCustomHourChange}
-                  maxLength={2}
-                  type="text"
-                  inputMode="numeric"
-                  onKeyDown={(e) => {
-                    e.stopPropagation();
-                    if (e.key === 'Enter') {
-                      const minuteInput =
-                        e.currentTarget.parentElement?.querySelector<HTMLInputElement>(
-                          'input[placeholder="mm"]',
-                        );
-                      if (customMinute) {
-                        handleCustomTimeSubmit();
-                      } else {
-                        minuteInput?.focus();
-                      }
-                    }
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <span className="text-sm text-muted-foreground">:</span>
-                <Input
-                  className="h-7 w-11 text-center text-[10px] placeholder:text-[10px]"
-                  placeholder="mm"
-                  value={customMinute}
-                  onChange={handleCustomMinuteChange}
-                  maxLength={2}
-                  type="text"
-                  inputMode="numeric"
-                  onKeyDown={(e) => {
-                    e.stopPropagation();
-                    if (e.key === 'Enter') handleCustomTimeSubmit();
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <Button
-                  size="sm"
-                  className="ml-auto h-7 px-2 text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCustomTimeSubmit();
-                  }}
-                >
-                  Set
-                </Button>
-              </div>
-            </div>
-
-            <ScrollArea className="h-[180px]" ref={timePickerRef}>
-              {timeOptions.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </ScrollArea>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="mt-2 flex justify-between gap-2">
-        <Button
-          variant="outline"
-          className={cn(
-            'flex-1 border-0 bg-card text-foreground hover:bg-muted',
-            sizeClasses[size].actionButton,
-          )}
-        >
-          Cancel
-        </Button>
-        <Button
-          className={cn(
-            'flex-1 border-0 bg-primary text-primary-foreground hover:bg-primary/90',
-            sizeClasses[size].actionButton,
-          )}
-          onClick={handleApply}
-        >
-          Apply
-        </Button>
-      </div>
+            Cancel
+          </Button>
+          <Button
+            variant="default"
+            className={cn(
+              'flex-1 bg-primary text-primary-foreground hover:bg-primary/90',
+              sizeClasses[size].actionButton,
+            )}
+            onClick={handleApply}
+          >
+            Apply
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

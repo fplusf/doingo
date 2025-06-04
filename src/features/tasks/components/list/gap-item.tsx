@@ -3,7 +3,6 @@ import { Button } from '@/shared/components/ui/button';
 import { Clock, Coffee, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { OptimalTask } from '../../types';
-import { BreakWidget } from '../schedule/break-widget';
 
 export const GapItem: React.FC<{
   task: OptimalTask;
@@ -128,7 +127,7 @@ export const GapItem: React.FC<{
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </Button>
-                <BreakWidget
+                {/* <BreakWidget
                   classNames="ml-4 absolute right-10"
                   taskId={task.id}
                   startTime={task.gapStartTime}
@@ -136,7 +135,7 @@ export const GapItem: React.FC<{
                   breakType="after"
                   isActive={gapType === 'active'}
                   isParentHovered={isHovered}
-                />
+                /> */}
               </>
             )}
           </div>
@@ -158,7 +157,7 @@ export const GapItem: React.FC<{
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </Button>
-                <BreakWidget
+                {/* <BreakWidget
                   classNames="ml-4 absolute right-10"
                   taskId={task.id}
                   startTime={task.gapStartTime}
@@ -166,7 +165,7 @@ export const GapItem: React.FC<{
                   breakType="after"
                   isActive={gapType === 'future'}
                   isParentHovered={isHovered}
-                />
+                /> */}
               </>
             )}
           </div>
