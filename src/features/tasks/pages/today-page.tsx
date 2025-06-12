@@ -1,5 +1,4 @@
 import { cn } from '@/lib/utils';
-import { useSidebar } from '@/shared/components/ui/sidebar';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
 import { useEffect, useRef } from 'react';
@@ -21,7 +20,6 @@ const clearStaleResizeFlag = () => {
 };
 
 export default function TodayPage() {
-  const sidebar = useSidebar();
   const dayContentRef = useRef<TasksListHandle>(null);
   const isInitialLoadRef = useRef(true);
 
