@@ -1,6 +1,7 @@
 import CalendarPage from '@/features/calendar/pages/calendar-page';
 import InboxPage from '@/features/inbox/pages/inbox-page';
 import StatsOverview from '@/features/stats/components/stats-overview';
+import ProfilePage from '@/features/user/pages/profile-page';
 import TodayPage from '@/features/tasks/pages/today-page';
 
 import { createRoute, Outlet, redirect, Route } from '@tanstack/react-router';
@@ -92,6 +93,13 @@ export const InboxRoute = createRoute({
   component: InboxPage,
 });
 
+// Profile Route - User profile page
+export const ProfileRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: 'profile',
+  component: ProfilePage,
+});
+
 // Build the route tree with explicit parent-child relationships
 export const rootTree = RootRoute.addChildren([
   IndexRoute,
@@ -99,5 +107,6 @@ export const rootTree = RootRoute.addChildren([
   CalendarRoute,
   StatsRoute,
   InboxRoute,
+  ProfileRoute,
   TasksRoute.addChildren([TasksIndexRoute, TaskDetailsRoute]),
 ]);

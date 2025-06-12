@@ -1,6 +1,7 @@
 import { setFocused, tasksStore } from '@/features/tasks/stores/tasks.store';
 import { OptimalTask } from '@/features/tasks/types/index';
 import { NavUser } from '@/layouts/sidebar/nav-user';
+import { userStore } from '@/features/user/stores/user.store';
 import {
   Sidebar,
   SidebarContent,
@@ -16,17 +17,11 @@ import { format } from 'date-fns';
 import { BarChart, Calendar1Icon, Pin } from 'lucide-react';
 import * as React from 'react';
 
-const data = {
-  user: {
-    name: 'Optimal ADHD',
-    email: '',
-    avatar: '/avatars/shadcn.jpg',
-  },
-};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const tasks = useStore(tasksStore, (state) => state.tasks) as OptimalTask[];
   const selectedDate = useStore(tasksStore, (state) => state.selectedDate);
+  const user = useStore(userStore, (state) => state);
   const today = format(new Date(), 'yyyy-MM-dd');
   const isToday = selectedDate === today;
 
@@ -178,7 +173,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <div className="flex flex-col items-center gap-4">
           {/* <ToggleTheme /> */}
-          <NavUser user={data.user} />
+          <NavUser user={user} />
         </div>
       </SidebarFooter>
     </Sidebar>
