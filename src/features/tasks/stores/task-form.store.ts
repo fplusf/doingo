@@ -210,9 +210,13 @@ export const updateField = <K extends keyof TaskFormState>(field: K, value: Task
 
 // Update multiple fields at once
 export const updateFields = (fields: Partial<TaskFormState>) => {
+  const filtered = Object.fromEntries(
+    Object.entries(fields).filter(([, value]) => value !== undefined),
+  ) as Partial<TaskFormState>;
+
   taskFormStore.setState((state) => ({
     ...state,
-    ...fields,
+    ...filtered,
     isDirty: true,
   }));
 };
