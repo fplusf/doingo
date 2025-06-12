@@ -1,13 +1,20 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/components/ui/card';
-import { useStore } from '@tanstack/react-store';
-import { userStore } from '../stores/user.store';
+import { useAuth } from '@/features/auth/auth-context';
 import React from 'react';
 
 const ProfilePage: React.FC = () => {
-  const user = useStore(userStore, (state) => state);
+  const { user } = useAuth();
+  if (!user) {
+    return (
+      <div className="p-6 text-center text-sm">You are not logged in.</div>
+    );
+  }
 
-  const initials = user.name
+  const name = (user.user_metadata as any)?.full_name ?? user.email ?? '';
+  const email = user.email ?? '';
+  const avatar = (user.user_metadata as any)?.avatar_url ?? '';
+  const initials = name
     .split(' ')
     .map((part) => part[0])
     .join('');
@@ -17,15 +24,15 @@ const ProfilePage: React.FC = () => {
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center gap-2">
           <Avatar className="h-20 w-20">
-            <AvatarImage src={user.avatar} alt={user.name} />
+            <AvatarImage src={avatar} alt={name} />
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
-          <CardTitle className="mt-4 text-center">{user.name}</CardTitle>
-          <CardDescription className="text-center">{user.email}</CardDescription>
+          <CardTitle className="mt-4 text-center">{name}</CardTitle>
+          <CardDescription className="text-center">{email}</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-center">
-            This information is provided by the mock Google authentication.
+            This information comes from your Google account via Supabase.
           </p>
         </CardContent>
       </Card>

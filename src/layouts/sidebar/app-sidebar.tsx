@@ -1,7 +1,8 @@
 import { setFocused, tasksStore } from '@/features/tasks/stores/tasks.store';
 import { OptimalTask } from '@/features/tasks/types/index';
 import { NavUser } from '@/layouts/sidebar/nav-user';
-import { userStore } from '@/features/user/stores/user.store';
+import { useAuth } from '@/features/auth/auth-context';
+import { Button } from '@/shared/components/ui/button';
 import {
   Sidebar,
   SidebarContent,
@@ -21,7 +22,14 @@ import * as React from 'react';
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const tasks = useStore(tasksStore, (state) => state.tasks) as OptimalTask[];
   const selectedDate = useStore(tasksStore, (state) => state.selectedDate);
-  const user = useStore(userStore, (state) => state);
+  const { user, signInWithGoogle, signOut } = useAuth();
+  const userInfo = user
+    ? {
+        name: (user.user_metadata as any)?.full_name ?? user.email ?? 'User',
+        email: user.email ?? '',
+        avatar: (user.user_metadata as any)?.avatar_url ?? ''
+      }
+    : null;
   const today = format(new Date(), 'yyyy-MM-dd');
   const isToday = selectedDate === today;
 
@@ -173,7 +181,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <div className="flex flex-col items-center gap-4">
           {/* <ToggleTheme /> */}
-          <NavUser user={user} />
+          {userInfo ? (
+            <NavUser user={userInfo} onLogout={signOut} />
+          ) : (
+            <Button onClick={signInWithGoogle}>Sign in with Google</Button>
+          )}
         </div>
       </SidebarFooter>
     </Sidebar>
