@@ -27,7 +27,7 @@ export function TaskCanvas({ task }: TaskCanvasProps) {
   const [viewModeEnabled, setViewModeEnabled] = useState(false);
   const [zenModeEnabled, setZenModeEnabled] = useState(false);
   const [gridModeEnabled, setGridModeEnabled] = useState(false);
-  const { tab } = useSearch({ from: '/tasks/$taskId' });
+  const { tab } = useSearch({ from: '/tasks' });
 
   useEffect(() => {
     if (!task.id || !excalidrawAPI) return;

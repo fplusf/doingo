@@ -1,3 +1,4 @@
+import { AuthProvider } from '@/features/auth/auth-context';
 import { ThemeProvider } from '@/shared/components/theme-provider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -9,9 +10,7 @@ import {
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 import { DynamicHeader } from '../layouts/headers/dynamic-header';
 import { AppSidebar } from '../layouts/sidebar/app-sidebar';
-import { TopSidebarTrigger } from '../layouts/sidebar/left-sidebar-trigger';
 import { SidebarInset, SidebarProvider } from '../shared/components/ui/sidebar';
-import { AuthProvider } from '@/features/auth/auth-context';
 import { weeklyCalendarSchema } from './searchParams';
 
 export const RootRoute = createRootRouteWithContext()({
@@ -35,7 +34,12 @@ function Root() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
           <div className="flex h-screen w-full flex-col">
             <DynamicHeader />
 
@@ -43,7 +47,6 @@ function Root() {
               <SidebarProvider style={{ '--sidebar-width': '5rem' } as any}>
                 <AppSidebar />
                 <SidebarInset className="top-10 h-[calc(100vh-3rem)] overflow-hidden">
-                  <TopSidebarTrigger />
                   <Outlet />
                 </SidebarInset>
               </SidebarProvider>

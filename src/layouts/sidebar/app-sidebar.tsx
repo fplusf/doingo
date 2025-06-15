@@ -1,7 +1,7 @@
+import { useAuth } from '@/features/auth/auth-context';
 import { setFocused, tasksStore } from '@/features/tasks/stores/tasks.store';
 import { OptimalTask } from '@/features/tasks/types/index';
 import { NavUser } from '@/layouts/sidebar/nav-user';
-import { useAuth } from '@/features/auth/auth-context';
 import { Button } from '@/shared/components/ui/button';
 import {
   Sidebar,
@@ -18,7 +18,6 @@ import { format } from 'date-fns';
 import { BarChart, Calendar1Icon, Pin } from 'lucide-react';
 import * as React from 'react';
 
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const tasks = useStore(tasksStore, (state) => state.tasks) as OptimalTask[];
   const selectedDate = useStore(tasksStore, (state) => state.selectedDate);
@@ -27,7 +26,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     ? {
         name: (user.user_metadata as any)?.full_name ?? user.email ?? 'User',
         email: user.email ?? '',
-        avatar: (user.user_metadata as any)?.avatar_url ?? ''
+        avatar: (user.user_metadata as any)?.avatar_url ?? '',
       }
     : null;
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -164,7 +163,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem className="flex flex-col items-center">
             <SidebarMenuButton size="lg" asChild>
               <Link
-                to="/stats"
+                to="/tasks"
+                search={(prev) => ({ ...prev, overlay: 'stats' })}
                 activeProps={{ className: 'active' }}
                 inactiveProps={{ className: 'inactive' }}
               >

@@ -69,57 +69,21 @@ const SidebarProvider = React.forwardRef<
     const isMobile = useIsMobile();
     const [openMobile, setOpenMobile] = React.useState(false);
 
-    // Load sidebar state from localStorage on mount
-    const getInitialOpen = () => {
-      if (typeof window === 'undefined') return defaultOpen;
-      const stored = localStorage.getItem(SIDEBAR_LOCALSTORAGE_KEY);
-      if (stored === 'true') return true;
-      if (stored === 'false') return false;
-      return defaultOpen;
-    };
-    // This is the internal state of the sidebar.
-    // We use openProp and setOpenProp for control from outside the component.
-    const [_open, _setOpen] = React.useState(getInitialOpen);
-    const open = openProp ?? _open;
-    const setOpen = React.useCallback(
-      (value: boolean | ((value: boolean) => boolean)) => {
-        const openState = typeof value === 'function' ? value(open) : value;
-        if (setOpenProp) {
-          setOpenProp(openState);
-        } else {
-          _setOpen(openState);
-        }
-        // Save to localStorage
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(SIDEBAR_LOCALSTORAGE_KEY, String(openState));
-        }
-        // Also set cookie for legacy support
-        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
-      },
-      [setOpenProp, open],
-    );
+    // Always keep sidebar closed
+    const [_open, _setOpen] = React.useState(false);
+    const open = false; // Force sidebar to always be closed
+    const setOpen = React.useCallback(() => {
+      // Do nothing - prevent sidebar from opening
+    }, []);
 
-    // Helper to toggle the sidebar.
+    // Helper to toggle the sidebar - do nothing
     const toggleSidebar = React.useCallback(() => {
-      return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
-    }, [isMobile, setOpen, setOpenMobile]);
-
-    // Adds a keyboard shortcut to toggle the sidebar.
-    React.useEffect(() => {
-      const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
-          event.preventDefault();
-          toggleSidebar();
-        }
-      };
-
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [toggleSidebar]);
+      // Do nothing - prevent sidebar from toggling
+    }, []);
 
     // We add a state so that we can do data-state="expanded" or "collapsed".
     // This makes it easier to style the sidebar with Tailwind classes.
-    const state = open ? 'expanded' : 'collapsed';
+    const state = 'collapsed';
 
     const contextValue = React.useMemo<SidebarContext>(
       () => ({

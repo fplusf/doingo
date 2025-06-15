@@ -1,8 +1,7 @@
 import CalendarPage from '@/features/calendar/pages/calendar-page';
 import InboxPage from '@/features/inbox/pages/inbox-page';
-import StatsOverview from '@/features/stats/components/stats-overview';
-import ProfilePage from '@/features/user/pages/profile-page';
 import TodayPage from '@/features/tasks/pages/today-page';
+import ProfilePage from '@/features/user/pages/profile-page';
 
 import { createRoute, Outlet, redirect, Route } from '@tanstack/react-router';
 import RemindersPage from '../features/reminders/pages/reminders-page';
@@ -79,13 +78,6 @@ export const CalendarRoute = createRoute({
   component: CalendarPage,
 });
 
-// Stats Route - For viewing statistics and analytics
-export const StatsRoute = createRoute({
-  getParentRoute: () => RootRoute,
-  path: 'stats',
-  component: StatsOverview,
-});
-
 // Inbox Route - For the inbox feature
 export const InboxRoute = createRoute({
   getParentRoute: () => RootRoute,
@@ -105,7 +97,6 @@ export const rootTree = RootRoute.addChildren([
   IndexRoute,
   RemindersRoute,
   CalendarRoute,
-  StatsRoute,
   InboxRoute,
   ProfileRoute,
   TasksRoute.addChildren([TasksIndexRoute, TaskDetailsRoute]),

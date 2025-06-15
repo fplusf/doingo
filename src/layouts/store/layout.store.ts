@@ -13,11 +13,11 @@ export const layoutStore = new Store<LayoutState>({
 });
 
 export const toggleSidebarState = (value?: boolean) => {
-  console.log('toggle: ', value);
+  // Always keep sidebar closed
   layoutStore.setState((prevState) => ({
     ...prevState,
     sidebar: {
-      isClosed: value === undefined ? !prevState.sidebar.isClosed : value,
+      isClosed: true,
     },
   }));
 };

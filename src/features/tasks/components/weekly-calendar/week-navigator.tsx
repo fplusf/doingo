@@ -39,7 +39,7 @@ export function WeekNavigator({ className }: { className?: string }) {
     <div
       ref={containerRef}
       className={cn(
-        'relative mx-auto h-[90px] w-full overflow-hidden bg-background pt-2 text-white',
+        'relative mx-auto h-[90px] w-full overflow-hidden bg-background pt-2',
         className,
       )}
     >
