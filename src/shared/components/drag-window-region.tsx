@@ -1,4 +1,3 @@
-import { TopSidebarTriggerVisible } from '@/layouts/sidebar/left-sidebar-trigger';
 import { closeWindow, maximizeWindow, minimizeWindow } from '@/shared/helpers/window_helpers';
 import { type ReactNode } from 'react';
 
@@ -6,10 +5,6 @@ export interface DragWindowRegionChildren {
   left: () => ReactNode;
   center: () => ReactNode;
   right: () => ReactNode;
-}
-interface DragWindowRegionProps {
-  title?: ReactNode;
-  children?: DragWindowRegionChildren;
 }
 
 export function DragWindowRegion({ children }: { children: DragWindowRegionChildren }) {
@@ -22,7 +17,6 @@ export function DragWindowRegion({ children }: { children: DragWindowRegionChild
       <div className="z-12 relative flex h-10 w-full items-center justify-between bg-sidebar">
         {/* Left section - fixed width */}
         <div className="no-drag mt-3 flex min-w-[200px] items-center px-4 pl-20">
-          <TopSidebarTriggerVisible />
           {children.left()}
         </div>
 

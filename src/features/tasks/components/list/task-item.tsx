@@ -111,7 +111,14 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
 
         if (e.key.toLowerCase() === 'd') {
           e.preventDefault();
-          navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
+          navigate({
+            to: '/tasks',
+            search: (prev) => ({
+              ...prev,
+              taskId: task.id,
+              tab: prev.tab || 'document',
+            }),
+          });
         }
       }
     };
@@ -231,7 +238,14 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
 
   const handleDetailsClick = (e: React.MouseEvent<HTMLButtonElement | HTMLDivElement>) => {
     e.stopPropagation();
-    navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
+    navigate({
+      to: '/tasks',
+      search: (prev) => ({
+        ...prev,
+        taskId: task.id,
+        tab: prev.tab || 'document',
+      }),
+    });
   };
 
   const hasSubtasks = task.subtasks && task.subtasks.length > 0;
@@ -339,7 +353,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                             {formatDurationForDisplay(displayDuration || 45 * 60 * 1000)}
                           </span>
                           <span className="ml-4 whitespace-nowrap text-xs opacity-40">
-                            Actual: {formatDurationForDisplay(getActualTimeWorked(task.id))}
+                            {/* Actual: {formatDurationForDisplay(getActualTimeWorked(task.id))} */}
                           </span>
                         </div>
                       </div>
@@ -369,7 +383,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                             {formatDurationForDisplay(displayDuration || 45 * 60 * 1000)}
                           </span>
                           <span className="ml-4 whitespace-nowrap text-xs opacity-40">
-                            Actual: {formatDurationForDisplay(getActualTimeWorked(task.id))}
+                            {/* Actual: {formatDurationForDisplay(getActualTimeWorked(task.id))} */}
                           </span>
                         </div>
                       </section>

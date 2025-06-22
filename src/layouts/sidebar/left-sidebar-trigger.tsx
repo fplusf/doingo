@@ -1,8 +1,5 @@
-import { cn } from '@/lib/utils';
-import { Button } from '@/shared/components/ui/button';
 import { SidebarTrigger, useSidebar } from '@/shared/components/ui/sidebar';
-import { PanelLeft, PanelRight } from 'lucide-react';
-import React, { useSyncExternalStore } from 'react';
+import React from 'react';
 import { layoutStore, toggleSidebarState } from '../store/layout.store';
 
 export const TopSidebarTrigger: React.FC = () => {
@@ -32,24 +29,5 @@ export const TopSidebarTrigger: React.FC = () => {
  * and in this case we need to keep the DragWindowRegion outside of the SidebarContext.
  */
 export const TopSidebarTriggerVisible = ({ className }: { className?: string }) => {
-  const sidebarState = useSyncExternalStore(
-    layoutStore.subscribe,
-    () => layoutStore.state.sidebar.isClosed,
-  );
-
-  return (
-    <Button
-      data-sidebar="trigger"
-      variant="ghost"
-      size="icon"
-      className={cn('z-50 h-7 w-7', className)}
-      onClick={() => {
-        toggleSidebarState(sidebarState ? false : true);
-        console.log('Left sidebar trigger clicked');
-      }}
-    >
-      {sidebarState ? <PanelLeft /> : <PanelRight />}
-      <span className="sr-only">Toggle Sidebar</span>
-    </Button>
-  );
+  return null;
 };

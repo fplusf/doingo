@@ -1,3 +1,4 @@
+import { AuthProvider } from '@/features/auth/auth-context';
 import { ThemeProvider } from '@/shared/components/theme-provider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -9,7 +10,6 @@ import {
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 import { DynamicHeader } from '../layouts/headers/dynamic-header';
 import { AppSidebar } from '../layouts/sidebar/app-sidebar';
-import { TopSidebarTrigger } from '../layouts/sidebar/left-sidebar-trigger';
 import { SidebarInset, SidebarProvider } from '../shared/components/ui/sidebar';
 import { weeklyCalendarSchema } from './searchParams';
 
@@ -33,22 +33,28 @@ const queryClient = new QueryClient();
 function Root() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-        <div className="flex h-screen w-full flex-col">
-          <DynamicHeader />
+      <AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <div className="flex h-screen w-full flex-col">
+            <DynamicHeader />
 
-          <div className="flex min-h-0 flex-1 flex-col">
-            <SidebarProvider style={{ '--sidebar-width': '5rem' } as any}>
-              <AppSidebar />
-              <SidebarInset className="top-10 h-[calc(100vh-3rem)] overflow-hidden">
-                <TopSidebarTrigger />
-                <Outlet />
-              </SidebarInset>
-            </SidebarProvider>
+            <div className="flex min-h-0 flex-1 flex-col">
+              <SidebarProvider style={{ '--sidebar-width': '5rem' } as any}>
+                <AppSidebar />
+                <SidebarInset className="top-10 h-[calc(100vh-3rem)] overflow-hidden">
+                  <Outlet />
+                </SidebarInset>
+              </SidebarProvider>
+            </div>
           </div>
-        </div>
-        <TanStackRouterDevtools />
-      </ThemeProvider>
+          <TanStackRouterDevtools />
+        </ThemeProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

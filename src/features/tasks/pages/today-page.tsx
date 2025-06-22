@@ -1,7 +1,10 @@
+import { StatsOverlay } from '@/features/stats/components/stats-overlay';
 import { cn } from '@/lib/utils';
+import { useSearch } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
 import { format } from 'date-fns';
 import { useEffect, useRef } from 'react';
+import { TaskDetailsOverlay } from '../components/details/details-overlay';
 import { TasksList, TasksListHandle } from '../components/list/tasks-list';
 import { WeekNavigator } from '../components/weekly-calendar/week-navigator';
 import { isResizeInProgress, setFocused, tasksStore } from '../stores/tasks.store';
@@ -25,6 +28,7 @@ export default function TodayPage() {
 
   const allTasks = useStore(tasksStore, (state) => state.tasks);
   const focusedTaskId = useStore(tasksStore, (state) => state.focusedTaskId);
+  const search = useSearch({ from: '/tasks' });
 
   // Add cleanup on mount
   useEffect(() => {
@@ -140,19 +144,20 @@ export default function TodayPage() {
 
   return (
     <div
-      className={cn(
-        'flex h-[calc(100vh-4rem)] bg-sidebar transition-all duration-100',
-        'flex-col text-white',
-      )}
+      className={cn('flex h-[calc(100vh-4rem)] flex-col bg-background transition-all duration-100')}
     >
       {/* Week Navigator */}
-      <div className="borderbg-background flex-1 rounded-t-2xl">
-        <WeekNavigator className="border-secondary-500 rounded-t-2xl border-b" />
+      <div className="flex-1">
+        <WeekNavigator className="border-b" />
       </div>
       {/* Day Content */}
-      <div className="h-full bg-background pb-4 shadow-[0_4px_10px_-4px_rgba(0,0,0,0.1)]">
+      <div className="h-full pb-4">
         <TasksList ref={dayContentRef} />
       </div>
+
+      {/* Overlays */}
+      {search.taskId && <TaskDetailsOverlay taskId={search.taskId} />}
+      {search.overlay === 'stats' && <StatsOverlay />}
     </div>
   );
 }

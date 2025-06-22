@@ -16,8 +16,9 @@ interface TaskDetailsProps {
 }
 
 export function TaskDetails({ task, onEdit }: TaskDetailsProps) {
-  const navigate = useNavigate();
-  const search = useSearch({ from: '/tasks/$taskId' });
+  // Use navigate relative to /tasks route to manipulate search params
+  const navigate = useNavigate({ from: '/tasks' });
+  const search = useSearch({ from: '/tasks' });
 
   const currentTab = search.tab || 'document';
   const [isCanvasVisible, setIsCanvasVisible] = React.useState(currentTab !== 'document');
@@ -25,14 +26,13 @@ export function TaskDetails({ task, onEdit }: TaskDetailsProps) {
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        // reset the search params for tab to document
         navigate({
-          to: '/tasks/$taskId',
-          params: { taskId: task.id },
-          search: { tab: 'document' },
+          search: (prev) => ({
+            ...prev,
+            taskId: undefined,
+            tab: 'document',
+          }),
         });
-        // navigate back
-        navigate({ to: '..' });
       }
     };
 
