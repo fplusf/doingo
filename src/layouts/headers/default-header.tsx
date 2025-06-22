@@ -44,18 +44,19 @@ function TasksHeader() {
               </Button>
             )}
             <div className="ml-2 flex items-center justify-center">
-              <Button onClick={handlePrev} variant="ghost" size="icon" className="h-7 w-7">
-                <ChevronLeft />
-              </Button>
               <span
                 onClick={() => navigateToDate(new Date())}
                 className="mx-2 w-[127px] cursor-pointer text-center"
               >
                 {format(new Date(date), 'MMMM yyyy')}
               </span>
-              <Button onClick={handleNext} variant="ghost" size="icon" className="h-7 w-7">
+              <Button onClick={handlePrev} variant="ghost" size="icon" className="mr-2 h-7 w-7">
+                <ChevronLeft />
+              </Button>
+              <Button onClick={handleNext} variant="ghost" size="icon" className="mr-4 h-7 w-7">
                 <ChevronRight />
               </Button>
+              <DatePicker />
             </div>
           </div>
         ),
@@ -63,7 +64,6 @@ function TasksHeader() {
         right: () => (
           <div className="mr-2 flex items-center gap-4 py-2">
             <ReminderBellMenu />
-            <DatePicker />
             <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
               <Link
                 to="/tasks"

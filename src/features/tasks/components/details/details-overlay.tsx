@@ -5,6 +5,7 @@ import { TaskDetailsTab } from '@/routes/searchParams';
 import { Overlay } from '@/shared/components/ui/overlay';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-store';
+import { ChevronLeft } from 'lucide-react';
 import { TaskDetails } from './details';
 
 interface TaskDetailsOverlayProps {
@@ -25,41 +26,77 @@ export function TaskDetailsOverlay({ taskId }: TaskDetailsOverlayProps) {
   };
 
   const handleTabChange = (tab: TaskDetailsTab) => {
-    navigate({ search: (prev) => ({ ...prev, tab }) });
+    navigate({
+      search: (prev) => ({ ...prev, tab }),
+      replace: true,
+    });
+  };
+
+  const handleBack = () => {
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        taskId: undefined,
+        tab: undefined,
+      }),
+    });
+  };
+
+  const handleBackClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleBack();
   };
 
   return (
-    <Overlay>
-      {/* Tab Switcher */}
-      <div className="flex justify-center p-1">
+    <Overlay showCloseButton={false}>
+      {/* Header with Back Button and Tab Switcher */}
+      <div
+        className="flex items-center justify-between p-2 text-sm"
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      >
+        {/* Back Button */}
         <button
-          className={cn('rounded-md px-3 py-1', currentTab === 'document' && 'bg-muted')}
-          onClick={() => handleTabChange('document')}
+          className="absolute left-20 top-2.5 z-50 flex items-center gap-1 rounded-md px-2 py-1 pl-5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          onClick={handleBackClick}
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          aria-label="Back to tasks"
+          type="button"
         >
-          Notes
+          <ChevronLeft className="h-4 w-4" />
+          <span>Back</span>
         </button>
-        <button
-          className={cn('rounded-md px-3 py-1', currentTab === 'both' && 'bg-muted')}
-          onClick={() => handleTabChange('both')}
-        >
-          Both
-        </button>
-        <button
-          className={cn('rounded-md px-3 py-1', currentTab === 'canvas' && 'bg-muted')}
-          onClick={() => handleTabChange('canvas')}
-        >
-          Canvas
-        </button>
+
+        {/* Tab Switcher */}
+        <div className="flex w-full justify-center">
+          <button
+            className={cn('rounded-md px-3 py-1', currentTab === 'document' && 'bg-muted')}
+            onClick={() => handleTabChange('document')}
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            Notes
+          </button>
+          <button
+            className={cn('rounded-md px-3 py-1', currentTab === 'both' && 'bg-muted')}
+            onClick={() => handleTabChange('both')}
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            Both
+          </button>
+          <button
+            className={cn('rounded-md px-3 py-1', currentTab === 'canvas' && 'bg-muted')}
+            onClick={() => handleTabChange('canvas')}
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            Canvas
+          </button>
+        </div>
+
+        {/* Empty div for spacing balance */}
+        <div className="w-16"></div>
       </div>
+
       <div className="relative flex-1">
-        {/* Close button */}
-        <button
-          className="absolute right-2 top-2 rounded p-1 text-muted-foreground hover:bg-muted"
-          aria-label="Close details"
-          onClick={() => navigate({ search: (prev) => ({ ...prev, taskId: undefined }) })}
-        >
-          ✕
-        </button>
         <TaskDetails task={task} onEdit={handleTaskUpdate} />
       </div>
     </Overlay>

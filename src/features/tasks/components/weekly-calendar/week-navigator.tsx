@@ -10,6 +10,8 @@ let isTransitioning = false;
 
 export function WeekNavigator({ className }: { className?: string }) {
   const { selectedDate, weeks, handleDateSelect, handleNext, handlePrev } = useWeekNavigation();
+
+  // The gesture control not used for now, until a stable working approach is found.
   const containerRef = React.useRef<HTMLDivElement>(null);
   const { getProgressForDate } = useTasksProgress();
 
@@ -37,7 +39,6 @@ export function WeekNavigator({ className }: { className?: string }) {
 
   return (
     <div
-      ref={containerRef}
       className={cn(
         'relative mx-auto h-[90px] w-full overflow-hidden bg-background pt-2',
         className,

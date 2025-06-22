@@ -353,7 +353,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                             {formatDurationForDisplay(displayDuration || 45 * 60 * 1000)}
                           </span>
                           <span className="ml-4 whitespace-nowrap text-xs opacity-40">
-                            Actual: {formatDurationForDisplay(getActualTimeWorked(task.id))}
+                            {/* Actual: {formatDurationForDisplay(getActualTimeWorked(task.id))} */}
                           </span>
                         </div>
                       </div>
@@ -383,7 +383,7 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
                             {formatDurationForDisplay(displayDuration || 45 * 60 * 1000)}
                           </span>
                           <span className="ml-4 whitespace-nowrap text-xs opacity-40">
-                            Actual: {formatDurationForDisplay(getActualTimeWorked(task.id))}
+                            {/* Actual: {formatDurationForDisplay(getActualTimeWorked(task.id))} */}
                           </span>
                         </div>
                       </section>
