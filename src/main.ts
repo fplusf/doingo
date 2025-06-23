@@ -8,6 +8,8 @@ const inDevelopment = process.env.NODE_ENV === 'development';
 // Countdown state
 let countdownInterval: NodeJS.Timeout | null = null;
 let countdownEndTime: number | null = null;
+// Stores remaining time whenever the timer is paused so we can resume accurately.
+let pausedRemainingTime: number | null = null;
 
 // Pomodoro timer state
 type TimerMode = 'pomodoro' | 'break';
@@ -74,6 +76,7 @@ const clearCountdown = () => {
     countdownInterval = null;
   }
   countdownEndTime = null;
+  pausedRemainingTime = null;
   pomodoroState.isRunning = false;
   pomodoroState.endTime = null;
   // Don't reset the tray here, as we want to keep showing the paused timer
@@ -127,11 +130,12 @@ const startCountdown = (endTime: number) => {
 // Function to get current timer state
 const getTimerState = () => {
   const now = Date.now();
-  const remaining = pomodoroState.endTime
-    ? pomodoroState.endTime - now
-    : pomodoroState.activeMode === 'pomodoro'
-      ? pomodoroState.pomodoroDuration
-      : pomodoroState.breakDuration;
+  const remaining = pomodoroState.isRunning
+    ? Math.max(0, (pomodoroState.endTime ?? now) - now)
+    : (pausedRemainingTime ??
+      (pomodoroState.activeMode === 'pomodoro'
+        ? pomodoroState.pomodoroDuration
+        : pomodoroState.breakDuration));
 
   return {
     ...pomodoroState,
@@ -282,8 +286,43 @@ app.whenReady().then(() => {
 
   // Pause pomodoro timer
   ipcMain.handle('pause-pomodoro-timer', () => {
+    // If the timer is already paused, simply return the current state
+    if (!pomodoroState.isRunning) {
+      return getTimerState();
+    }
+
+    // Compute the remaining time BEFORE clearing the interval so we don't lose it
+    let remaining = 0;
+
+    if (countdownEndTime) {
+      remaining = Math.max(0, countdownEndTime - Date.now());
+    } else {
+      // Fallback to full duration if for some reason we don't have an endTime
+      remaining =
+        pomodoroState.activeMode === 'pomodoro'
+          ? pomodoroState.pomodoroDuration
+          : pomodoroState.breakDuration;
+    }
+
+    // Stop the countdown and mark the timer as not running
     clearCountdown();
-    return getTimerState();
+
+    // Persist the paused remaining time so future queries reflect the correct value
+    pausedRemainingTime = remaining;
+
+    // Update the tray to reflect the paused time so the user sees an accurate value
+    const minutes = Math.floor(remaining / 60000);
+    const seconds = Math.floor((remaining % 60000) / 1000);
+    updateTrayTimer(
+      `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
+    );
+
+    // Return the updated state with the correct remainingTime so the renderer can resume later
+    return {
+      ...pomodoroState,
+      isRunning: false,
+      remainingTime: remaining,
+    };
   });
 
   // Reset pomodoro timer
