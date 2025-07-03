@@ -7,10 +7,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/components/ui/tooltip';
+import { ElectronApi } from '@/shared/types/electron';
 import { useStore } from '@tanstack/react-store';
 import { Check, Pause, Pencil, Play } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '../../../../lib/utils';
+
+// Declare global electron interface for TypeScript
+declare global {
+  interface Window {
+    electron?: ElectronApi;
+  }
+}
 
 interface TaskTimerProps {
   taskId: string;
@@ -98,8 +106,14 @@ export const TaskTimer = ({
 
       intervalRef.current = setInterval(() => {
         const elapsed = Date.now() - startTimeRef.current;
-        setDisplayTime(initialTimeSpent + elapsed);
-      }, 100);
+        const totalTime = initialTimeSpent + elapsed;
+        setDisplayTime(totalTime);
+
+        // Update system tray every tick
+        if (window.electron?.ipcRenderer) {
+          window.electron.ipcRenderer.send('update-timer', formatTrayTime(totalTime));
+        }
+      }, 1000);
     } else {
       // Update display time to current value
       setDisplayTime(initialTimeSpent);
@@ -116,6 +130,14 @@ export const TaskTimer = ({
           const elapsed = Date.now() - startTimeRef.current;
           if (elapsed > 0) {
             updateTaskTimeSpent(taskId, elapsed);
+
+            // Ensure tray shows final elapsed time when paused
+            if (window.electron?.ipcRenderer) {
+              window.electron.ipcRenderer.send(
+                'update-timer',
+                formatTrayTime(initialTimeSpent + elapsed),
+              );
+            }
           }
         }
       }
@@ -163,6 +185,13 @@ export const TaskTimer = ({
     if (hours > 0) {
       return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Format time for system tray (MM:SS)
+  const formatTrayTime = (ms: number): string => {
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 

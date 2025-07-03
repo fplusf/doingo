@@ -5,12 +5,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { TaskCheckbox } from '../../../../shared/components/task-checkbox';
 import { updateCompletionStatus } from '../../stores/task-form.store';
-import { toggleTaskCompletion, updateTask, updateTaskBreak } from '../../stores/tasks.store';
+import { toggleTaskCompletion, updateTask } from '../../stores/tasks.store';
 import CollapsedContainer from '../schedule/collapsed-container';
 import { EmojiPicker } from '../schedule/emoji-picker';
 import { TaskScheduler } from '../schedule/task-scheduler';
 import { TimelineNode } from '../timeline/timeline-node';
-import { PomodoroTimer } from '../timer/pomodoro-timer';
+import { TaskTimer } from '../timer/task-timer';
 import TaskNotes from './notes';
 import { SubtaskList } from './subtasks';
 
@@ -73,24 +73,6 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
       if (onEdit) onEdit({ ...task, notes: content });
     },
     [taskId, task, onEdit],
-  );
-
-  // Handler for adding breaks
-  const handleAddBreak = useCallback(
-    (taskId: string, startTime: Date, duration: number, breakType: 'during' | 'after') => {
-      updateTaskBreak(taskId, startTime, duration, breakType);
-      if (onEdit) {
-        onEdit({
-          ...task,
-          break: {
-            startTime,
-            duration,
-            type: breakType,
-          },
-        });
-      }
-    },
-    [task, onEdit],
   );
 
   const handleTimelineNodeClick = () => {
@@ -169,11 +151,11 @@ export function TaskDocument({ task, onEdit, className }: TaskDocumentProps) {
               className="w-full resize-none overflow-hidden whitespace-pre-wrap break-words bg-transparent px-4 text-2xl font-semibold tracking-tight focus:outline-none"
               minRows={1}
             />
-            <PomodoroTimer
+            <TaskTimer
               className="flex-shrink-0"
               taskId={taskId}
-              onAddBreak={handleAddBreak}
-              totalDuration={task.duration || 45 * 60 * 1000} // Default 45 minutes if no duration set
+              initialTimeSpent={task.timeSpent || 0}
+              editable={true}
             />
           </div>
         </section>

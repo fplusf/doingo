@@ -29,6 +29,7 @@ import {
   undoLastFocusAction,
 } from '../../stores/tasks.store';
 import { ONE_HOUR_IN_MS, TaskCardProps } from '../../types';
+import { TaskTimer } from '../timer/task-timer';
 import { TaskItemActionButtons } from './task-item-action-buttons';
 
 interface TaskItemProps extends TaskCardProps {
@@ -309,8 +310,8 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
 
                   <div
                     className={cn(
-                      'flex w-full',
-                      'flex-col py-0',
+                      'flex-1',
+                      'flex flex-col py-0',
                       displayDuration <= ONE_HOUR_IN_MS * 2
                         ? 'h-full justify-center pr-16'
                         : 'justify-between py-1 pr-2',
@@ -441,6 +442,16 @@ export const TaskItem = ({ task, onEdit, effectiveDuration, listeners }: TaskIte
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
+
+        {/* Timer overlay for focused task - outside of card */}
+        {task.isFocused && !task.completed && (
+          <div
+            className="absolute -right-14 top-1/2 z-20 -translate-y-1/2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <TaskTimer taskId={task.id} initialTimeSpent={task.timeSpent || 0} editable={false} />
+          </div>
+        )}
 
         {/* Drag Handle - Only appears if listeners are provided */}
         {listeners && (
