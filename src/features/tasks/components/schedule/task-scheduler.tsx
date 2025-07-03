@@ -129,11 +129,8 @@ export const TaskScheduler = React.forwardRef<TaskSchedulerHandle, TaskScheduler
 
       setIsAiEstimating(true);
       try {
-        const {
-          duration: estimatedDuration,
-          priority: estimatedPriority,
-          emoji: estimatedEmoji,
-        } = await batchPredictTaskProperties(currentTaskTitleForAi);
+        const { duration: estimatedDuration, priority: estimatedPriority } =
+          await batchPredictTaskProperties(currentTaskTitleForAi);
 
         // Update state using the store's setState pattern
         taskFormStore.setState((state) => {
@@ -151,10 +148,6 @@ export const TaskScheduler = React.forwardRef<TaskSchedulerHandle, TaskScheduler
           }
           if (!state.isPriorityManuallySet) {
             newState.priority = estimatedPriority;
-          }
-          if (estimatedEmoji && !state.isEmojiSetByAi) {
-            newState.emoji = estimatedEmoji;
-            newState.isEmojiSetByAi = true;
           }
 
           return newState;
@@ -291,9 +284,8 @@ export const TaskScheduler = React.forwardRef<TaskSchedulerHandle, TaskScheduler
       }
     };
 
-    const handleDurationChange = (newDuration: number) => {
-      updateDuration(newDuration);
-      taskFormStore.setState((state) => ({ ...state, isDurationManuallySet: true, isDirty: true }));
+    const handleDurationChange = (newDuration: number, isUserAction: boolean) => {
+      updateDuration(newDuration, isUserAction);
     };
 
     const handleDueDateTimeChange = (date: Date | undefined, time: string) => {

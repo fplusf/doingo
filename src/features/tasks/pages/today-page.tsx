@@ -53,6 +53,11 @@ export default function TodayPage() {
         return;
       }
 
+      // Disable the "A" hot-key when any overlay (task details, stats, etc.) is open
+      if (search.taskId || search.overlay || document.querySelector('[data-state="open"]')) {
+        return;
+      }
+
       if (e.key.toLowerCase() === 'a') {
         e.preventDefault();
         dayContentRef.current?.setIsCreating(true);
@@ -61,7 +66,7 @@ export default function TodayPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [search.taskId, search.overlay]);
 
   // Effect for automatic focus checking
   useEffect(() => {

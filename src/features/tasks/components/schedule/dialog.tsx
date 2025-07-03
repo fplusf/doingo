@@ -53,6 +53,8 @@ export interface TaskFormValues {
   progress?: number;
   repetition?: 'once' | 'daily' | 'weekly' | 'custom';
   completed?: boolean;
+  isDurationManuallySet?: boolean;
+  isPriorityManuallySet?: boolean;
 }
 
 interface TaskDialogProps {
@@ -152,10 +154,14 @@ function TaskDialogContent({
   // Add ref to track if component is still mounted and dialog is open
   const isDialogActiveRef = useRef(false);
 
-  // Initialize form when dialog opens
+  // Initialize form ONLY when the dialog opens for the first time.
+  // Subsequent prop changes (for example, AI predictions updating the parent `initialValues`)
+  // should NOT wipe the user's in-progress input.
+  const hasInitializedRef = useRef(false);
+
   useEffect(() => {
-    if (open) {
-      // Set dialog as active
+    if (open && !hasInitializedRef.current) {
+      // Mark dialog as active
       isDialogActiveRef.current = true;
 
       // Initialize form for create or edit mode
@@ -167,7 +173,7 @@ function TaskDialogContent({
         setOriginalTitle('');
         setPredictionRequested(false);
 
-        // Apply any initial values passed to the component
+        // Apply any initial values passed to the component *once*
         if (initialValues) {
           updateFields(initialValues as Partial<TaskFormState>);
         }
@@ -187,8 +193,17 @@ function TaskDialogContent({
           setPredictionRequested(false);
         }
       }
+
+      // Ensure this initialization block only runs once per dialog open
+      hasInitializedRef.current = true;
     }
-  }, [open, mode, editingTaskId, initialValues]);
+
+    // When the dialog closes, reset the initialization flag so that
+    // the next time it is opened we re-initialise correctly.
+    if (!open) {
+      hasInitializedRef.current = false;
+    }
+  }, [open, mode, editingTaskId]);
 
   // Effect to reset form when dialog closes
   useEffect(() => {

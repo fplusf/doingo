@@ -1,5 +1,5 @@
 import { exec } from 'child_process';
-import { app, BrowserWindow, ipcMain, Menu, nativeImage, Tray } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, nativeImage, Notification, Tray } from 'electron';
 import path from 'path';
 import registerListeners from './shared/helpers/ipc/listeners-register';
 
@@ -242,6 +242,16 @@ app.whenReady().then(() => {
   ipcMain.on('update-timer', (event, timeString: string) => {
     console.log(`[Main Process] Received timer update: ${timeString}`);
     updateTrayTimer(timeString);
+  });
+
+  // Listen for notification requests from renderer process
+  ipcMain.on('show-notification', (_event, { title, body }: { title: string; body: string }) => {
+    try {
+      // Create and show a new system notification
+      new Notification({ title, body }).show();
+    } catch (error) {
+      console.error('[Main Process] Failed to show notification:', error);
+    }
   });
 
   // Add click handler to show window when tray is clicked

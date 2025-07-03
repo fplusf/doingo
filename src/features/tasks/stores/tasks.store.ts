@@ -1,5 +1,5 @@
 import { remindersStore } from '@/features/reminders/store/reminders.store';
-import { findEmojiForTitle } from '@/lib/emoji-matcher';
+import { batchPredictTaskProperties } from '@/lib/groq-service';
 import {
   findNextAvailableTimeSlot,
   getNextFifteenMinuteInterval,
@@ -138,9 +138,10 @@ export const addTask = (task: Omit<OptimalTask, 'id'>) => {
   const taskDate = task.taskDate || tasksStore.state.selectedDate;
 
   updateStateAndStorage((state) => {
+    const generatedId = (task as { id?: string }).id ?? uuidv4();
     const newTask = {
       ...task,
-      id: uuidv4(),
+      id: generatedId,
       priority: task.priority || 'none',
       taskDate,
       subtasks: task.subtasks || [],
@@ -889,6 +890,8 @@ export const createNewTask = (
     subtasks?: any[];
     progress?: number;
     repetition?: RepetitionOption;
+    isDurationManuallySet?: boolean;
+    isPriorityManuallySet?: boolean;
   },
   category: TaskCategory = 'work',
 ) => {
@@ -924,10 +927,12 @@ export const createNewTask = (
     }
 
     // Handle duration
-    const duration = values.duration && values.duration > 0 ? values.duration : 45 * 60 * 1000;
+    const duration = values.duration && values.duration > 0 ? values.duration : undefined;
 
     // Calculate next start time
-    const nextStartTime = addMilliseconds(startTime, duration);
+    const nextStartTime = duration
+      ? addMilliseconds(startTime, duration)
+      : addMilliseconds(startTime, 45 * 60 * 1000); // Use 45min as fallback for UI
 
     // Create default repetition option if not provided
     const defaultRepetition: RepetitionOption = {
@@ -940,12 +945,12 @@ export const createNewTask = (
       id: taskId,
       title: values.title,
       notes: values.notes || '',
-      emoji: values.emoji || findEmojiForTitle(values.title),
+      emoji: values.emoji || undefined,
       time: timeString,
-      duration,
+      duration: duration || 45 * 60 * 1000, // Ensure task always has a duration for UI purposes
       dueDate: values.dueDate,
       dueTime: values.dueTime,
-      priority: values.priority || 'none',
+      priority: values.priority || 'medium', // Use medium as default instead of none
       category: values.category || category,
       completed: false,
       isFocused: false,
@@ -959,6 +964,52 @@ export const createNewTask = (
     };
 
     addTask(task);
+
+    // Fire-and-forget: ask AI for duration / priority / emoji if any of them were not
+    // explicitly supplied by the user. When the response arrives we patch the task.
+    (async () => {
+      try {
+        const needsDuration = !values.isDurationManuallySet;
+        const needsPriority = !values.isPriorityManuallySet;
+        const needsEmoji = !values.emoji;
+
+        if (!(needsDuration || needsPriority || needsEmoji)) {
+          return; // Nothing to predict
+        }
+
+        const {
+          duration: predictedDuration,
+          priority: predictedPriority,
+          emoji: predictedEmoji,
+        } = await batchPredictTaskProperties(values.title);
+
+        const updates: Partial<OptimalTask> = {};
+
+        if (needsEmoji && predictedEmoji && predictedEmoji.trim().length) {
+          updates.emoji = predictedEmoji.trim();
+        }
+
+        if (needsPriority && predictedPriority && predictedPriority !== 'none') {
+          updates.priority = predictedPriority;
+        }
+
+        if (needsDuration && predictedDuration && predictedDuration > 0) {
+          updates.duration = predictedDuration;
+
+          // Recalculate nextStartTime and time string
+          const newNextStart = addMilliseconds(startTime, predictedDuration);
+          updates.nextStartTime = newNextStart;
+          updates.time = `${format(startTime, 'HH:mm')}—${format(newNextStart, 'HH:mm')}`;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          updateTask(taskId, updates);
+        }
+      } catch (err) {
+        console.error('Failed to fetch AI task properties:', err);
+      }
+    })();
+
     return taskId;
   } catch (error) {
     console.error('Failed to create new task:', error);

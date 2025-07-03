@@ -1,3 +1,5 @@
+import { tasksStore } from '@/features/tasks/stores/tasks.store';
+import { showTaskCompletionNotification } from '@/shared/helpers/notification.helper';
 import { ElectronApi } from '@/shared/types/electron';
 
 // --- Constants ---
@@ -210,6 +212,21 @@ export function initializeGlobalTimer(): void {
       // TODO: Handle completion (e.g., switch mode, notify user, record session)
       const mode = completedMode || state.activeMode; // Fallback if completedMode is undefined
       console.log(`Timer for task ${state.currentTaskId} in mode ${mode} finished.`);
+
+      // Send a system notification through the main process so the user knows the timer finished
+      try {
+        // Attempt to fetch the task title for better context
+        const task = tasksStore.state.tasks.find((t) => t.id === state.currentTaskId);
+        const taskTitle = task?.title || 'Task';
+
+        showTaskCompletionNotification(
+          'Time is up! 🎉',
+          `Planned time for "${taskTitle}" has finished.`,
+        );
+      } catch (err) {
+        console.error('Failed to send completion notification:', err);
+      }
+
       _saveState();
       _notifySubscribers();
     });

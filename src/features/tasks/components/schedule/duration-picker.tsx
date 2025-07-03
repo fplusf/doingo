@@ -18,7 +18,7 @@ import { useEffect, useRef, useState } from 'react';
 
 interface DurationPickerProps {
   value: number; // milliseconds
-  onChange: (duration: number) => void;
+  onChange: (duration: number, isUserAction: boolean) => void;
   className?: string;
   isEstimating?: boolean;
   taskTitle?: string;
@@ -116,7 +116,7 @@ export function DurationPicker({
   // Update both form and central store
   const updateDuration = (durationMs: number) => {
     // Update form via parent component's onChange
-    onChange(durationMs);
+    onChange(durationMs, true);
 
     // If we have a taskId, update the central store too
     if (taskId) {

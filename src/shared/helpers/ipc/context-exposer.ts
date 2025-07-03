@@ -8,7 +8,12 @@ const exposeIpcRenderer = () => {
     ipcRenderer: {
       send: (channel: string, ...args: any[]) => {
         // List channels allowed to send from renderer to main
-        const validChannels = ['update-timer', 'start-countdown', 'stop-countdown'];
+        const validChannels = [
+          'update-timer',
+          'start-countdown',
+          'stop-countdown',
+          'show-notification',
+        ];
         if (validChannels.includes(channel)) {
           ipcRenderer.send(channel, ...args);
         }

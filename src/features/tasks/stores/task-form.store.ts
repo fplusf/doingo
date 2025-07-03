@@ -1,4 +1,3 @@
-import { findEmojiForTitle } from '@/lib/emoji-matcher';
 import { Store } from '@tanstack/react-store';
 import { addMilliseconds, format, parse, parseISO } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
@@ -176,29 +175,9 @@ export const updateField = <K extends keyof TaskFormState>(field: K, value: Task
       newState.isEmojiSetByAi = false;
     }
 
-    // If updating title in create mode, check for emoji suggestion ONLY if no emoji is set by AI
-    if (
-      field === 'title' &&
-      typeof value === 'string' &&
-      state.mode === 'create' &&
-      !state.isEmojiSetByAi
-    ) {
-      const emoji = findEmojiForTitle(value);
-
-      // Debug log remains helpful
-      console.log('Title update triggered emoji suggestion:', {
-        title: value,
-        suggestedEmoji: emoji,
-        currentEmoji: state.emoji,
-        isEmojiSetByAi: state.isEmojiSetByAi,
-      });
-
-      // Add emoji to the update *if* it's valid and different and not set by AI
-      if (emoji && emoji !== state.emoji) {
-        console.log('Adding suggested emoji to update:', emoji);
-        newState.emoji = emoji;
-      }
-    }
+    // Previously we auto-suggested an emoji based on the title. This behaviour has been
+    // removed to keep the emoji empty unless explicitly chosen by the user or later
+    // populated by the AI service after task creation.
 
     // Return the combined new state properties
     return {
@@ -335,7 +314,7 @@ export const updateRepeatInterval = (repeatInterval: number) => {
   }));
 };
 
-export const updateDuration = (durationMs: number) => {
+export const updateDuration = (durationMs: number, isUserAction = false) => {
   const { mode, taskId } = taskFormStore.state;
 
   // Update form store
@@ -343,6 +322,7 @@ export const updateDuration = (durationMs: number) => {
     ...state,
     duration: durationMs,
     isDirty: true,
+    isDurationManuallySet: isUserAction,
   }));
 
   // If in edit mode, update the task store
