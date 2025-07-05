@@ -1,4 +1,5 @@
 import { AuthProvider } from '@/features/auth/auth-context';
+import { AppSidebar } from '@/layouts/sidebar/app-sidebar';
 import { ThemeProvider } from '@/shared/components/theme-provider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -6,10 +7,10 @@ import {
   createRootRouteWithContext,
   retainSearchParams,
   stripSearchParams,
+  useRouterState,
 } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 import { DynamicHeader } from '../layouts/headers/dynamic-header';
-import { AppSidebar } from '../layouts/sidebar/app-sidebar';
 import { SidebarInset, SidebarProvider } from '../shared/components/ui/sidebar';
 import { weeklyCalendarSchema } from './searchParams';
 
@@ -31,6 +32,27 @@ export const RootRoute = createRootRouteWithContext()({
 const queryClient = new QueryClient();
 
 function Root() {
+  const { location } = useRouterState();
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/auth/callback';
+
+  if (isAuthPage) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <Outlet />
+            <TanStackRouterDevtools />
+          </ThemeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -41,16 +63,15 @@ function Root() {
           disableTransitionOnChange
         >
           <div className="flex h-screen w-full flex-col">
-            <DynamicHeader />
-
-            <div className="flex min-h-0 flex-1 flex-col">
-              <SidebarProvider style={{ '--sidebar-width': '5rem' } as any}>
+            <SidebarProvider style={{ '--sidebar-width': '5rem' } as any}>
+              <DynamicHeader />
+              <div className="flex min-h-0 flex-1 flex-row">
                 <AppSidebar />
                 <SidebarInset className="top-10 h-[calc(100vh-3rem)] overflow-hidden">
                   <Outlet />
                 </SidebarInset>
-              </SidebarProvider>
-            </div>
+              </div>
+            </SidebarProvider>
           </div>
           <TanStackRouterDevtools />
         </ThemeProvider>

@@ -1,7 +1,10 @@
+import AuthCallbackPage from '@/features/auth/pages/auth-callback-page';
+import LoginPage from '@/features/auth/pages/login-page';
 import CalendarPage from '@/features/calendar/pages/calendar-page';
 import InboxPage from '@/features/inbox/pages/inbox-page';
 import TodayPage from '@/features/tasks/pages/today-page';
 import ProfilePage from '@/features/user/pages/profile-page';
+import { supabase } from '@/lib/supabase-client';
 
 import { createRoute, Outlet, redirect, Route } from '@tanstack/react-router';
 import RemindersPage from '../features/reminders/pages/reminders-page';
@@ -38,12 +41,23 @@ export const IndexRoute = createRoute({
   },
 });
 
+// Helper: require user session else redirect to /login
+const requireAuth = async () => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    throw redirect({ to: '/login' });
+  }
+};
+
 // Tasks Route - Parent route for all task-related routes
 export const TasksRoute = new Route({
   getParentRoute: () => RootRoute,
   path: '/tasks',
   component: Outlet,
   validateSearch: tasksSearchParamsSchema,
+  beforeLoad: requireAuth,
 });
 
 // Tasks Index Route - The default route when navigating to /tasks
@@ -69,6 +83,7 @@ export const RemindersRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: 'reminders',
   component: RemindersPage,
+  beforeLoad: requireAuth,
 });
 
 // Calendar Route - For the calendar feature
@@ -76,6 +91,7 @@ export const CalendarRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: 'calendar',
   component: CalendarPage,
+  beforeLoad: requireAuth,
 });
 
 // Inbox Route - For the inbox feature
@@ -83,6 +99,7 @@ export const InboxRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: 'inbox',
   component: InboxPage,
+  beforeLoad: requireAuth,
 });
 
 // Profile Route - User profile page
@@ -90,6 +107,21 @@ export const ProfileRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: 'profile',
   component: ProfilePage,
+  beforeLoad: requireAuth,
+});
+
+// Login Route - Public
+export const LoginRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: 'login',
+  component: LoginPage,
+});
+
+// Auth Callback Route - Public
+export const AuthCallbackRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: 'auth/callback',
+  component: AuthCallbackPage,
 });
 
 // Build the route tree with explicit parent-child relationships
@@ -99,5 +131,7 @@ export const rootTree = RootRoute.addChildren([
   CalendarRoute,
   InboxRoute,
   ProfileRoute,
+  LoginRoute,
+  AuthCallbackRoute,
   TasksRoute.addChildren([TasksIndexRoute, TaskDetailsRoute]),
 ]);
