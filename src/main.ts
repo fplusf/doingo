@@ -33,9 +33,24 @@ const pomodoroState: PomodoroState = {
 
 // Function to format time string with fixed width
 const formatTrayTitle = (timeString: string): string => {
-  // Add spaces on both sides to create fixed width
-  // Using monospace characters to ensure consistent width
-  return ` ${timeString} `;
+  // Convert to monospace digits to prevent shifting (analog to CSS tabular-nums)
+  const toMonospace = (str: string): string => {
+    const monospaceMap: { [key: string]: string } = {
+      '0': '𝟶',
+      '1': '𝟷',
+      '2': '𝟸',
+      '3': '𝟹',
+      '4': '𝟺',
+      '5': '𝟻',
+      '6': '𝟼',
+      '7': '𝟽',
+      '8': '𝟾',
+      '9': '𝟿',
+    };
+    return str.replace(/[0-9]/g, (digit) => monospaceMap[digit] || digit);
+  };
+
+  return ` ${toMonospace(timeString)} `;
 };
 
 // Function to update the tray timer display
@@ -63,8 +78,8 @@ const updateTrayTimer = (timeString: string) => {
       tray.setContextMenu(newContextMenu);
     } else {
       console.warn(`[Main Process] Invalid time format: ${timeString}`);
-      // Default to showing 25:00 instead of --:--
-      tray.setTitle(formatTrayTitle('25:00'));
+      // Default to showing 00:00 instead of --:--
+      tray.setTitle(formatTrayTitle('00:00'));
     }
   }
 };
@@ -160,6 +175,7 @@ function createWindow() {
       nodeIntegrationInSubFrames: false,
       preload: preload,
       webSecurity: true,
+      backgroundThrottling: false,
     },
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: {
@@ -218,11 +234,11 @@ app.whenReady().then(() => {
   // Create the tray with template icon
   tray = new Tray(icon);
 
-  // Set initial title with default pomodoro duration
-  tray.setTitle(formatTrayTitle('25:00'));
+  // Set initial title with default value (00:00)
+  tray.setTitle(formatTrayTitle('00:00'));
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: '25:00', enabled: false },
+    { label: '00:00', enabled: false },
     { type: 'separator' },
     {
       label: 'Hide',
@@ -241,7 +257,10 @@ app.whenReady().then(() => {
   console.log('[Main Process] Setting up IPC listener for update-timer.');
   ipcMain.on('update-timer', (event, timeString: string) => {
     console.log(`[Main Process] Received timer update: ${timeString}`);
-    updateTrayTimer(timeString);
+    // Only update tray if main process countdown is not running to avoid conflicts
+    if (!pomodoroState.isRunning && !countdownInterval) {
+      updateTrayTimer(timeString);
+    }
   });
 
   // Listen for notification requests from renderer process
@@ -383,7 +402,8 @@ app.whenReady().then(() => {
   // Set timer durations
   ipcMain.handle('set-pomodoro-duration', (event, duration: number) => {
     pomodoroState.pomodoroDuration = duration;
-    if (pomodoroState.activeMode === 'pomodoro' && !pomodoroState.isRunning) {
+    // Only reflect duration change in tray if timer is currently running in this mode
+    if (pomodoroState.activeMode === 'pomodoro' && pomodoroState.isRunning) {
       const minutes = Math.floor(duration / 60000);
       const seconds = Math.floor((duration % 60000) / 1000);
       const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
@@ -394,7 +414,8 @@ app.whenReady().then(() => {
 
   ipcMain.handle('set-break-duration', (event, duration: number) => {
     pomodoroState.breakDuration = duration;
-    if (pomodoroState.activeMode === 'break' && !pomodoroState.isRunning) {
+    // Only reflect duration change in tray if timer is currently running in this mode
+    if (pomodoroState.activeMode === 'break' && pomodoroState.isRunning) {
       const minutes = Math.floor(duration / 60000);
       const seconds = Math.floor((duration % 60000) / 1000);
       const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
@@ -411,6 +432,8 @@ app.whenReady().then(() => {
   // Legacy handlers (keeping for backward compatibility)
   ipcMain.on('start-countdown', (event, endTime: number) => {
     console.log(`[Main Process] Received start-countdown: ${endTime}`);
+    // Ensure main process takes control of timer
+    pomodoroState.isRunning = true;
     startCountdown(endTime);
   });
 
