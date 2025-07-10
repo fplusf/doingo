@@ -13,7 +13,7 @@ export default defineConfig((env) => {
 
   return {
     mode,
-    base: process.env.NODE_ENV === 'production' ? '/optimal-adhd-react/' : '/',
+    base: process.env.NODE_ENV === 'production' ? './' : '/',
     build: {
       outDir: 'dist',
       sourcemap: false,
