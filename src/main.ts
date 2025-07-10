@@ -250,7 +250,7 @@ app.whenReady().then(() => {
     },
   ]);
 
-  tray.setToolTip('Optimal Timer');
+  tray.setToolTip('Doingo Timer');
   tray.setContextMenu(contextMenu);
 
   // Listen for timer updates from the renderer process

@@ -2,10 +2,10 @@ import { OptimalTask } from '@/features/tasks/types/task.types';
 import { format } from 'date-fns';
 import { StorageAdapter } from './storage-adapter';
 
-const TASKS_STORAGE_KEY = 'optimal-adhd-tasks';
+const TASKS_STORAGE_KEY = 'doingo-tasks';
 
 export class LocalStorageAdapter implements StorageAdapter {
-  constructor(private prefix: string = 'optimal-adhd') {}
+  constructor(private prefix: string = 'doingo') {}
 
   // Tasks specific methods
   getTasks(): OptimalTask[] {

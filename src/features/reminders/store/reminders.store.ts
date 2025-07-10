@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Reminder, ReminderList, RemindersState } from '../types';
 
 // Initialize the storage adapter
-const storageAdapter: StorageAdapter = new LocalStorageAdapter('optimal-adhd');
+const storageAdapter: StorageAdapter = new LocalStorageAdapter('doingo');
 
 // Storage keys
 const REMINDERS_STORAGE_KEY = 'reminders';

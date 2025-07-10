@@ -195,14 +195,14 @@ body {
   }
 }
 
-.optimal .excalidraw {
+.doingo .excalidraw {
   --color-primary: red;
 
   canvas {
     @apply rounded-xl;
   }
 }
-.optimal .excalidraw.theme--dark {
+.doingo .excalidraw.theme--dark {
   --color-primary: pink;
 }
 

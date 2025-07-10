@@ -91,10 +91,10 @@ export default function InboxkList({
                         random
                       </span>
                     )}
-                    {tag === 'optimal-adhd' && (
+                    {tag === 'doingo' && (
                       <span className="flex items-center gap-1">
                         <span className="h-2 w-2 rounded-full bg-blue-500"></span>
-                        <span className="text-[10px] text-blue-500">Optimal ADHD</span>
+                        <span className="text-[10px] text-blue-500">Doingo</span>
                       </span>
                     )}
                     {tag === 'welcome' && (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const SUBTASKS_COLLAPSE_KEY = 'optimal_adhd_subtasks_collapsed';
+const SUBTASKS_COLLAPSE_KEY = 'doingo_subtasks_collapsed';
 
 export const useSubtasksCollapse = () => {
   const [isSubtasksOpen, setIsSubtasksOpen] = useState(() => {

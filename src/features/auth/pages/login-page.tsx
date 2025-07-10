@@ -13,7 +13,7 @@ const LoginPage: React.FC = () => {
         </h1>
       </div>
       <div className="w-full max-w-md rounded-2xl border border-border/60 bg-card p-8 text-center shadow-lg">
-        <img src="logo.png" alt="Optimal ADHD logo" className="mx-auto mb-6 h-16 w-16" />
+        <img src="logo.png" alt="Doingo logo" className="mx-auto mb-6 h-16 w-16" />
         <h1 className="mb-2 text-3xl font-bold text-foreground">Welcome to Doingo</h1>
         <p className="mb-8 text-muted-foreground">Sign in to continue to your dashboard</p>
         <Button onClick={signInWithGoogle} size="lg" className="w-full">

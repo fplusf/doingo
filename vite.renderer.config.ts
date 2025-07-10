@@ -14,7 +14,7 @@ export default defineConfig((env) => {
   return {
     root,
     mode,
-    base: process.env.NODE_ENV === 'production' ? '/optimal-adhd-react/' : '/',
+    base: process.env.NODE_ENV === 'production' ? '/doingo/' : '/',
     build: {
       outDir: process.env.NODE_ENV === 'production' ? 'dist' : `.vite/renderer/${name}`,
     },
