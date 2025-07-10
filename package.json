@@ -25,7 +25,8 @@
     "test:ui": "vitest --ui",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
-    "test:all": "vitest && playwright test"
+    "test:all": "vitest && playwright test",
+    "build:pages": "vite build --config vite.web.config.ts && mv dist docs"
   },
   "author": "FF - Farukh",
   "license": "MIT",
