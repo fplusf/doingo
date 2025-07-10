@@ -1,10 +1,27 @@
-import { Excalidraw } from '@excalidraw/excalidraw';
 import { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types/types';
 import { useSearch } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { OptimalTask } from '../../types';
+
+// Lazy load Excalidraw to avoid SSR issues
+const Excalidraw = React.lazy(() =>
+  import('@excalidraw/excalidraw').then((module) => ({
+    default: module.Excalidraw,
+  })),
+);
+
+declare global {
+  interface Window {
+    EXCALIDRAW_ASSET_PATH?: string;
+  }
+}
+
+// Set asset path for fonts (ensure it's set only in browser)
+if (typeof window !== 'undefined') {
+  window.EXCALIDRAW_ASSET_PATH = window.EXCALIDRAW_ASSET_PATH ?? '/';
+}
 
 interface TaskCanvasProps {
   task: OptimalTask;
