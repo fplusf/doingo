@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import './styles/global.css'; // global tailwind styles
 
 // Check if we're running in Electron
 const isElectron = typeof window !== 'undefined' && window.process?.type === 'renderer';
